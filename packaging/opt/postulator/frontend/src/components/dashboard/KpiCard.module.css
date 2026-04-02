@@ -1,0 +1,76 @@
+.card {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: opacity 0.2s;
+}
+
+/* Shimmer pendant le chargement */
+.shimmer { opacity: 0.55; }
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+
+.skeletonValue {
+  display: block;
+  width: 70px;
+  height: 30px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--outline);
+}
+
+.icon          { color: var(--outline); }
+.iconHighlight { color: var(--tertiary); }
+
+.value {
+  font-family: var(--font-headline);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--on-surface);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.valueHighlight { color: var(--tertiary); }
+
+.sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  min-height: 16px;
+}
+
+.arrow   { font-size: 9px; color: var(--tertiary); }
+.positive { font-size: 11px; color: var(--tertiary); font-weight: 500; }
+.ai      { font-size: 11px; color: var(--tertiary); font-weight: 600; letter-spacing: 0.01em; }
+
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--tertiary);
+  flex-shrink: 0;
+}
+
+.muted { font-size: 11px; color: var(--outline); }

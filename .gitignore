@@ -55,3 +55,9 @@ celerybeat.pid
 # Secrets (ne jamais committer)
 .env
 !backend/.env.example
+
+# stitch ( les ecrans ) 
+stitch_export/
+
+# Packaging Debian — garder les sources, exclure le build
+dist/*.deb

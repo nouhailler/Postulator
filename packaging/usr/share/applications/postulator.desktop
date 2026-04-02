@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Postulator
+GenericName=Agregateur d'offres d'emploi
+Comment=Recherche d'emploi avec IA locale — self-hosted, privacy-first
+Exec=/usr/bin/postulator
+Icon=postulator
+Terminal=false
+Categories=Office;Finance;Network;
+Keywords=emploi;cv;offres;ia;scraping;carriere;job;recrutement;
+StartupNotify=true
+StartupWMClass=Postulator
+MimeType=application/pdf;

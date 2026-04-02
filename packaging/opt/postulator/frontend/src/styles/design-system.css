@@ -1,0 +1,167 @@
+/* ============================================================
+   POSTULATOR – Design System "The Command Center"
+   Palette & tokens extraits du Stitch export
+   ============================================================ */
+
+/* ---- Google Fonts (fallback si index.html pas chargé) ---- */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ---- CSS Custom Properties ---- */
+:root {
+  /* Surfaces */
+  --surface:                   #0b1326;
+  --surface-dim:               #0b1326;
+  --surface-container-lowest:  #060e20;
+  --surface-container-low:     #131b2e;
+  --surface-container:         #171f33;
+  --surface-container-high:    #222a3d;
+  --surface-container-highest: #2d3449;
+  --surface-variant:           #2d3449;
+  --surface-bright:            #31394d;
+
+  /* Couleurs principales */
+  --primary:           #7bd0ff;
+  --primary-container: #00a7e0;
+  --on-primary:        #00354a;
+  --secondary:         #b9c8de;
+  --secondary-container: #39485a;
+  --on-secondary-container: #a7b6cc;
+  --tertiary:          #3cddc7;
+  --tertiary-container: #00af9d;
+  --on-tertiary:       #003731;
+
+  /* Texte */
+  --on-surface:        #dae2fd;
+  --on-surface-variant: #bec8d2;
+  --outline:           #88929b;
+  --outline-variant:   #3e4850;
+
+  /* État */
+  --error:             #ffb4ab;
+  --error-container:   #93000a;
+
+  /* Typographie */
+  --font-headline: 'Manrope', sans-serif;
+  --font-body:     'Inter', sans-serif;
+
+  /* Espacements */
+  --sidebar-width: 220px;
+  --topbar-height: 56px;
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+}
+
+/* ---- Reset & Base ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface-container-high); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--surface-bright); }
+
+/* ---- Utilitaires typography ---- */
+.font-headline { font-family: var(--font-headline); }
+.tracking-tight { letter-spacing: -0.02em; }
+
+/* ---- Bouton primaire (gradient "liquid-crystal") ---- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-container));
+  color: var(--on-primary);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 9px 16px;
+  font-family: var(--font-headline);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-primary:active { transform: scale(0.97); opacity: 0.9; }
+
+/* ---- Ghost button ---- */
+.btn-ghost {
+  background: none;
+  border: 1px solid rgba(123, 208, 255, 0.25);
+  color: var(--primary);
+  border-radius: var(--radius-md);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-ghost:hover { background: rgba(123, 208, 255, 0.08); }
+
+/* ---- Chip / Tag ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---- Score badge IA ---- */
+.badge-ai {
+  background: rgba(60, 221, 199, 0.15);
+  color: var(--tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-headline);
+}
+.badge-ai-blue {
+  background: rgba(123, 208, 255, 0.15);
+  color: var(--primary);
+}
+
+/* ---- Status dot ---- */
+.dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.dot-teal  { background: var(--tertiary); }
+.dot-blue  { background: var(--primary); }
+.dot-gray  { background: var(--outline-variant); }
+
+/* ---- Neural trace (shimmer loader) ---- */
+@keyframes neural-shimmer {
+  0%   { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+.neural-trace {
+  background: linear-gradient(90deg, var(--primary) 0%, var(--tertiary) 50%, var(--primary) 100%);
+  background-size: 200% 100%;
+  animation: neural-shimmer 2s linear infinite;
+  border-radius: 2px;
+  height: 3px;
+}

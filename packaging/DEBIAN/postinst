@@ -1,0 +1,67 @@
+#!/bin/bash
+set -e
+
+INSTALL_DIR="/opt/postulator"
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo ""
+echo -e "${BLUE}╔══════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║       Installation de Postulator         ║${NC}"
+echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}"
+echo ""
+
+# ── Python virtualenv + dépendances ──────────────────────────
+echo -e "${YELLOW}[1/4] Création de l'environnement Python...${NC}"
+cd "${INSTALL_DIR}/backend"
+python3 -m venv .venv
+source .venv/bin/activate
+
+echo -e "${YELLOW}[2/4] Installation des dépendances Python...${NC}"
+pip install -q --upgrade pip
+pip install -q "greenlet>=3.1.0"
+pip install -q -r requirements.txt
+deactivate
+
+# ── Node.js dépendances ───────────────────────────────────────
+echo -e "${YELLOW}[3/4] Installation des dépendances frontend...${NC}"
+cd "${INSTALL_DIR}/frontend"
+npm install --silent 2>/dev/null || npm install
+
+# ── Configuration par défaut ──────────────────────────────────
+echo -e "${YELLOW}[4/4] Configuration initiale...${NC}"
+if [ ! -f "${INSTALL_DIR}/backend/.env" ]; then
+    cp "${INSTALL_DIR}/backend/.env.example" "${INSTALL_DIR}/backend/.env"
+    echo "      → Fichier .env créé depuis .env.example"
+fi
+
+# Droits d'exécution
+chmod +x /usr/bin/postulator
+chmod -R 755 "${INSTALL_DIR}"
+
+# Mettre à jour le cache des icônes
+if command -v gtk-update-icon-cache &>/dev/null; then
+    gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
+fi
+
+# Mettre à jour la base de données des applications desktop
+if command -v update-desktop-database &>/dev/null; then
+    update-desktop-database /usr/share/applications 2>/dev/null || true
+fi
+
+echo ""
+echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║   Postulator installé avec succès !      ║${NC}"
+echo -e "${GREEN}╠══════════════════════════════════════════╣${NC}"
+echo -e "${GREEN}║                                          ║${NC}"
+echo -e "${GREEN}║  Prérequis supplémentaires :             ║${NC}"
+echo -e "${GREEN}║  1. Installer Ollama : ollama.ai         ║${NC}"
+echo -e "${GREEN}║  2. ollama pull phi3.5:3.8b              ║${NC}"
+echo -e "${GREEN}║                                          ║${NC}"
+echo -e "${GREEN}║  Démarrer : postulator                   ║${NC}"
+echo -e "${GREEN}║  Ou via le menu Applications             ║${NC}"
+echo -e "${GREEN}║                                          ║${NC}"
+echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
+echo ""

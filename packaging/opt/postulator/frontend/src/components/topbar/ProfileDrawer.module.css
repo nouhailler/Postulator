@@ -1,0 +1,55 @@
+/* ProfileDrawer.module.css */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+
+.avatarMed {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--tertiary));
+  color: var(--on-primary); font-family: var(--font-headline);
+  font-size: 14px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* CTA block */
+.ctaBlock {
+  padding: 14px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ctaBtn {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+}
+
+/* Preview rows */
+.previewRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.previewRow:last-child { border-bottom: none; }
+.previewLabel { font-size: 10px; font-weight: 600; color: var(--outline); text-transform: uppercase; letter-spacing: 0.05em; }
+.previewValue { font-size: 11px; color: var(--on-surface-variant); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Preview sections */
+.previewSection { margin-bottom: 12px; }
+.previewSection:last-child { margin-bottom: 0; }
+.previewSectionTitle {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.previewSectionContent {
+  font-size: 11px; color: var(--on-surface-variant);
+  line-height: 1.5; white-space: pre-wrap;
+}
+
+.previewNote {
+  font-size: 11px; color: var(--outline);
+  font-style: italic; line-height: 1.4;
+}
+.previewNote strong { color: var(--on-surface-variant); }

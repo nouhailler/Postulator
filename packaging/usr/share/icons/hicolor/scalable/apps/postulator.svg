@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Fond dégradé dark navy (couleur app) -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0b1326;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1f3c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="briefcaseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7bd0ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4ab8f0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3cddc7;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2bbfab;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Fond rond -->
+  <circle cx="128" cy="128" r="124" fill="url(#bgGrad)" />
+  <circle cx="128" cy="128" r="124" fill="none" stroke="#7bd0ff" stroke-width="2" opacity="0.3"/>
+
+  <!-- Mallette / Briefcase (couleur primaire bleue) -->
+  <!-- Corps de la mallette -->
+  <rect x="52" y="100" width="152" height="110" rx="12" ry="12"
+        fill="url(#briefcaseGrad)" opacity="0.95"/>
+
+  <!-- Poignée de la mallette -->
+  <path d="M96 100 L96 84 Q96 72 108 72 L148 72 Q160 72 160 84 L160 100"
+        fill="none" stroke="url(#briefcaseGrad)" stroke-width="10"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Bande centrale de la mallette -->
+  <rect x="52" y="148" width="152" height="12" rx="0"
+        fill="#0b1326" opacity="0.25"/>
+
+  <!-- Serrure centrale -->
+  <rect x="113" y="140" width="30" height="28" rx="6"
+        fill="#0b1326" opacity="0.5"/>
+  <circle cx="128" cy="154" r="6" fill="#7bd0ff"/>
+
+  <!-- Lignes décoratives (documents/CV dans la mallette) -->
+  <rect x="70" y="120" width="45" height="4" rx="2" fill="#0b1326" opacity="0.4"/>
+  <rect x="70" y="130" width="35" height="4" rx="2" fill="#0b1326" opacity="0.3"/>
+  <rect x="141" y="120" width="45" height="4" rx="2" fill="#0b1326" opacity="0.4"/>
+  <rect x="141" y="130" width="35" height="4" rx="2" fill="#0b1326" opacity="0.3"/>
+
+  <!-- Sparkle IA (couleur tertiary teal) — coin haut droit -->
+  <g filter="url(#glow)" transform="translate(178, 52)">
+    <!-- Grande étoile -->
+    <path d="M0,-22 L5,-5 L22,0 L5,5 L0,22 L-5,5 L-22,0 L-5,-5 Z"
+          fill="url(#aiGrad)" opacity="0.95"/>
+    <!-- Petite étoile -->
+    <path d="M28,-8 L30,-2 L36,0 L30,2 L28,8 L26,2 L20,0 L26,-2 Z"
+          fill="#3cddc7" opacity="0.8"/>
+  </g>
+
+  <!-- Graphique tendance (coin bas gauche, couleur teal) -->
+  <g opacity="0.6">
+    <polyline points="62,198 80,185 98,190 116,172 134,178"
+              fill="none" stroke="#3cddc7" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="62" cy="198" r="3" fill="#3cddc7"/>
+    <circle cx="80" cy="185" r="3" fill="#3cddc7"/>
+    <circle cx="98" cy="190" r="3" fill="#3cddc7"/>
+    <circle cx="116" cy="172" r="3" fill="#3cddc7"/>
+    <circle cx="134" cy="178" r="3" fill="#3cddc7"/>
+  </g>
+</svg>

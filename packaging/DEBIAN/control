@@ -1,0 +1,24 @@
+Package: postulator
+Version: 1.0.0
+Architecture: all
+Maintainer: Patrick Nouhailler <patrick@nouhailler.fr>
+Installed-Size: 1348
+Depends: python3 (>= 3.11), python3-pip, python3-venv, nodejs (>= 18), npm, redis-server, curl
+Recommends: pandoc
+Suggests: ollama
+Section: utils
+Priority: optional
+Homepage: https://github.com/nouhailler/postulator
+Description: Agregateur de recherche d'emploi open source avec IA locale
+ Postulator collecte automatiquement des offres d'emploi depuis Indeed,
+ LinkedIn, Glassdoor, ZipRecruiter et Google Jobs. Il analyse la
+ correspondance avec votre CV via Ollama (IA 100% locale) et genere des
+ CVs adaptes a chaque offre — sans envoyer de donnees dans le cloud.
+ .
+ Fonctionnalites :
+  - Scraping multi-sources avec deduplication SHA-256
+  - Scoring CV <-> offre (0-100) via Ollama local
+  - Generation de CVs adaptes par IA
+  - Pipeline Kanban pour le suivi des candidatures
+  - Rotation de proxies residentiels
+  - Alertes email pour les meilleures correspondances

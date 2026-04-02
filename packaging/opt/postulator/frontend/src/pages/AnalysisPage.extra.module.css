@@ -1,0 +1,24 @@
+
+/* ── Bouton Sauvegarder (ajouté à la fin du scoreCard) ── */
+.saveRow {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px !important;
+  padding: 6px 14px !important;
+  transition: all 0.2s;
+}
+
+.saveBtnDone {
+  border-color: rgba(60, 221, 199, 0.4) !important;
+  color: var(--tertiary) !important;
+  cursor: default !important;
+}
