@@ -1,0 +1,97 @@
+/* Partagé entre les pages stub */
+.page {
+  padding-bottom: 40px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin-bottom: 6px;
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--outline);
+  margin-bottom: 32px;
+}
+
+.placeholder {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  text-align: center;
+}
+
+.icon {
+  font-size: 32px;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--outline);
+}
+
+/* Kanban stub */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1000px) {
+  .kanban { grid-template-columns: repeat(3, 1fr); }
+}
+
+.kanbanCol {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.kanbanHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.kanbanDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kanbanLabel {
+  font-family: var(--font-headline);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--on-surface);
+  flex: 1;
+}
+
+.kanbanCount {
+  font-size: 11px;
+  color: var(--outline);
+  background: var(--surface-container-high);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+.kanbanBody {
+  padding: 16px 14px;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

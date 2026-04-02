@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Postulator | Saved Searches</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "primary-container": "#00a7e0",
+                "surface-variant": "#2d3449",
+                "on-primary-container": "#00374d",
+                "tertiary-fixed": "#62fae3",
+                "outline-variant": "#3e4850",
+                "secondary-fixed-dim": "#b9c8de",
+                "primary-fixed": "#c4e7ff",
+                "inverse-surface": "#dae2fd",
+                "on-error": "#690005",
+                "background": "#0b1326",
+                "on-background": "#dae2fd",
+                "inverse-primary": "#00668a",
+                "surface-container-highest": "#2d3449",
+                "surface-tint": "#7bd0ff",
+                "secondary-fixed": "#d4e4fa",
+                "on-tertiary": "#003731",
+                "on-secondary-container": "#a7b6cc",
+                "on-error-container": "#ffdad6",
+                "primary": "#7bd0ff",
+                "surface-container-high": "#222a3d",
+                "on-primary-fixed-variant": "#004c69",
+                "error": "#ffb4ab",
+                "on-tertiary-container": "#003b34",
+                "surface-container-lowest": "#060e20",
+                "secondary-container": "#39485a",
+                "on-primary": "#00354a",
+                "inverse-on-surface": "#283044",
+                "on-surface-variant": "#bec8d2",
+                "primary-fixed-dim": "#7bd0ff",
+                "on-secondary-fixed": "#0d1c2d",
+                "tertiary": "#3cddc7",
+                "on-tertiary-fixed": "#00201c",
+                "on-secondary": "#233143",
+                "surface-container-low": "#131b2e",
+                "on-secondary-fixed-variant": "#39485a",
+                "on-primary-fixed": "#001e2c",
+                "surface-bright": "#31394d",
+                "outline": "#88929b",
+                "surface": "#0b1326",
+                "on-surface": "#dae2fd",
+                "surface-container": "#171f33"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(45, 52, 73, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        .neural-shimmer {
+            background: linear-gradient(90deg, #7bd0ff 0%, #3cddc7 50%, #7bd0ff 100%);
+            background-size: 200% 100%;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary/30">
+<!-- TopAppBar -->
+<header class="bg-[#0b1326] dark:bg-[#0b1326] docked full-width top-0 z-50 shadow-[0_32px_64px_rgba(0,0,0,0.4)] fixed w-full">
+<div class="flex justify-between items-center w-full px-6 py-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#7bd0ff] dark:text-[#7bd0ff] text-2xl">terminal</span>
+<h1 class="text-xl font-black text-[#7bd0ff] tracking-tighter font-['Manrope']">Postulator</h1>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<nav class="flex gap-6">
+<a class="text-[#94a3b8] hover:bg-[#1e293b] transition-colors duration-200 px-2 py-1 font-['Inter'] text-sm font-medium" href="#">Command Center</a>
+<a class="text-[#7bd0ff] border-b-2 border-[#7bd0ff] px-2 py-1 font-['Inter'] text-sm font-medium" href="#">Saved Searches</a>
+<a class="text-[#94a3b8] hover:bg-[#1e293b] transition-colors duration-200 px-2 py-1 font-['Inter'] text-sm font-medium" href="#">Market Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#94a3b8] hover:bg-[#1e293b] p-2 rounded-full transition-all">notifications</button>
+<button class="material-symbols-outlined text-[#94a3b8] hover:bg-[#1e293b] p-2 rounded-full transition-all">settings</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30">
+<img alt="Architect Profile" data-alt="close-up portrait of a professional male architect with a focused expression in a dark studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-HYfRMVb-3g54nOtUblCxZ_Aqes5dgAesgHAGZtMQR1WqFI560bw8zzaT-AQISuZuNdzoARus0MrZch7UKKiWah0SNn6x-9HNJdVEjP-L3lbWYMf5mXWEJ6iSa4JPsoS2CPqx2O5pLqHXQU5cHz9FH8Q3TRmDKyfh0bNT6DbUgtvDGTpa-hi89NwwTJYqWMzDzzxKugIJB9hF3Bxwxxls5RGwv0ljBHcpKRyOUXE4FKXVFmnJ7SSSyV2rS6gqwoF_zrhUc6W60-Se"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Desktop Only) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col pt-16 bg-[#0b1326] dark:bg-[#0b1326] h-screen w-64 border-r border-[#1e293b]/15 hidden md:flex z-40">
+<div class="px-6 py-8">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<p class="text-on-surface font-bold text-sm">The Architect</p>
+<p class="text-outline text-xs">Level 4 Access</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 text-[#94a3b8] px-4 py-3 hover:bg-[#1e293b]/50 hover:text-white transition-all duration-300 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                    Command Center
+                </a>
+<a class="flex items-center gap-3 bg-[#1e293b] text-[#7bd0ff] border-l-4 border-[#7bd0ff] px-4 py-3 transition-all duration-300 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">saved_search</span>
+                    Saved Searches
+                </a>
+<a class="flex items-center gap-3 text-[#94a3b8] px-4 py-3 hover:bg-[#1e293b]/50 hover:text-white transition-all duration-300 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+                    Market Insights
+                </a>
+<a class="flex items-center gap-3 text-[#94a3b8] px-4 py-3 hover:bg-[#1e293b]/50 hover:text-white transition-all duration-300 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">grain</span>
+                    Neural Trace
+                </a>
+</nav>
+<div class="mt-8">
+<button class="w-full py-3 px-4 bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Initialize New Search
+                </button>
+</div>
+</div>
+<div class="mt-auto px-6 py-8 space-y-1">
+<a class="flex items-center gap-3 text-[#94a3b8] px-4 py-3 hover:bg-[#1e293b]/50 transition-all font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">shield</span>
+                Security
+            </a>
+<a class="flex items-center gap-3 text-[#94a3b8] px-4 py-3 hover:bg-[#1e293b]/50 transition-all font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Log Out
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:pl-64 pt-20 pb-24 min-h-screen">
+<div class="max-w-7xl mx-auto px-6 py-8">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+<div class="space-y-2">
+<h2 class="text-4xl font-extrabold text-on-surface tracking-tighter">Search Repository</h2>
+<p class="text-outline max-w-lg">Manage your active neural traces and automated recruitment pipelines. Currently monitoring <span class="text-tertiary font-bold">14 sources</span>.</p>
+</div>
+<div class="flex gap-3">
+<div class="flex items-center gap-2 bg-surface-container px-4 py-2 rounded-lg border border-outline-variant/10">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="text-xs font-bold uppercase tracking-widest text-tertiary">8 Active Traces</span>
+</div>
+</div>
+</div>
+<!-- Bento Grid of Saved Searches -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Active Search Card: Rust Engineer -->
+<div class="group relative bg-surface-container-low rounded-xl overflow-hidden border border-primary/20 shadow-xl shadow-primary/5 transition-all hover:bg-surface-container">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-xl font-bold text-on-surface group-hover:text-primary transition-colors">Senior Rust Engineer - Remote</h3>
+<p class="text-outline text-xs mt-1">Last executed: 14 mins ago</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="bg-tertiary/10 text-tertiary text-[10px] font-black px-2 py-1 rounded border border-tertiary/20 uppercase">92% Match Avg</span>
+<div class="flex gap-1">
+<span class="w-1 h-3 bg-tertiary/30 rounded-full"></span>
+<span class="w-1 h-4 bg-tertiary/50 rounded-full"></span>
+<span class="w-1 h-6 bg-tertiary rounded-full"></span>
+<span class="w-1 h-4 bg-tertiary/60 rounded-full"></span>
+<span class="w-1 h-5 bg-tertiary/80 rounded-full"></span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="space-y-1">
+<p class="text-[10px] uppercase tracking-widest text-outline">Keywords</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">Rust</span>
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">Distributed Systems</span>
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">WASM</span>
+</div>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] uppercase tracking-widest text-outline">Parameters</p>
+<p class="text-sm font-medium text-on-surface">Remote • $180k - $240k</p>
+<div class="flex gap-2 mt-2">
+<span class="material-symbols-outlined text-xs text-outline">public</span>
+<span class="material-symbols-outlined text-xs text-outline">terminal</span>
+<span class="material-symbols-outlined text-xs text-outline">alternate_email</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-4">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+<span class="ms-3 text-xs font-bold text-on-surface">Live Pulse</span>
+</label>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container-highest text-outline hover:text-primary transition-all rounded-lg material-symbols-outlined text-lg">edit</button>
+<button class="p-2 hover:bg-surface-container-highest text-outline hover:text-error transition-all rounded-lg material-symbols-outlined text-lg">delete</button>
+<button class="px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all rounded-lg text-xs font-bold uppercase tracking-wider">Execute Now</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Active Search Card: ML Ops -->
+<div class="group relative bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg transition-all hover:bg-surface-container">
+<div class="absolute top-0 left-0 w-1 h-full bg-tertiary"></div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-xl font-bold text-on-surface group-hover:text-tertiary transition-colors">ML Ops - SF/Hybrid</h3>
+<p class="text-outline text-xs mt-1">Last executed: 2 hours ago</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<div class="bg-primary/10 text-primary text-[10px] font-black px-2 py-1 rounded border border-primary/20">+4 New Matches</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="space-y-1">
+<p class="text-[10px] uppercase tracking-widest text-outline">Keywords</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">Kubernetes</span>
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">PyTorch</span>
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">CUDA</span>
+</div>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] uppercase tracking-widest text-outline">Parameters</p>
+<p class="text-sm font-medium text-on-surface">San Francisco • $200k+</p>
+<div class="flex gap-2 mt-2">
+<span class="material-symbols-outlined text-xs text-outline">business</span>
+<span class="material-symbols-outlined text-xs text-outline">hub</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-4">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+<span class="ms-3 text-xs font-bold text-on-surface">Daily Recap</span>
+</label>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container-highest text-outline hover:text-primary transition-all rounded-lg material-symbols-outlined text-lg">edit</button>
+<button class="p-2 hover:bg-surface-container-highest text-outline hover:text-error transition-all rounded-lg material-symbols-outlined text-lg">delete</button>
+<button class="px-4 py-2 bg-surface-container-highest text-on-surface hover:bg-primary hover:text-on-primary transition-all rounded-lg text-xs font-bold uppercase tracking-wider">Execute Now</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State / Add Card -->
+<div class="group relative border-2 border-dashed border-outline-variant/30 rounded-xl overflow-hidden hover:border-primary/50 transition-all flex flex-col items-center justify-center p-12 min-h-[300px] cursor-pointer">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-outline group-hover:text-primary group-hover:scale-110 transition-all mb-4">
+<span class="material-symbols-outlined text-4xl">add_circle</span>
+</div>
+<h3 class="text-xl font-bold text-outline group-hover:text-primary transition-all">Initialize Neural Trace</h3>
+<p class="text-outline/60 text-sm mt-2 text-center max-w-[240px]">Create a new autonomous search agent with advanced logic parameters.</p>
+</div>
+<!-- Card: Principal Product Designer -->
+<div class="group relative bg-surface-container-low rounded-xl overflow-hidden border border-outline-variant/10 shadow-lg transition-all hover:bg-surface-container">
+<div class="absolute top-0 left-0 w-1 h-full bg-outline-variant"></div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="text-xl font-bold text-on-surface group-hover:text-primary transition-colors">Principal Product Designer</h3>
+<p class="text-outline text-xs mt-1">Trace paused 3 days ago</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="bg-outline-variant/20 text-outline text-[10px] font-black px-2 py-1 rounded border border-outline-variant/20">Inactive</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-6 opacity-60">
+<div class="space-y-1">
+<p class="text-[10px] uppercase tracking-widest text-outline">Keywords</p>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">Design Systems</span>
+<span class="text-xs bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-sm">Figma</span>
+</div>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] uppercase tracking-widest text-outline">Parameters</p>
+<p class="text-sm font-medium text-on-surface">London • Competitive</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-6 border-t border-outline-variant/10">
+<div class="flex items-center gap-4">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-surface-container-highest rounded-full peer peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all"></div>
+<span class="ms-3 text-xs font-bold text-outline">Resume Trace</span>
+</label>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container-highest text-outline transition-all rounded-lg material-symbols-outlined text-lg">edit</button>
+<button class="p-2 hover:bg-surface-container-highest text-outline hover:text-error transition-all rounded-lg material-symbols-outlined text-lg">delete</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Global Stats / Analysis Section -->
+<div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<p class="text-[10px] uppercase tracking-widest text-outline mb-2">Total Intelligence Yield</p>
+<div class="flex items-end gap-3">
+<h4 class="text-4xl font-black text-on-surface">1,204</h4>
+<span class="text-tertiary text-sm font-bold mb-1">+12% vs last week</span>
+</div>
+<div class="w-full h-1 bg-surface-container-highest mt-6 rounded-full overflow-hidden">
+<div class="h-full w-[65%] neural-shimmer animate-[shimmer_2s_infinite]"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<p class="text-[10px] uppercase tracking-widest text-outline mb-2">Market Sentiment</p>
+<div class="flex items-center gap-3">
+<h4 class="text-4xl font-black text-on-surface">Bullish</h4>
+<div class="w-10 h-10 rounded-full border-4 border-tertiary border-t-transparent animate-spin"></div>
+</div>
+<p class="text-xs text-outline mt-6">Increased hiring velocity in <span class="text-on-surface font-bold">Rust</span> and <span class="text-on-surface font-bold">ML Ops</span> roles.</p>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<p class="text-[10px] uppercase tracking-widest text-outline mb-2">Network Health</p>
+<div class="flex items-center gap-4">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-background flex items-center justify-center text-primary"><span class="material-symbols-outlined text-sm">terminal</span></div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-background flex items-center justify-center text-secondary"><span class="material-symbols-outlined text-sm">alternate_email</span></div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-background flex items-center justify-center text-tertiary"><span class="material-symbols-outlined text-sm">public</span></div>
+</div>
+<span class="text-sm font-bold text-on-surface">14/14 Nodes Online</span>
+</div>
+<p class="text-xs text-outline mt-6">Latency: <span class="text-tertiary">42ms</span>. All crawlers operating within nominal parameters.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-[#0b1326]/90 backdrop-blur-xl border-t border-[#1e293b]/50 shadow-2xl">
+<a class="flex flex-col items-center justify-center text-slate-500 active:bg-[#1e293b] tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#7bd0ff] scale-110 active:bg-[#1e293b] tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest mt-1">Searches</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 active:bg-[#1e293b] tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest mt-1">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 active:bg-[#1e293b] tap-highlight-transparent" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+<!-- Floating Action Button (FAB) -->
+<button class="fixed bottom-24 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center hover:scale-110 transition-all z-40">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</body></html>

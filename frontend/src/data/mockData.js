@@ -1,0 +1,221 @@
+// ============================================================
+// Données fictives – Dashboard Postulator
+// Fallback automatique si le backend FastAPI est hors ligne.
+// ============================================================
+
+// ---- KPI Cards ----
+export const kpiData = [
+  {
+    id: 'total_jobs',
+    label: 'Total Jobs Found',
+    value: '1 284',
+    sub: '+12% from last cycle',
+    subType: 'positive',
+    icon: 'chart',
+  },
+  {
+    id: 'matches',
+    label: 'Matches > 80%',
+    value: '42',
+    sub: 'AI Recommended',
+    subType: 'ai',
+    icon: 'bolt',
+    highlight: true,
+  },
+  {
+    id: 'scrapers',
+    label: 'Active Scrapers',
+    value: '08',
+    sub: 'Steady state ops',
+    subType: 'neutral',
+    icon: 'cpu',
+  },
+  {
+    id: 'in_progress',
+    label: 'In Progress',
+    value: '15',
+    sub: 'Awaiting response',
+    subType: 'neutral',
+    icon: 'clock',
+  },
+]
+
+// ---- Ingestion Velocity ----
+export const velocityData7d = [
+  { day: 'LUN', jobs: 38 },
+  { day: 'MAR', jobs: 52 },
+  { day: 'MER', jobs: 61 },
+  { day: 'JEU', jobs: 119 },
+  { day: 'VEN', jobs: 74 },
+  { day: 'SAM', jobs: 98 },
+  { day: 'DIM', jobs: 183 },
+]
+
+export const velocityData30d = [
+  { day: 'S-4', jobs: 312 },
+  { day: 'S-3', jobs: 487 },
+  { day: 'S-2', jobs: 541 },
+  { day: 'S-1', jobs: 625 },
+  { day: 'S',   jobs: 625 },
+]
+
+// ---- Logs récents ----
+export const recentLogs = [
+  { id: 1, type: 'ai',      message: 'New match found via Ollama',      meta: '2M AGO · SCORE: 94%' },
+  { id: 2, type: 'scraper', message: 'Scraper finished on LinkedIn',     meta: '14M AGO · 45 NEW RESULTS' },
+  { id: 3, type: 'system',  message: 'CV Re-indexing complete',          meta: '1H AGO · SYSTEM OPTIMIZED' },
+  { id: 4, type: 'ai',      message: 'Match alert: Stripe (Frontend)',   meta: '3H AGO · SCORE: 88%' },
+  { id: 5, type: 'scraper', message: 'Indeed scraper: 67 new jobs',      meta: '5H AGO · SOURCE: INDEED' },
+]
+
+// ---- High-Confidence Matches (Dashboard) ----
+export const topMatches = [
+  { id: 'job_001', score: 96, company: 'Stripe',      initials: 'ST', title: 'Senior Frontend Engineer',   location: 'Remote (EU)',    tags: ['React', 'TypeScript', 'Vite'],     source: 'LinkedIn',  postedAt: '2j' },
+  { id: 'job_002', score: 92, company: 'Vercel',      initials: 'VR', title: 'AI Platform Engineer',       location: 'Remote',         tags: ['Python', 'FastAPI', 'LLM'],        source: 'Indeed',    postedAt: '1j' },
+  { id: 'job_003', score: 88, company: 'HuggingFace', initials: 'HF', title: 'ML Infrastructure Developer',location: 'Paris / Remote', tags: ['Ollama', 'Docker', 'Linux'],       source: 'HF Jobs',   postedAt: '3j' },
+  { id: 'job_004', score: 85, company: 'Scaleway',    initials: 'SC', title: 'Backend Python Engineer',    location: 'Paris',          tags: ['Python', 'FastAPI', 'SQLite'],     source: 'LinkedIn',  postedAt: '4j' },
+  { id: 'job_005', score: 83, company: 'OVHcloud',    initials: 'OV', title: 'DevOps / SRE Engineer',      location: 'Lyon / Remote',  tags: ['Linux', 'KVM', 'Ansible'],         source: 'Glassdoor', postedAt: '2j' },
+  { id: 'job_006', score: 81, company: 'Mistral AI',  initials: 'MI', title: 'Developer Advocate – AI',   location: 'Paris',          tags: ['LLM', 'React', 'Python'],          source: 'Indeed',    postedAt: '1j' },
+]
+
+// ---- Statistiques sources ----
+export const sourceStats = [
+  { source: 'LinkedIn',  count: 341, pct: 27 },
+  { source: 'Indeed',    count: 289, pct: 22 },
+  { source: 'Glassdoor', count: 198, pct: 15 },
+  { source: 'HF Jobs',   count: 143, pct: 11 },
+  { source: 'Wellfound', count: 118, pct: 9  },
+  { source: 'Autres',    count: 195, pct: 15 },
+]
+
+// ---- Offres complètes (JobsPage + BoardPage fallback) ----
+export const mockJobs = [
+  {
+    id: 1,
+    title: 'Senior Frontend Engineer',
+    company: 'Stripe',
+    location: 'Remote (EU)',
+    source: 'linkedin',
+    is_remote: true,
+    job_type: 'fulltime',
+    salary_min: 90000, salary_max: 130000, salary_currency: 'EUR',
+    ai_score: 96,
+    status: 'new',
+    published_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 3600000).toISOString(),
+    url: 'https://stripe.com/jobs/1',
+    description: `## Senior Frontend Engineer — Stripe\n\nNous recherchons un ingénieur frontend senior pour rejoindre notre équipe produit.\n\n### Missions\n- Construire des interfaces React performantes\n- Collaborer avec le design system\n- Participer aux revues de code\n\n### Stack\nReact, TypeScript, Vite, GraphQL\n\n### Profil\n5+ ans d'expérience, maîtrise de TypeScript et des tests unitaires.`,
+  },
+  {
+    id: 2,
+    title: 'AI Platform Engineer',
+    company: 'Vercel',
+    location: 'Remote',
+    source: 'indeed',
+    is_remote: true,
+    job_type: 'fulltime',
+    salary_min: 95000, salary_max: 140000, salary_currency: 'EUR',
+    ai_score: 92,
+    status: 'new',
+    published_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 1800000).toISOString(),
+    url: 'https://vercel.com/jobs/2',
+    description: `## AI Platform Engineer — Vercel\n\nRejoignez l'équipe IA de Vercel pour construire la prochaine génération d'outils de développement.\n\n### Missions\n- Intégrer des LLMs dans la plateforme\n- Construire des APIs FastAPI haute disponibilité\n- Monitorer les pipelines d'inférence\n\n### Stack\nPython, FastAPI, LLM, Docker, Kubernetes`,
+  },
+  {
+    id: 3,
+    title: 'ML Infrastructure Developer',
+    company: 'HuggingFace',
+    location: 'Paris / Remote',
+    source: 'glassdoor',
+    is_remote: true,
+    job_type: 'fulltime',
+    salary_min: 80000, salary_max: 115000, salary_currency: 'EUR',
+    ai_score: 88,
+    status: 'to_apply',
+    published_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 7200000).toISOString(),
+    url: 'https://huggingface.co/jobs/3',
+    description: `## ML Infrastructure Developer — HuggingFace\n\nContribuez à l'infrastructure qui alimente les modèles open source les plus populaires du monde.\n\n### Stack\nOllama, Docker, Linux, Python, CUDA`,
+  },
+  {
+    id: 4,
+    title: 'Backend Python Engineer',
+    company: 'Scaleway',
+    location: 'Paris',
+    source: 'linkedin',
+    is_remote: false,
+    job_type: 'fulltime',
+    salary_min: 70000, salary_max: 100000, salary_currency: 'EUR',
+    ai_score: 85,
+    status: 'to_apply',
+    published_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 10800000).toISOString(),
+    url: 'https://scaleway.com/jobs/4',
+    description: `## Backend Python Engineer — Scaleway\n\nDéveloppez les APIs cloud de Scaleway en Python.\n\n### Stack\nPython, FastAPI, PostgreSQL, SQLAlchemy, Redis`,
+  },
+  {
+    id: 5,
+    title: 'DevOps / SRE Engineer',
+    company: 'OVHcloud',
+    location: 'Lyon / Remote',
+    source: 'glassdoor',
+    is_remote: true,
+    job_type: 'fulltime',
+    salary_min: 65000, salary_max: 95000, salary_currency: 'EUR',
+    ai_score: 83,
+    status: 'applied',
+    published_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 14400000).toISOString(),
+    url: 'https://ovhcloud.com/jobs/5',
+    description: `## DevOps / SRE Engineer — OVHcloud\n\nGarantissez la disponibilité et la performance de l'infrastructure cloud OVHcloud.\n\n### Stack\nLinux, KVM, Ansible, Terraform, Prometheus, Grafana`,
+  },
+  {
+    id: 6,
+    title: 'Developer Advocate – AI',
+    company: 'Mistral AI',
+    location: 'Paris',
+    source: 'indeed',
+    is_remote: false,
+    job_type: 'fulltime',
+    salary_min: 75000, salary_max: 110000, salary_currency: 'EUR',
+    ai_score: 81,
+    status: 'interview',
+    published_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 3600000).toISOString(),
+    url: 'https://mistral.ai/jobs/6',
+    description: `## Developer Advocate – AI — Mistral AI\n\nÉvangélisez les LLMs open source de Mistral auprès de la communauté technique.\n\n### Profil\nExpérience LLM, React, Python, bonne aisance à l'écrit et en conférence.`,
+  },
+  {
+    id: 7,
+    title: 'Tech Lead React',
+    company: 'BlaBlaCar',
+    location: 'Paris',
+    source: 'linkedin',
+    is_remote: false,
+    job_type: 'fulltime',
+    salary_min: 85000, salary_max: 120000, salary_currency: 'EUR',
+    ai_score: 79,
+    status: 'new',
+    published_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 18000000).toISOString(),
+    url: 'https://blablacar.com/jobs/7',
+    description: `## Tech Lead React — BlaBlaCar\n\nLeadez une équipe frontend de 5 développeurs sur la plateforme principale.\n\n### Stack\nReact, TypeScript, GraphQL, Jest, Storybook`,
+  },
+  {
+    id: 8,
+    title: 'Fullstack JS Developer',
+    company: 'Deezer',
+    location: 'Paris',
+    source: 'indeed',
+    is_remote: false,
+    job_type: 'fulltime',
+    salary_min: 55000, salary_max: 75000, salary_currency: 'EUR',
+    ai_score: 62,
+    status: 'rejected',
+    published_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+    scraped_at: new Date(Date.now() - 86400000).toISOString(),
+    url: 'https://deezer.com/jobs/8',
+    description: `## Fullstack JS Developer — Deezer\n\nDéveloppez les fonctionnalités de la plateforme musicale Deezer.\n\n### Stack\nReact, Node.js, PostgreSQL, Redis`,
+  },
+]

@@ -1,0 +1,39 @@
+# ── Web framework ────────────────────────────────────────────
+fastapi==0.115.0
+uvicorn==0.30.6          # sans [standard] : évite uvloop/httptools sur Python 3.13
+
+# ── ORM & base de données ────────────────────────────────────
+# greenlet>=3.1.0 requis pour Python 3.13 (3.0.x ne compile pas)
+greenlet>=3.1.0
+sqlalchemy==2.0.35
+aiosqlite==0.20.0
+alembic==1.13.3
+
+# ── Validation & settings ────────────────────────────────────
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# ── Scraping ─────────────────────────────────────────────────
+python-jobspy>=1.1.80
+beautifulsoup4==4.12.3
+httpx==0.27.2
+fake-useragent==1.5.1
+# playwright : optionnel, installer séparément si nécessaire
+# pip install playwright && playwright install chromium
+
+# ── IA locale (Ollama) ───────────────────────────────────────
+ollama==0.3.3
+
+# ── Parsing PDF / CV ─────────────────────────────────────────
+pymupdf>=1.24.11
+python-multipart==0.0.12
+
+# ── Tâches asynchrones ───────────────────────────────────────
+# celery 5.4.1+ améliore le support Python 3.13
+celery>=5.4.1
+redis==5.1.1
+
+# ── Utilitaires ──────────────────────────────────────────────
+python-dotenv==1.0.1
+tenacity==9.0.0
+loguru==0.7.2

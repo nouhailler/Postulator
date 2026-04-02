@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Postulator | System Logs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-low": "#131b2e",
+              "primary-container": "#00a7e0",
+              "inverse-primary": "#00668a",
+              "outline-variant": "#3e4850",
+              "tertiary-fixed": "#62fae3",
+              "secondary-fixed-dim": "#b9c8de",
+              "surface-container-lowest": "#060e20",
+              "secondary-container": "#39485a",
+              "surface-bright": "#31394d",
+              "on-tertiary-container": "#003b34",
+              "on-background": "#dae2fd",
+              "tertiary-container": "#00af9d",
+              "primary-fixed-dim": "#7bd0ff",
+              "surface-container-highest": "#2d3449",
+              "secondary-fixed": "#d4e4fa",
+              "secondary": "#b9c8de",
+              "surface-dim": "#0b1326",
+              "on-secondary-fixed-variant": "#39485a",
+              "on-error": "#690005",
+              "primary-fixed": "#c4e7ff",
+              "tertiary": "#3cddc7",
+              "on-tertiary-fixed": "#00201c",
+              "on-error-container": "#ffdad6",
+              "surface-tint": "#7bd0ff",
+              "on-primary-fixed-variant": "#004c69",
+              "error": "#ffb4ab",
+              "inverse-surface": "#dae2fd",
+              "surface-container-high": "#222a3d",
+              "on-secondary-container": "#a7b6cc",
+              "on-secondary-fixed": "#0d1c2d",
+              "surface": "#0b1326",
+              "on-secondary": "#233143",
+              "on-primary-container": "#00374d",
+              "on-primary-fixed": "#001e2c",
+              "error-container": "#93000a",
+              "on-surface": "#dae2fd",
+              "surface-container": "#171f33",
+              "on-surface-variant": "#bec8d2",
+              "on-primary": "#00354a",
+              "outline": "#88929b",
+              "tertiary-fixed-dim": "#3cddc7",
+              "background": "#0b1326",
+              "primary": "#7bd0ff",
+              "surface-variant": "#2d3449",
+              "inverse-on-surface": "#283044",
+              "on-tertiary-fixed-variant": "#005047",
+              "on-tertiary": "#003731"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0b1326;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2d3449;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface min-h-screen selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full z-40 bg-[#0b1326] dark:bg-[#0b1326] h-screen w-64 flex flex-col border-r border-white/5 font-['Inter'] text-sm font-medium">
+<div class="px-6 py-8">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</div>
+<div>
+<h1 class="text-[#7bd0ff] font-black tracking-widest uppercase">Postulator</h1>
+<p class="text-[10px] text-outline tracking-wider">v2.4.0-stable</p>
+</div>
+</div>
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-bold py-2.5 rounded-xl mb-8 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Instance
+            </button>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all hover:translate-x-1 duration-150 rounded" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+                    Dashboard
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-[#7bd0ff]/10 to-transparent text-[#7bd0ff] border-l-2 border-[#7bd0ff] transition-all hover:translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">segment</span>
+                    Logs
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all hover:translate-x-1 duration-150 rounded" href="#">
+<span class="material-symbols-outlined text-lg">terminal</span>
+                    Terminals
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all hover:translate-x-1 duration-150 rounded" href="#">
+<span class="material-symbols-outlined text-lg">rocket_launch</span>
+                    Deployments
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all hover:translate-x-1 duration-150 rounded" href="#">
+<span class="material-symbols-outlined text-lg">hub</span>
+                    Network
+                </a>
+</nav>
+</div>
+<div class="mt-auto px-6 py-8 border-t border-white/5 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-lg">menu_book</span>
+                Docs
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-lg">help_outline</span>
+                Support
+            </a>
+</div>
+</aside>
+<!-- Main Workspace -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopAppBar (Shared Component) -->
+<header class="bg-[#0b1326] dark:bg-[#0b1326] flex justify-between items-center w-full px-8 py-4 border-b border-slate-800/50 font-['Manrope'] tracking-tight antialiased">
+<div class="flex items-center gap-6">
+<h2 class="text-xl font-bold tracking-tighter text-sky-400 dark:text-sky-300">System Logs</h2>
+<div class="h-4 w-px bg-slate-800"></div>
+<div class="flex items-center gap-2 text-sm text-slate-400">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+                    Live Streaming
+                </div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant/10">
+<span class="material-symbols-outlined text-outline text-sm mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-on-surface w-48 placeholder:text-outline/50" placeholder="Search logs..." type="text"/>
+</div>
+<div class="flex gap-1">
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 transition-colors duration-200 rounded active:scale-95">
+<span class="material-symbols-outlined">terminal</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 transition-colors duration-200 rounded active:scale-95">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-2 text-slate-400 hover:bg-slate-800/50 transition-colors duration-200 rounded active:scale-95 relative">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-[#0b1326]"></span>
+</button>
+</div>
+<div class="ml-4 w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+<img alt="Developer Profile" class="w-full h-full object-cover" data-alt="Close up portrait of a software engineer with professional lighting and minimalist background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDLyx5R2cTj7rPGwjkNxaaNx3tHBQ4ErwZY7p-jRJ0m-VclEK_eAoF0PR53tb8bTkulrHk6BWN-kvAX-SobliRP06fWxV7f8oc6EcOmH1uAXqMVzj80SgAbwB3Rq-ouif32W32fcaowB2oBygyLka28TlmEArU-_U8bttyYZajbbJ6HmHcD5-h8pBvRAbHEm__qTCREdtK5ppPEcqigghvxi96grpv9_GUJ7t4N1PRgJNSAG0KA914mJRJdsaInh0D5wYgl224OKg4q"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
+<!-- Statistics Bento Header -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-primary relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-8xl">speed</span>
+</div>
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Logs / Minute</p>
+<h3 class="text-3xl font-black text-primary">1,284</h3>
+<div class="mt-2 flex items-center gap-1 text-[10px] text-tertiary">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>+12% from last hour</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-error relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-8xl">warning</span>
+</div>
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Error Rate</p>
+<h3 class="text-3xl font-black text-error">0.04%</h3>
+<div class="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+<span class="material-symbols-outlined text-xs">video_stable</span>
+<span>Within threshold</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-tertiary relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-8xl">engineering</span>
+</div>
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Active Workers</p>
+<h3 class="text-3xl font-black text-tertiary">14</h3>
+<div class="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+<span class="material-symbols-outlined text-xs">check_circle</span>
+<span>All systems operational</span>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl border-l-4 border-outline relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 opacity-10">
+<span class="material-symbols-outlined text-8xl">storage</span>
+</div>
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Storage used</p>
+<h3 class="text-3xl font-black text-on-surface">4.2 GB</h3>
+<div class="mt-2 flex items-center gap-1 text-[10px] text-slate-400">
+<span class="material-symbols-outlined text-xs">schedule</span>
+<span>Retention: 30 days</span>
+</div>
+</div>
+</div>
+<!-- Terminal Controls & Filtering -->
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-outline uppercase tracking-widest mr-2">Filter Level:</span>
+<button class="px-3 py-1 rounded bg-error-container text-on-error-container text-[11px] font-bold border border-error/20">ERROR</button>
+<button class="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-[11px] font-bold opacity-50 hover:opacity-100 transition-opacity">WARNING</button>
+<button class="px-3 py-1 rounded bg-primary-container/20 text-primary text-[11px] font-bold">INFO</button>
+<button class="px-3 py-1 rounded bg-tertiary/10 text-tertiary text-[11px] font-bold opacity-50 hover:opacity-100 transition-opacity">DEBUG</button>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-outline uppercase tracking-widest mr-2">Source:</span>
+<select class="bg-surface-container-highest border-none text-[11px] font-bold text-on-surface rounded focus:ring-1 focus:ring-primary py-1 pr-8">
+<option>All Sources</option>
+<option>[Scraper-LinkedIn]</option>
+<option>[Ollama-Analysis]</option>
+<option>[Scheduler]</option>
+<option>[Proxy-Rotator]</option>
+</select>
+<div class="h-6 w-px bg-slate-800 mx-2"></div>
+<button class="flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-high hover:bg-surface-bright transition-colors text-[11px] font-bold text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-sm">download</span>
+                        Export Logs
+                    </button>
+<button class="flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-high hover:bg-surface-bright transition-colors text-[11px] font-bold text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-sm">delete_sweep</span>
+                        Clear Terminal
+                    </button>
+</div>
+</div>
+<!-- Terminal Window -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 shadow-2xl flex flex-col h-[600px] overflow-hidden">
+<!-- Terminal Header -->
+<div class="bg-surface-container-highest px-4 py-2 flex items-center justify-between border-b border-white/5">
+<div class="flex items-center gap-2">
+<div class="flex gap-1.5 mr-4">
+<div class="w-3 h-3 rounded-full bg-error/40"></div>
+<div class="w-3 h-3 rounded-full bg-tertiary/40"></div>
+<div class="w-3 h-3 rounded-full bg-primary/40"></div>
+</div>
+<span class="material-symbols-outlined text-sm text-outline">terminal</span>
+<span class="text-[11px] font-mono text-outline uppercase tracking-widest">system_monitor.sh — postulator-node-01</span>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-mono text-outline">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary"></span> Connected</span>
+<span>Encoding: UTF-8</span>
+</div>
+</div>
+<!-- Terminal Content -->
+<div class="flex-1 p-6 font-mono text-sm leading-relaxed overflow-y-auto custom-scrollbar bg-slate-950/50 backdrop-blur-sm">
+<div class="space-y-1">
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:01.442</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Scheduler]</span>
+<span class="text-on-surface">Initiating daily job synchronization routine...</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:01.891</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Proxy-Rotator]</span>
+<span class="text-on-surface">Switched to node <span class="underline underline-offset-2 decoration-primary/40">us-east-41.proxy-mesh.net</span> (Latency: 42ms)</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:02.102</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Scraper-LinkedIn]</span>
+<span class="text-on-surface">Started extraction for query: <span class="text-secondary">"Senior Rust Engineer"</span></span>
+</div>
+<div class="flex gap-4 bg-error-container/10 border-l-2 border-error -mx-6 px-6 py-0.5">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:05.331</span>
+<span class="text-error font-bold w-16 shrink-0">ERROR</span>
+<span class="text-tertiary shrink-0">[Ollama-Analysis]</span>
+<span class="text-on-error-container">Model response timeout after 30s. Retrying connection...</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:06.002</span>
+<span class="text-tertiary-fixed-dim font-bold w-16 shrink-0">DEBUG</span>
+<span class="text-tertiary shrink-0">[Scheduler]</span>
+<span class="text-slate-400 italic">Queue depth: 142 items. Priority: HIGH.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:10.119</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Scraper-LinkedIn]</span>
+<span class="text-on-surface">Successfully parsed 12 new listings from LinkedIn Talent Hub.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:11.442</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Ollama-Analysis]</span>
+<span class="text-on-surface">Vector embedding completed for JobID: <span class="text-primary-fixed-dim">#RU-9921</span></span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:15.901</span>
+<span class="text-secondary-fixed-dim font-bold w-16 shrink-0">WARN</span>
+<span class="text-tertiary shrink-0">[Proxy-Rotator]</span>
+<span class="text-on-secondary-container">High failure rate detected on <span class="text-error">eu-west-19</span>. Blacklisting for 10 minutes.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:18.221</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Scheduler]</span>
+<span class="text-on-surface">Auto-scaling group: increased worker count to 16.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:20.102</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Scraper-LinkedIn]</span>
+<span class="text-on-surface">Extraction complete. Total results: 48. Cooldown initiated.</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600 shrink-0">2023-10-24 14:22:21.442</span>
+<span class="text-primary font-bold w-16 shrink-0">INFO</span>
+<span class="text-tertiary shrink-0">[Scheduler]</span>
+<span class="text-on-surface">Database commit successful. Shard #04 updated.</span>
+</div>
+<!-- Blinking Cursor Simulation -->
+<div class="flex gap-4 mt-4">
+<span class="text-primary font-bold">&gt;</span>
+<span class="w-2 h-5 bg-primary/80 animate-pulse"></span>
+</div>
+</div>
+</div>
+<!-- Terminal Footer -->
+<div class="bg-surface-container-highest px-6 py-3 flex items-center justify-between text-[11px] font-mono text-outline/70">
+<div class="flex gap-6">
+<span>Lines: 1042</span>
+<span>Buffer: 85%</span>
+<span>Auto-scroll: ON</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">memory</span>
+<span>Mem: 421MB / 2048MB</span>
+</div>
+</div>
+</div>
+<!-- Footer Analysis Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-2 bg-surface-container-low rounded-xl p-6 relative">
+<div class="flex items-center justify-between mb-6">
+<h4 class="font-headline font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary">query_stats</span>
+                            AI Pattern Recognition
+                        </h4>
+<span class="px-2 py-1 bg-tertiary/10 text-tertiary text-[10px] font-bold rounded">LIVE ANALYSIS</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-start gap-4 p-4 bg-surface-container-highest rounded-lg border-l-2 border-tertiary">
+<span class="material-symbols-outlined text-tertiary mt-1">auto_awesome</span>
+<div>
+<p class="text-sm font-medium text-on-surface">Anomaly Detected: Proxy Latency Spike</p>
+<p class="text-xs text-outline mt-1">System suggests switching to 'Aggressive Rotation' mode to maintain scraping throughput in the EU region.</p>
+<button class="mt-3 text-[11px] font-bold text-tertiary hover:underline uppercase tracking-tight">Apply Optimization</button>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 bg-surface-container-highest/50 rounded-lg border-l-2 border-primary/40">
+<span class="material-symbols-outlined text-primary mt-1">info</span>
+<div>
+<p class="text-sm font-medium text-on-surface">Performance Insight: Scheduler Efficiency</p>
+<p class="text-xs text-outline mt-1">Batch processing is currently 14% faster than the previous 24h average. No action required.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-6">
+<h4 class="font-headline font-bold text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">hub</span>
+                        Source Health
+                    </h4>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#3cddc7]"></div>
+<span class="text-xs text-on-surface font-mono">[Scraper-LinkedIn]</span>
+</div>
+<span class="text-[10px] font-bold text-outline uppercase tracking-tighter">99.2% Up</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#3cddc7]"></div>
+<span class="text-xs text-on-surface font-mono">[Scheduler]</span>
+</div>
+<span class="text-[10px] font-bold text-outline uppercase tracking-tighter">100% Up</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-error animate-pulse shadow-[0_0_8px_#ffb4ab]"></div>
+<span class="text-xs text-on-surface font-mono">[Ollama-Analysis]</span>
+</div>
+<span class="text-[10px] font-bold text-error uppercase tracking-tighter">RETRIYING</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#3cddc7]"></div>
+<span class="text-xs text-on-surface font-mono">[Proxy-Rotator]</span>
+</div>
+<span class="text-[10px] font-bold text-outline uppercase tracking-tighter">94.8% Up</span>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-white/5">
+<p class="text-[10px] font-bold text-outline uppercase tracking-widest mb-3">Overall Reliability</p>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-tertiary" style="width: 88%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB - Suppression Rule applied for Details/Settings, but this is a Dashboard-like view, so we provide a quick action -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary rounded-full shadow-2xl flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</button>
+</body></html>

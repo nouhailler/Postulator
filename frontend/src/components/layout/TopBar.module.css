@@ -1,0 +1,48 @@
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  height: var(--topbar-height);
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+  position: sticky; top: 0; z-index: 100;
+}
+.left { display: flex; align-items: center; gap: 32px; }
+.logo { font-family: var(--font-headline); font-size: 20px; font-weight: 800; color: var(--primary); letter-spacing: -0.03em; cursor: default; user-select: none; }
+.nav  { display: flex; gap: 24px; }
+.navLink { font-family: var(--font-headline); font-size: 13px; font-weight: 500; color: var(--outline); text-decoration: none; padding-bottom: 3px; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; letter-spacing: -0.01em; }
+.navLink:hover { color: var(--on-surface); }
+.navLink.active { color: var(--on-surface); border-bottom-color: var(--primary); }
+.right { display: flex; align-items: center; gap: 10px; }
+
+/* Boutons icône */
+.iconBtn {
+  position: relative; background: none; border: none; color: var(--outline);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: var(--radius-md);
+  transition: color 0.15s, background 0.15s;
+}
+.iconBtn:hover    { color: var(--primary); background: rgba(123,208,255,0.07); }
+.iconBtnActive    { color: var(--primary) !important; background: rgba(123,208,255,0.1) !important; }
+
+/* Point de notification */
+.notifDot {
+  position: absolute; top: 5px; right: 5px;
+  width: 7px; height: 7px;
+  background: var(--tertiary); border-radius: 50%;
+  border: 1.5px solid var(--surface);
+}
+
+/* Avatar */
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--tertiary));
+  color: var(--on-primary); font-family: var(--font-headline);
+  font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; user-select: none; flex-shrink: 0;
+  transition: box-shadow 0.15s, transform 0.1s;
+  border: 2px solid transparent;
+}
+.avatar:hover  { transform: scale(1.05); }
+.avatarActive  { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(123,208,255,0.2); }

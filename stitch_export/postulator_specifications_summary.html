@@ -1,0 +1,30 @@
+# Projet Postulator - Cahier des Charges
+
+## 1. Présentation du Projet
+**Nom :** Postulator  
+**Type :** Application Web Open Source (Self-hosted)  
+**Objectif :** Centraliser, analyser et gérer la recherche d'emploi via une agrégation multi-sources, enrichie par l'IA locale, tout en respectant la vie privée de l'utilisateur.  
+**Public Cible :** Chercheurs d'emploi techniques, développeurs, recruteurs indépendants.
+
+## 2. Architecture Technique
+### 2.1. Stack Technologique
+*   **Backend :** Python 3.10+ (FastAPI or Flask)
+*   **Scraping :** python-jobspy, BeautifulSoup4, Playwright
+*   **IA / LLM :** Ollama (Llama3, Mistral)
+*   **Frontend :** React.js (Vite), Tailwind CSS or Material UI
+*   **Database :** SQLite, SQLAlchemy
+
+## 3. Spécifications Fonctionnelles
+### 3.1. Module de Recherche & Agrégation
+*   **Sources :** Indeed, LinkedIn, Glassdoor, ZipRecruiter, Wellfound, ActivityPub (Mastodon/Bluesky).
+*   **Critères :** Mots-clés, Localisation, Contrat, Expérience, Salaire, Stack Technique.
+
+### 3.2. Gestion des Proxies & Anti-Blocage
+*   Proxies résidentiels, rotation d'IP, délais aléatoires, gestion des CAPTCHAs.
+
+### 3.3. Module IA & Analyse de CV (Ollama)
+*   Multi-CV management, Skills Extraction, Scoring (0-100), Points forts/faibles.
+
+### 3.4. Tableau de Bord & Suivi
+*   Dashboard avec graphiques, Vue Kanban (À voir, Postulé, Entretien, etc.), Alertes (SMTP/Webhook).
+*   Intégration ATS & Export (JSON Resume).

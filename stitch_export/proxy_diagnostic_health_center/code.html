@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Postulator - Proxy Diagnostic &amp; Health Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary-container": "#003b34",
+                        "tertiary": "#3cddc7",
+                        "surface-variant": "#2d3449",
+                        "outline-variant": "#3e4850",
+                        "error": "#ffb4ab",
+                        "inverse-surface": "#dae2fd",
+                        "on-primary-container": "#00374d",
+                        "on-primary": "#00354a",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-high": "#222a3d",
+                        "surface-container-highest": "#2d3449",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#00201c",
+                        "on-error": "#690005",
+                        "secondary-fixed-dim": "#b9c8de",
+                        "primary-fixed-dim": "#7bd0ff",
+                        "primary-container": "#00a7e0",
+                        "surface-tint": "#7bd0ff",
+                        "on-secondary-fixed": "#0d1c2d",
+                        "secondary": "#b9c8de",
+                        "surface-container-lowest": "#060e20",
+                        "on-secondary": "#233143",
+                        "inverse-primary": "#00668a",
+                        "surface": "#0b1326",
+                        "secondary-container": "#39485a",
+                        "inverse-on-surface": "#283044",
+                        "on-primary-fixed": "#001e2c",
+                        "surface-dim": "#0b1326",
+                        "on-primary-fixed-variant": "#004c69",
+                        "on-secondary-container": "#a7b6cc",
+                        "secondary-fixed": "#d4e4fa",
+                        "on-background": "#dae2fd",
+                        "background": "#0b1326",
+                        "on-surface": "#dae2fd",
+                        "tertiary-fixed-dim": "#3cddc7",
+                        "tertiary-container": "#00af9d",
+                        "on-tertiary": "#003731",
+                        "primary-fixed": "#c4e7ff",
+                        "on-tertiary-fixed-variant": "#005047",
+                        "primary": "#7bd0ff",
+                        "on-surface-variant": "#bec8d2",
+                        "surface-container-low": "#131b2e",
+                        "on-secondary-fixed-variant": "#39485a",
+                        "surface-bright": "#31394d",
+                        "surface-container": "#171f33",
+                        "outline": "#88929b",
+                        "tertiary-fixed": "#62fae3"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3e4850; border-radius: 10px; }
+        .terminal-glow { text-shadow: 0 0 8px rgba(123, 208, 255, 0.4); }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-[#0b1326] shadow-[0_32px_32px_rgba(0,0,0,0.04)] flex justify-between items-center px-6 h-16 w-full">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-sky-400 font-headline">Postulator</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-slate-400 font-manrope tracking-tight hover:text-sky-300 transition-colors" href="#">Network</a>
+<a class="text-slate-400 font-manrope tracking-tight hover:text-sky-300 transition-colors" href="#">Security</a>
+<a class="text-sky-400 border-b-2 border-sky-400 pb-1 font-manrope tracking-tight hover:text-sky-300 transition-colors" href="#">Logs</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-sky-300 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-slate-400 hover:text-sky-300 transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="close-up professional headshot of a developer in a dark studio setting with teal and blue rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMQNSNZfrGfbTfRqyPtGHH_EpC5iP0-Kqv4250o7g211HD7aEPZGds5pizCFwGRM5FW5LFzjFVhawIAdBR60s5e3ejfqTEZpnTY5465wmuR6-hZvHySIkhQOd6har0fbqGtgYqKA-ozOlFuoupB9JK6U6pSlOi_4qnBwWB9PccAvPnYkizYtMSujn7-AzDqu3MpzaiKEUiMHfLsIGTg1n7nRTHypJegBlOi58zhAb6jUF1wEXWQyMbl9QzlqnT_R8DQnKcvZr2cdtA"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-16 bg-[#0b1326] border-r border-slate-800/15 hidden md:flex flex-col gap-2 p-4">
+<div class="mb-6 px-2 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">terminal</span>
+</div>
+<div>
+<p class="font-manrope text-sm font-bold text-on-surface">The Architect</p>
+<p class="text-[10px] text-outline uppercase tracking-widest">Sovereign Node</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all rounded-lg font-manrope text-sm font-medium active:translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all rounded-lg font-manrope text-sm font-medium active:translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined">monitor_heart</span> Proxy Health
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-sky-400 bg-sky-400/10 rounded-lg font-manrope text-sm font-medium active:translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined">biotech</span> Diagnostics
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all rounded-lg font-manrope text-sm font-medium active:translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined">speed</span> Latency
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all rounded-lg font-manrope text-sm font-medium active:translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+            </a>
+</nav>
+<button class="mt-4 bg-gradient-to-br from-primary to-primary-container text-on-primary px-4 py-2 rounded-xl text-sm font-bold font-headline transition-transform active:scale-95 shadow-lg shadow-primary/20">
+            New Diagnostic
+        </button>
+<div class="mt-auto border-t border-outline-variant/10 pt-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all rounded-lg font-manrope text-sm font-medium" href="#">
+<span class="material-symbols-outlined">help</span> Support
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-all rounded-lg font-manrope text-sm font-medium" href="#">
+<span class="material-symbols-outlined">logout</span> Sign Out
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="md:ml-64 pt-20 p-6 min-h-screen">
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
+<div>
+<h1 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Proxy Diagnostic &amp; Health</h1>
+<p class="text-on-surface-variant body-sm mt-1">Real-time status of sovereign network nodes across global regions.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="px-3 py-1 bg-surface-container rounded-full border border-outline-variant/20 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="text-xs font-medium text-tertiary font-label uppercase tracking-wider">Live Monitoring</span>
+</div>
+<button class="bg-surface-container-high border border-outline-variant/30 px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                        Test All Proxies
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Regional Health Summary (Left Column) -->
+<div class="md:col-span-8 space-y-6">
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<!-- US-EAST -->
+<div class="bg-surface-container-low p-5 rounded-xl border-l-4 border-primary group hover:bg-surface-container transition-colors">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Region</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">public</span>
+</div>
+<h3 class="text-lg font-bold font-headline mb-1">US-EAST</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold text-on-surface">99.2<span class="text-sm font-normal text-outline-variant">%</span></span>
+<span class="text-[10px] font-medium text-tertiary flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">arrow_drop_up</span> 0.4%
+                                </span>
+</div>
+<div class="mt-4 flex items-center justify-between text-[11px] text-on-surface-variant font-label">
+<span>Latency</span>
+<span class="text-primary font-bold">24ms avg</span>
+</div>
+</div>
+<!-- EU-WEST -->
+<div class="bg-surface-container-low p-5 rounded-xl border-l-4 border-tertiary group hover:bg-surface-container transition-colors">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Region</span>
+<span class="material-symbols-outlined text-tertiary group-hover:scale-110 transition-transform">cloud_done</span>
+</div>
+<h3 class="text-lg font-bold font-headline mb-1">EU-WEST</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold text-on-surface">98.5<span class="text-sm font-normal text-outline-variant">%</span></span>
+<span class="text-[10px] font-medium text-error flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">arrow_drop_down</span> 1.2%
+                                </span>
+</div>
+<div class="mt-4 flex items-center justify-between text-[11px] text-on-surface-variant font-label">
+<span>Latency</span>
+<span class="text-tertiary font-bold">42ms avg</span>
+</div>
+</div>
+<!-- ASIA-SOUTH -->
+<div class="bg-surface-container-low p-5 rounded-xl border-l-4 border-outline group hover:bg-surface-container transition-colors">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Region</span>
+<span class="material-symbols-outlined text-outline group-hover:scale-110 transition-transform">settings_input_antenna</span>
+</div>
+<h3 class="text-lg font-bold font-headline mb-1">ASIA-SOUTH</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold text-on-surface">94.1<span class="text-sm font-normal text-outline-variant">%</span></span>
+<span class="text-[10px] font-medium text-tertiary flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">arrow_drop_up</span> 2.1%
+                                </span>
+</div>
+<div class="mt-4 flex items-center justify-between text-[11px] text-on-surface-variant font-label">
+<span>Latency</span>
+<span class="text-on-surface font-bold">118ms avg</span>
+</div>
+</div>
+</div>
+<!-- Diagnostic Terminal -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-hidden">
+<div class="bg-surface-container flex items-center justify-between px-4 py-2 border-b border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="flex gap-1.5">
+<div class="w-2.5 h-2.5 rounded-full bg-error/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-tertiary/40"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-primary/40"></div>
+</div>
+<span class="text-[11px] font-bold font-headline text-outline uppercase tracking-widest">Diagnostic Terminal</span>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-medium text-outline">
+<span>PID: 44021</span>
+<span>THREAD: SOVEREIGN_01</span>
+</div>
+</div>
+<div class="p-4 font-mono text-[13px] h-80 overflow-y-auto space-y-1.5 terminal-glow">
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:01]</span>
+<span class="text-tertiary shrink-0">BOOT</span>
+<span class="text-on-surface-variant">Initializing multi-region diagnostic probe...</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:02]</span>
+<span class="text-primary shrink-0">INFO</span>
+<span class="text-on-surface-variant">Testing IP <span class="text-primary">192.168.1.104</span> (US-East-1) - Protocol: HTTP/2</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:03]</span>
+<span class="text-tertiary shrink-0">PASS</span>
+<span class="text-on-surface-variant">Response: <span class="text-tertiary">200 OK</span> | Latency: <span class="text-tertiary font-bold">14ms</span> | TLS 1.3 Handshake Success</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:05]</span>
+<span class="text-primary shrink-0">INFO</span>
+<span class="text-on-surface-variant">Testing IP <span class="text-primary">45.23.112.90</span> (EU-West-2) - Protocol: SOCKS5</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:06]</span>
+<span class="text-tertiary shrink-0">PASS</span>
+<span class="text-on-surface-variant">Response: <span class="text-tertiary">Connected</span> | Latency: <span class="text-tertiary font-bold">38ms</span> | Handshake Success</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:08]</span>
+<span class="text-error shrink-0">WARN</span>
+<span class="text-on-surface-variant">Testing IP <span class="text-error">103.21.14.55</span> (Asia-South-1) - Connection Timeout</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:12]</span>
+<span class="text-primary shrink-0">INFO</span>
+<span class="text-on-surface-variant">Retrying Asia-South-1 Node... Attempt 2/3</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:15]</span>
+<span class="text-tertiary shrink-0">PASS</span>
+<span class="text-on-surface-variant">Response: <span class="text-tertiary">200 OK</span> | Latency: <span class="text-tertiary font-bold">242ms</span> | Tunnel Established</span>
+</div>
+<div class="flex gap-4">
+<span class="text-outline shrink-0">[14:22:18]</span>
+<span class="text-primary shrink-0">INFO</span>
+<span class="text-on-surface-variant">Running Success Rate calculation for 142 total nodes...</span>
+</div>
+<div class="flex gap-4 animate-pulse">
+<span class="text-outline shrink-0">[14:22:20]</span>
+<span class="text-primary shrink-0">EXEC</span>
+<span class="text-on-surface-variant">Streaming regional health metrics... _</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Metrics Panel (Right Column) -->
+<div class="md:col-span-4 space-y-6">
+<!-- Success Rate Donut -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10 relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+<h3 class="text-sm font-bold font-headline mb-6 tracking-tight flex items-center gap-2">
+                            Success Rate
+                            <span class="material-symbols-outlined text-xs text-tertiary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</h3>
+<div class="relative flex justify-center py-4">
+<!-- SVG Donut Placeholder -->
+<svg class="w-40 h-40 transform -rotate-90">
+<circle class="text-surface-container-highest" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary drop-shadow-[0_0_8px_rgba(123,208,255,0.4)]" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="35" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-extrabold text-on-surface">96.8<span class="text-sm">%</span></span>
+<span class="text-[10px] text-outline font-label uppercase">Aggregate</span>
+</div>
+</div>
+<div class="mt-6 flex justify-between gap-4">
+<div class="text-center flex-1">
+<p class="text-[10px] text-outline font-label uppercase">Failed</p>
+<p class="text-lg font-bold text-error">4</p>
+</div>
+<div class="text-center flex-1 border-x border-outline-variant/10">
+<p class="text-[10px] text-outline font-label uppercase">Warn</p>
+<p class="text-lg font-bold text-on-surface">12</p>
+</div>
+<div class="text-center flex-1">
+<p class="text-[10px] text-outline font-label uppercase">Passed</p>
+<p class="text-lg font-bold text-tertiary">126</p>
+</div>
+</div>
+</div>
+<!-- Proxy Type Distribution -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<h3 class="text-sm font-bold font-headline mb-6 tracking-tight flex items-center gap-2">
+                            Type Distribution
+                            <span class="material-symbols-outlined text-xs text-outline">data_usage</span>
+</h3>
+<div class="space-y-4">
+<!-- Residential -->
+<div class="space-y-2">
+<div class="flex justify-between items-center text-xs">
+<span class="font-medium text-on-surface">Residential</span>
+<span class="text-outline">65%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<!-- Datacenter -->
+<div class="space-y-2">
+<div class="flex justify-between items-center text-xs">
+<span class="font-medium text-on-surface">Datacenter</span>
+<span class="text-outline">35%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-tertiary to-tertiary-container rounded-full" style="width: 35%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 bg-surface-container rounded-lg border border-outline-variant/5">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-tertiary">insights</span>
+<div>
+<p class="text-[11px] font-bold text-tertiary font-headline uppercase tracking-wider mb-1">AI Recommendation</p>
+<p class="text-[12px] leading-relaxed text-on-surface-variant">Switch to Residential nodes for EU-WEST requests to reduce blockage risk by 22%.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Map/Visual Insight -->
+<div class="bg-surface-container-low rounded-xl border border-outline-variant/10 overflow-hidden h-40 group relative">
+<img alt="Global network nodes map" class="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-60 transition-all duration-500" data-alt="abstract dark world map with glowing blue network connections and node points on a grid background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnFxFjUO5L8mv5kHNcbOCDsQKyMgmKSxWNRXMLSdfE9ZpbSWDd39K9L812nYWMncJpoWJJgjvB3yUqC8CMYlpj6Bs72X3chvj5VVnwUVL3Tzm6DxxXfc-0QvGpEK7dWXZ2Fu7lNWhWP4tn_J6vUreX-J8pHJnotaY6Q7EDQV8GfMbePh9qDJHZN2hy9RxlNHXjZRwHyktukey2PiUDejsLQ2I2sNDrLkHLi-Rzn-2-qY32_RRmaug7G0Fz7HeZzPePF67cZrTwLUBl"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<p class="text-[10px] font-bold text-primary font-headline uppercase tracking-widest">Active Traffic</p>
+<p class="text-sm font-bold">142 Global Nodes</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Detailed Stats Table (Intentional Asymmetry) -->
+<div class="bg-surface-container p-6 rounded-xl border border-outline-variant/10">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xl font-bold font-headline">Node Registry</h2>
+<div class="flex gap-2">
+<div class="relative">
+<input class="bg-surface-container-lowest border-none focus:ring-1 focus:ring-primary rounded-lg text-xs py-1.5 pl-8 w-48 text-on-surface" placeholder="Search IP..." type="text"/>
+<span class="material-symbols-outlined absolute left-2 top-1.5 text-outline text-sm">search</span>
+</div>
+<button class="bg-surface-container-highest px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-surface-bright transition-colors">
+                            Filter
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-[11px] font-bold text-outline uppercase tracking-widest border-b border-outline-variant/10">
+<th class="pb-4 px-2">Status</th>
+<th class="pb-4 px-2">IP Address</th>
+<th class="pb-4 px-2">Region</th>
+<th class="pb-4 px-2">Provider</th>
+<th class="pb-4 px-2">Latency</th>
+<th class="pb-4 px-2 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-4 px-2">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-tertiary font-medium">Active</span>
+</span>
+</td>
+<td class="py-4 px-2 font-mono text-on-surface">192.168.1.104</td>
+<td class="py-4 px-2 text-on-surface-variant">US-East-1</td>
+<td class="py-4 px-2">
+<span class="px-2 py-0.5 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded">AWS</span>
+</td>
+<td class="py-4 px-2 text-on-surface">14ms</td>
+<td class="py-4 px-2 text-right">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-4 px-2 border-t border-outline-variant/5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-tertiary font-medium">Active</span>
+</span>
+</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 font-mono text-on-surface">45.23.112.90</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-on-surface-variant">EU-West-2</td>
+<td class="py-4 px-2 border-t border-outline-variant/5">
+<span class="px-2 py-0.5 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded">DIGITALOCEAN</span>
+</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-on-surface">38ms</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-right">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-4 px-2 border-t border-outline-variant/5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="text-error font-medium">Slow</span>
+</span>
+</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 font-mono text-on-surface">103.21.14.55</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-on-surface-variant">Asia-South-1</td>
+<td class="py-4 px-2 border-t border-outline-variant/5">
+<span class="px-2 py-0.5 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded">RESIDENTIAL_A</span>
+</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-error font-bold">242ms</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-right">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-surface-container-high transition-colors">
+<td class="py-4 px-2 border-t border-outline-variant/5">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-tertiary font-medium">Active</span>
+</span>
+</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 font-mono text-on-surface">182.204.1.22</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-on-surface-variant">US-East-2</td>
+<td class="py-4 px-2 border-t border-outline-variant/5">
+<span class="px-2 py-0.5 bg-secondary-container/30 text-secondary text-[10px] font-bold rounded">GCP</span>
+</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-on-surface">22ms</td>
+<td class="py-4 px-2 border-t border-outline-variant/5 text-right">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full bg-[#0b1326] flex justify-around items-center h-16 shadow-[0_-8px_24px_rgba(0,0,0,0.1)] z-50 px-4">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold uppercase">Dash</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-sky-400" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">biotech</span>
+<span class="text-[10px] font-bold uppercase">Diag</span>
+</a>
+<div class="-mt-8">
+<button class="bg-primary p-3 rounded-full text-on-primary shadow-lg shadow-primary/40">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">speed</span>
+<span class="text-[10px] font-bold uppercase">Perf</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase">User</span>
+</a>
+</nav>
+</body></html>

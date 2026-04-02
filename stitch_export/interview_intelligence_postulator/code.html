@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Postulator - Interview Command Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary-fixed-dim": "#7bd0ff",
+            "inverse-surface": "#dae2fd",
+            "on-tertiary-container": "#003b34",
+            "on-secondary-fixed": "#0d1c2d",
+            "tertiary-fixed-dim": "#3cddc7",
+            "error": "#ffb4ab",
+            "surface-container": "#171f33",
+            "background": "#0b1326",
+            "surface-container-low": "#131b2e",
+            "on-tertiary": "#003731",
+            "on-error-container": "#ffdad6",
+            "on-secondary-fixed-variant": "#39485a",
+            "secondary-fixed": "#d4e4fa",
+            "outline": "#88929b",
+            "surface-bright": "#31394d",
+            "on-secondary-container": "#a7b6cc",
+            "tertiary": "#3cddc7",
+            "on-primary-container": "#00374d",
+            "surface-container-highest": "#2d3449",
+            "surface-container-high": "#222a3d",
+            "surface-tint": "#7bd0ff",
+            "primary-fixed": "#c4e7ff",
+            "surface": "#0b1326",
+            "surface-dim": "#0b1326",
+            "secondary-container": "#39485a",
+            "on-surface-variant": "#bec8d2",
+            "on-tertiary-fixed-variant": "#005047",
+            "on-primary-fixed": "#001e2c",
+            "on-secondary": "#233143",
+            "inverse-primary": "#00668a",
+            "tertiary-container": "#00af9d",
+            "surface-container-lowest": "#060e20",
+            "secondary": "#b9c8de",
+            "primary-container": "#00a7e0",
+            "on-tertiary-fixed": "#00201c",
+            "on-surface": "#dae2fd",
+            "surface-variant": "#2d3449",
+            "outline-variant": "#3e4850",
+            "on-primary": "#00354a",
+            "inverse-on-surface": "#283044",
+            "secondary-fixed-dim": "#b9c8de",
+            "tertiary-fixed": "#62fae3",
+            "on-background": "#dae2fd",
+            "error-container": "#93000a",
+            "on-error": "#690005",
+            "primary": "#7bd0ff",
+            "on-primary-fixed-variant": "#004c69"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    body {
+      background-color: #0b1326;
+      color: #dae2fd;
+    }
+  </style>
+</head>
+<body class="font-body selection:bg-primary/30">
+<!-- TopNavBar Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 bg-slate-900/50 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)] flex items-center justify-between px-6 py-3 w-full max-w-none">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black tracking-tighter text-sky-400 font-headline">Postulator</span>
+<div class="hidden md:flex items-center gap-6">
+<a class="font-headline tracking-tight text-slate-400 hover:text-slate-200 transition-colors" href="#">Dashboard</a>
+<a class="font-headline tracking-tight text-slate-400 hover:text-slate-200 transition-colors" href="#">Jobs</a>
+<a class="font-headline tracking-tight text-sky-400 border-b-2 border-sky-400 pb-1" href="#">Interviews</a>
+<a class="font-headline tracking-tight text-slate-400 hover:text-slate-200 transition-colors" href="#">Network</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-slate-400 p-2 hover:bg-slate-800/50 transition-all duration-200 rounded-full cursor-pointer">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-slate-400 p-2 hover:bg-slate-800/50 transition-all duration-200 rounded-full cursor-pointer">settings</span>
+<img alt="User profile avatar" class="w-8 h-8 rounded-full border border-outline-variant/30 active:scale-95 transition-transform cursor-pointer" data-alt="professional headshot of a software engineer with glasses against a neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCboe2crW85O5j40H3ee1vZg9RZv50IkwwQ3iRJBCTbDkdXo2tcrR1ZIh8w3xzgLx0D5wWLsR01GmfkSxRrE78EHCovv0074oDqqFhM1-uNbeqZttE4e8U-h9H25tzIvjtERFJpty11Bf18HbLvFtfyBqNAEhOz0LbrrW4MIv_obh9FOoDQLJzeiH5bCn0cjM6hBbuhjUvDc6-ihE_0xsU9Z4OO2LeH5k7egH9JgC7UOfUPc0oYiQfNKjDwwy-xCI-n1yecIEDvYqWj"/>
+</div>
+</nav>
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-20 hover:w-64 transition-all duration-300 z-40 bg-[#0b1326] bg-slate-900/40 border-r border-slate-800/20 flex flex-col h-full py-20 group">
+<div class="flex flex-col gap-2 px-4 mb-auto">
+<!-- Active Item: Calendar (Closest match to Interviews/Schedule) -->
+<a class="flex items-center gap-4 py-3 px-3 transition-all ease-in-out duration-300 text-slate-500 hover:text-slate-300 hover:bg-slate-800/30" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="calendar_month">calendar_month</span>
+<span class="opacity-0 group-hover:opacity-100 font-inter text-sm font-medium">Calendar</span>
+</a>
+<a class="flex items-center gap-4 py-3 px-3 transition-all ease-in-out duration-300 bg-sky-500/10 text-sky-400 border-l-4 border-sky-400" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="psychology">psychology</span>
+<span class="opacity-0 group-hover:opacity-100 font-inter text-sm font-medium">Prep Kit</span>
+</a>
+<a class="flex items-center gap-4 py-3 px-3 transition-all ease-in-out duration-300 text-slate-500 hover:text-slate-300 hover:bg-slate-800/30" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="history_edu">history_edu</span>
+<span class="opacity-0 group-hover:opacity-100 font-inter text-sm font-medium">Feedback</span>
+</a>
+<a class="flex items-center gap-4 py-3 px-3 transition-all ease-in-out duration-300 text-slate-500 hover:text-slate-300 hover:bg-slate-800/30" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="insights">insights</span>
+<span class="opacity-0 group-hover:opacity-100 font-inter text-sm font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-4 py-3 px-3 transition-all ease-in-out duration-300 text-slate-500 hover:text-slate-300 hover:bg-slate-800/30" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="inventory_2">inventory_2</span>
+<span class="opacity-0 group-hover:opacity-100 font-inter text-sm font-medium">Archive</span>
+</a>
+</div>
+<div class="px-4 py-6 border-t border-slate-800/30">
+<a class="flex items-center gap-4 py-3 px-3 transition-all ease-in-out duration-300 text-slate-500 hover:text-slate-300" href="#">
+<span class="material-symbols-outlined shrink-0" data-icon="help_outline">help_outline</span>
+<span class="opacity-0 group-hover:opacity-100 font-inter text-sm font-medium">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="pl-20 pt-20 pr-6 pb-6 min-h-screen">
+<div class="max-w-[1600px] mx-auto">
+<!-- Editorial Header Section -->
+<header class="mb-10 pl-8">
+<div class="flex items-end justify-between">
+<div>
+<span class="text-tertiary font-headline font-bold text-sm tracking-widest uppercase mb-2 block">Interview Intelligence</span>
+<h1 class="text-5xl font-headline font-extrabold text-on-surface tracking-tighter">Command Center</h1>
+<p class="text-on-surface-variant mt-2 max-w-lg">Advanced session management for high-stakes technical evaluations.</p>
+</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-bold py-3 px-8 rounded-xl shadow-[0_8px_20px_rgba(123,208,255,0.2)] active:scale-95 transition-all">
+            Schedule New Session
+          </button>
+</div>
+</header>
+<!-- Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left Column: Upcoming & AI Prep (Bento) -->
+<div class="col-span-12 xl:col-span-8 space-y-6">
+<!-- Upcoming Weekly Schedule -->
+<section class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-xl font-headline font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+                Strategic Schedule
+              </h2>
+<span class="text-xs font-medium text-outline-variant uppercase tracking-widest">Oct 23 - Oct 29</span>
+</div>
+<div class="grid md:grid-cols-3 gap-4">
+<!-- Interview Card 1: Active Focus -->
+<div class="bg-surface-container-high p-5 rounded-lg border border-primary/20 shadow-xl">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-sm uppercase">Round 3</span>
+<span class="text-on-surface-variant text-xs">Today, 14:00</span>
+</div>
+<h3 class="text-lg font-headline font-bold leading-tight mb-1">Senior Rust Engineer</h3>
+<p class="text-on-surface-variant text-sm mb-4">Scale AI</p>
+<div class="flex items-center gap-2 mb-4">
+<img alt="Interviewer avatar" class="w-6 h-8 rounded-full" data-alt="Close up portrait of Jane Doe principal engineer smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn5Mm8rQ6jmLnTIrAVGLRq2alYU7_NZgZSYmLUTiCyf82A5hFo0tv_mpYP7F5dCAUyM7y-HeM2jhX4mLjtsPWCHFPX0bnvUpi00nczBiUcP3WcipiSLFF4EZfp6U3jSPlavnN3ZyUE4IYmTnXMYIIm4QKiPJAEz9XYsOjgJOnJ6KubKy1vibf3FLQVGt87oOJG_SdDbpiJVIRihS3haLq1ooRA6ipZ9wM3-SmDZ31Zh__wZQ5kRjmIleSlvTdaEwTHcRrnD0qv4ZPH"/>
+<div class="text-xs">
+<p class="text-on-surface font-semibold">Jane Doe</p>
+<p class="text-outline text-[10px]">Principal Engineer</p>
+</div>
+</div>
+<button class="w-full bg-surface-bright py-2 rounded text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors">Launch Zoom</button>
+</div>
+<!-- Interview Card 2 -->
+<div class="bg-surface-container-lowest/50 p-5 rounded-lg border border-outline-variant/10 hover:border-outline-variant/30 transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold bg-secondary-container/30 text-secondary px-2 py-0.5 rounded-sm uppercase">Intro</span>
+<span class="text-on-surface-variant text-xs">Wed, 10:30</span>
+</div>
+<h3 class="text-lg font-headline font-bold leading-tight mb-1">Founding Backend</h3>
+<p class="text-on-surface-variant text-sm mb-4">Stealth Startup</p>
+<div class="flex items-center gap-1 text-xs text-outline italic">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                  Link pending...
+                </div>
+</div>
+<!-- Interview Card 3 -->
+<div class="bg-surface-container-lowest/50 p-5 rounded-lg border border-outline-variant/10 hover:border-outline-variant/30 transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<span class="text-[10px] font-bold bg-secondary-container/30 text-secondary px-2 py-0.5 rounded-sm uppercase">Technical</span>
+<span class="text-on-surface-variant text-xs">Fri, 16:00</span>
+</div>
+<h3 class="text-lg font-headline font-bold leading-tight mb-1">SRE / DevOps</h3>
+<p class="text-on-surface-variant text-sm mb-4">Cloudflare</p>
+<div class="flex items-center gap-1 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">videocam</span>
+                  Google Meet
+                </div>
+</div>
+</div>
+</section>
+<!-- AI Prep Kit Section (Ollama Power) -->
+<section class="bg-surface-container p-8 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-32 h-32 bg-tertiary/5 blur-3xl -mr-16 -mt-16 rounded-full"></div>
+<div class="flex items-center justify-between mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-tertiary-container/20 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div>
+<h2 class="text-xl font-headline font-bold text-on-surface">Neural Prep Kit</h2>
+<p class="text-xs text-tertiary tracking-wide uppercase font-bold">Powered by Ollama / Llama 3</p>
+</div>
+</div>
+<button class="text-tertiary text-sm flex items-center gap-2 hover:underline">
+<span class="material-symbols-outlined text-sm">refresh</span>
+                Regenerate Insights
+              </button>
+</div>
+<div class="grid md:grid-cols-2 gap-8">
+<!-- AI Recommended Questions -->
+<div class="space-y-4">
+<h3 class="text-sm font-bold text-on-surface/80 flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-tertiary rounded-full"></span>
+                  Predicted Technical Challenges
+                </h3>
+<div class="space-y-3">
+<div class="bg-surface-container-high p-4 rounded border-l-2 border-tertiary/40 hover:bg-surface-bright transition-colors cursor-pointer">
+<p class="text-sm font-medium text-on-surface mb-1">Explain the memory safety model of Rust without a garbage collector.</p>
+<span class="text-[10px] text-tertiary uppercase font-bold">High Probability (84%)</span>
+</div>
+<div class="bg-surface-container-high p-4 rounded border-l-2 border-tertiary/40 hover:bg-surface-bright transition-colors cursor-pointer">
+<p class="text-sm font-medium text-on-surface mb-1">How would you design a distributed rate-limiter for a global API?</p>
+<span class="text-[10px] text-tertiary uppercase font-bold">System Design Focus</span>
+</div>
+</div>
+</div>
+<!-- Resume Gap Analysis -->
+<div class="bg-surface-container-low p-6 rounded-lg border border-outline-variant/10">
+<h3 class="text-sm font-bold text-on-surface/80 mb-4">Contextual Anchors</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed mb-6">
+                  Based on your tenure at <span class="text-tertiary">Meta</span> and the <span class="text-tertiary">Scale AI</span> JD, focus on your experience with <span class="font-bold text-on-surface">highly concurrent data ingestion pipelines</span>.
+                </p>
+<div class="space-y-3">
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-on-surface-variant">CV Alignment</span>
+<span class="text-tertiary font-bold">92%</span>
+</div>
+<div class="h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-tertiary to-primary w-[92%]"></div>
+</div>
+<div class="flex flex-wrap gap-2 pt-2">
+<span class="text-[9px] px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/20 rounded-sm">Concurrency</span>
+<span class="text-[9px] px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/20 rounded-sm">Distributed Systems</span>
+<span class="text-[9px] px-2 py-1 bg-secondary-container/20 text-secondary border border-secondary/20 rounded-sm">MLOps</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- History Table -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-headline font-bold">Mission Archive</h2>
+<button class="text-xs text-outline hover:text-on-surface transition-colors">View All History</button>
+</div>
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/50">
+<th class="px-6 py-4 text-[10px] font-bold text-outline-variant uppercase tracking-widest">Date</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline-variant uppercase tracking-widest">Company / Role</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline-variant uppercase tracking-widest">Status</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline-variant uppercase tracking-widest">Result</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-container-highest transition-colors group">
+<td class="px-6 py-4 text-sm text-on-surface-variant font-medium">Oct 18, 2023</td>
+<td class="px-6 py-4">
+<p class="text-sm font-bold">Anthropic</p>
+<p class="text-[11px] text-outline">Software Engineer, Security</p>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[11px] text-tertiary">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                        Feedback Received
+                      </span>
+</td>
+<td class="px-6 py-4 text-xs font-bold text-on-surface">P4 Next Steps</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary text-[11px] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-auto">
+                        Review Notes <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors group">
+<td class="px-6 py-4 text-sm text-on-surface-variant font-medium">Oct 12, 2023</td>
+<td class="px-6 py-4">
+<p class="text-sm font-bold">Vercel</p>
+<p class="text-[11px] text-outline">Platform Engineer</p>
+</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant"></span>
+                        Completed
+                      </span>
+</td>
+<td class="px-6 py-4 text-xs font-bold text-error/80">Closed</td>
+<td class="px-6 py-4 text-right">
+<button class="text-primary text-[11px] font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-auto">
+                        Review Notes <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Right Column: Detail View & Quick Action -->
+<div class="col-span-12 xl:col-span-4 space-y-6">
+<!-- Interview Detail Card (Floating feel) -->
+<div class="bg-surface-container-high/60 backdrop-blur-xl border border-outline-variant/20 rounded-xl p-8 sticky top-24 shadow-2xl">
+<div class="flex items-center gap-4 mb-8">
+<div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center">
+<img alt="Scale AI Logo" class="w-10 h-10 object-contain" data-alt="Minimalist geometric company logo for Scale AI in black and white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjN5sSEjrNu5AhXEQX8fU25e4m6eyAIvObQcsH1SkXotah_bR8n0xsbey2uRKalqUgGINUnQQ_fLeLSZBFu1kckqM6raa1rL3OtGDFS5AZMm1mLVzFyI9jxpKNowHL8HHEokMFCVXWq32LrqWb6OdBWnWGtm4ThJoZ_WgGpdIdKQSGIfsXBkLSj9OKqHHSX4HBzpLmkwNcJfLCw_0NDMEM3ot1RpGeD05NZHcDn4-3smbe1YTBdPiVOBWrM0nWl6I77lykxARM03Ue"/>
+</div>
+<div>
+<h2 class="text-2xl font-headline font-extrabold tracking-tight">Scale AI</h2>
+<p class="text-sm text-primary font-bold">Senior Rust Engineer</p>
+</div>
+</div>
+<div class="space-y-6">
+<div>
+<p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mb-2">Stage</p>
+<div class="flex items-center justify-between bg-surface-container-highest p-3 rounded-lg border border-outline-variant/10">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">architecture</span>
+<span class="text-sm font-bold">Round 3: System Design</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[18px]">info</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mb-2">Interviewer</p>
+<p class="text-sm font-bold">Jane Doe</p>
+<p class="text-xs text-outline">Principal Eng</p>
+</div>
+<div>
+<p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mb-2">Duration</p>
+<p class="text-sm font-bold">60 Minutes</p>
+<p class="text-xs text-outline">Technical Deep-dive</p>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-bold text-outline-variant uppercase tracking-widest mb-2">Meeting Link</p>
+<div class="bg-surface-container-highest/50 px-4 py-3 rounded-lg flex items-center justify-between">
+<code class="text-xs text-primary truncate pr-4">zoom.us/j/8827419902...</code>
+<span class="material-symbols-outlined text-[16px] text-outline cursor-pointer hover:text-on-surface">content_copy</span>
+</div>
+</div>
+<div class="pt-4 space-y-3">
+<button class="w-full bg-primary text-on-primary font-bold py-3 rounded-lg shadow-lg hover:shadow-primary/20 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">videocam</span>
+                  Join Meeting Room
+                </button>
+<button class="w-full border border-outline-variant/30 text-on-surface font-bold py-3 rounded-lg hover:bg-surface-bright transition-all">
+                  Reschedule Session
+                </button>
+</div>
+</div>
+</div>
+<!-- Quick Feedback Entry -->
+<div class="bg-tertiary-container/10 border border-tertiary/20 rounded-xl p-6">
+<h3 class="text-sm font-headline font-bold text-tertiary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+              Debrief Terminal
+            </h3>
+<textarea class="w-full bg-surface-container-lowest border-0 rounded-lg text-sm placeholder:text-outline p-4 focus:ring-1 focus:ring-tertiary min-h-[120px]" placeholder="Record immediate post-session thoughts, technical snags, or questions you couldn't answer..."></textarea>
+<div class="mt-4 flex items-center justify-between">
+<div class="flex gap-2">
+<button class="p-2 hover:bg-tertiary/10 rounded-full text-tertiary transition-colors">
+<span class="material-symbols-outlined text-[20px]">mic</span>
+</button>
+<button class="p-2 hover:bg-tertiary/10 rounded-full text-tertiary transition-colors">
+<span class="material-symbols-outlined text-[20px]">attach_file</span>
+</button>
+</div>
+<button class="text-[11px] font-bold bg-tertiary text-on-tertiary px-4 py-2 rounded uppercase tracking-wider shadow-sm hover:brightness-110">
+                Sync Feedback
+              </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Navigation (Suppressed on MD+) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-[#0b1326]/90 backdrop-blur-lg border-t border-slate-800/30 flex justify-around py-3 px-6 z-50">
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px]">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined">work</span>
+<span class="text-[10px]">Jobs</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-sky-400">
+<span class="material-symbols-outlined">event</span>
+<span class="text-[10px]">Interviews</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined">group</span>
+<span class="text-[10px]">Network</span>
+</button>
+</nav>
+</body></html>

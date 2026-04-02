@@ -1,0 +1,101 @@
+.page { padding-bottom: 48px; }
+.pageHeader { margin-bottom: 16px; }
+.pageTitle { font-size: 28px; font-weight: 800; color: var(--on-surface); margin-bottom: 6px; }
+.pageSub { font-size: 13px; color: var(--outline); }
+.sectionTitle { font-family: var(--font-headline); font-size: 13px; font-weight: 700; color: var(--on-surface); letter-spacing: -0.01em; margin-bottom: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+
+/* ── Bandeau contextuel (arrivée depuis JobsPage) ── */
+.contextBanner {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(123, 208, 255, 0.07);
+  border: 1px solid rgba(123, 208, 255, 0.2);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px; color: var(--on-surface-variant);
+  margin-bottom: 20px; line-height: 1.4;
+}
+.contextBanner strong { color: var(--on-surface); }
+
+/* Badge "présélectionnée" dans le label offre */
+.preselectTag {
+  display: inline-block;
+  background: rgba(60, 221, 199, 0.12);
+  color: var(--tertiary);
+  font-size: 9px; font-weight: 700;
+  padding: 1px 6px; border-radius: 3px;
+  margin-left: 6px; vertical-align: middle;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.layout { display: grid; grid-template-columns: 1fr 1.1fr; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.dropZone { border: 2px dashed var(--outline-variant); border-radius: var(--radius-lg); padding: 32px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; margin-bottom: 10px; text-align: center; }
+.dropZone:hover      { border-color: var(--primary); background: rgba(123,208,255,0.04); }
+.dropZoneOver        { border-color: var(--primary); background: rgba(123,208,255,0.07); }
+.dropZoneLoading     { opacity: 0.6; pointer-events: none; }
+.dropText { font-size: 13px; font-weight: 600; color: var(--on-surface-variant); margin-bottom: 4px; }
+.dropHint { font-size: 11px; color: var(--outline); }
+.uploadError { display: flex; align-items: center; gap: 6px; background: rgba(255,180,171,0.08); border: 1px solid rgba(255,180,171,0.2); border-radius: var(--radius-md); padding: 8px 12px; font-size: 12px; color: var(--error); margin-bottom: 10px; }
+.nameInput { width: 100%; background: var(--surface-container); border: none; border-bottom: 2px solid var(--surface-container-highest); border-radius: var(--radius-sm) var(--radius-sm) 0 0; padding: 8px 12px; font-size: 13px; color: var(--on-surface); outline: none; margin-bottom: 14px; transition: border-color 0.15s; }
+.nameInput::placeholder { color: var(--outline); }
+.nameInput:focus { border-bottom-color: var(--primary); }
+.cvList { display: flex; flex-direction: column; gap: 10px; }
+.emptyMsg { font-size: 13px; color: var(--outline); padding: 20px 0; }
+.cvCard { background: var(--surface-container-low); border-radius: var(--radius-lg); padding: 14px 16px; position: relative; border: 1px solid transparent; transition: border-color 0.15s; }
+.cvDefault { border-color: rgba(60, 221, 199, 0.25); }
+.defaultBadge { position: absolute; top: 10px; right: 12px; font-size: 10px; font-weight: 700; color: var(--tertiary); letter-spacing: 0.04em; font-family: var(--font-headline); }
+.cvHeader { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cvIconWrap { width: 36px; height: 36px; background: var(--surface-container-high); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cvIcon { font-size: 11px; font-weight: 800; color: var(--primary); font-family: var(--font-headline); }
+.cvName { font-size: 13px; font-weight: 600; color: var(--on-surface); margin-bottom: 2px; }
+.cvFile { font-size: 11px; color: var(--outline); }
+.skills { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.skill { background: var(--secondary-container); color: var(--on-secondary-container); font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 2px; }
+.skillMore { font-size: 10px; color: var(--outline); padding: 2px 4px; }
+.noSkills  { font-size: 11px; color: var(--outline); margin-bottom: 10px; font-style: italic; }
+.analyzeProgress { margin: 8px 0 10px; }
+.analyzeMsg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--outline); margin-top: 6px; }
+.analyzeTip { font-size: 10px; color: var(--outline); margin-top: 5px; font-style: italic; line-height: 1.4; }
+.timer { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--primary); font-family: var(--font-headline); margin-left: auto; }
+.analyzeError { display: flex; align-items: flex-start; gap: 6px; background: rgba(255,180,171,0.08); border: 1px solid rgba(255,180,171,0.15); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 11px; color: var(--error); margin: 6px 0 10px; line-height: 1.4; }
+.cvActions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.actionBtn { font-size: 11px !important; padding: 4px 10px !important; display: inline-flex !important; align-items: center !important; gap: 4px !important; }
+.actionBtnActive { border-color: rgba(123, 208, 255, 0.3) !important; color: var(--primary) !important; }
+.actionDelete { color: var(--error) !important; border-color: rgba(255,180,171,0.2) !important; }
+.actionDelete:hover { background: rgba(255,180,171,0.08) !important; }
+.scoringCard { background: var(--surface-container-low); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 14px; }
+.scoringRow { margin-bottom: 14px; }
+.scoringLabel { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--outline); display: block; margin-bottom: 7px; }
+.scoringValue { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--on-surface); }
+.scoringHint { font-size: 12px; color: var(--outline); }
+.selectWrap { position: relative; }
+.select { width: 100%; background: var(--surface-container); border: none; border-bottom: 2px solid var(--surface-container-highest); border-radius: var(--radius-sm) var(--radius-sm) 0 0; padding: 8px 32px 8px 12px; font-size: 13px; color: var(--on-surface); outline: none; appearance: none; cursor: pointer; transition: border-color 0.15s; }
+.select:focus { border-bottom-color: var(--primary); }
+.selectIcon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--outline); pointer-events: none; }
+.scoreBtn { width: 100%; justify-content: center; margin-top: 6px; }
+.scoringWait { margin-top: 14px; padding: 12px 14px; background: var(--surface-container); border-radius: var(--radius-md); }
+.scoringWaitRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.scoringWaitMsg { font-size: 12px; color: var(--on-surface-variant); font-weight: 500; }
+.scoringWaitTip { font-size: 11px; color: var(--outline); line-height: 1.5; font-style: italic; }
+.scoreErrorBox { display: flex; align-items: flex-start; gap: 8px; background: rgba(255,180,171,0.08); border: 1px solid rgba(255,180,171,0.2); border-radius: var(--radius-md); padding: 10px 12px; font-size: 12px; color: var(--error); margin-top: 10px; line-height: 1.4; }
+.scoreCard { background: var(--surface-container-low); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 14px; }
+.scoreHeader { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+.scoreCircle { width: 72px; height: 72px; border-radius: 50%; border: 3px solid; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+.scoreValue { font-family: var(--font-headline); font-size: 24px; font-weight: 800; line-height: 1; }
+.scorePct { font-size: 11px; font-weight: 600; }
+.scoreRec { font-size: 13px; color: var(--on-surface-variant); line-height: 1.5; }
+.scoreGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 700px) { .scoreGrid { grid-template-columns: 1fr; } }
+.scoreSectionTitle { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 8px; font-family: var(--font-headline); }
+.scoreList { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.scoreList li { font-size: 12px; color: var(--on-surface-variant); padding-left: 10px; position: relative; line-height: 1.4; }
+.scoreList li::before { content: '–'; position: absolute; left: 0; color: var(--outline); }
+.saveRow { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; }
+.saveBtn { display: inline-flex !important; align-items: center !important; gap: 6px !important; font-size: 12px !important; padding: 6px 14px !important; transition: all 0.2s; }
+.saveBtnDone { border-color: rgba(60, 221, 199, 0.4) !important; color: var(--tertiary) !important; cursor: default !important; }
+.infoBox { background: rgba(123, 208, 255, 0.05); border: 1px solid rgba(123, 208, 255, 0.1); border-radius: var(--radius-md); padding: 12px 14px; }
+.infoTitle { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
+.infoText { font-size: 11px; color: var(--on-surface-variant); line-height: 1.7; }
+.infoText code { font-size: 10px; background: var(--surface-container); padding: 1px 5px; border-radius: 3px; }

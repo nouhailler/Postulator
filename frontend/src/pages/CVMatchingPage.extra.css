@@ -1,0 +1,18 @@
+/* Ajoute à la fin de CVMatchingPage.module.css */
+
+.docxFallback {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: rgba(255, 200, 100, 0.07);
+  border: 1px solid rgba(255, 200, 100, 0.2);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 11px; color: var(--on-surface-variant);
+  line-height: 1.5;
+  margin: 0 24px 0;
+  flex-shrink: 0;
+}
+.docxFallback strong { color: var(--on-surface); }
+.docxFallback code {
+  font-size: 10px; background: var(--surface-container-high);
+  padding: 1px 5px; border-radius: 3px; color: var(--tertiary);
+}

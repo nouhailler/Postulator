@@ -1,0 +1,48 @@
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0 16px;
+  overflow-y: auto;
+}
+
+/* ---- Brand ---- */
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 16px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 14px; }
+.brandIcon { width: 36px; height: 36px; border-radius: var(--radius-md); background: rgba(123,208,255,0.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.brandIconInner { color: var(--primary); font-size: 18px; line-height: 1; }
+.brandLabel { font-family: var(--font-headline); font-size: 9px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--tertiary); }
+.brandTitle { font-family: var(--font-headline); font-size: 12px; font-weight: 700; color: var(--on-surface); margin-top: 1px; letter-spacing: -0.01em; }
+
+/* ---- New Search CTA ---- */
+.newSearch { margin: 0 14px 16px; width: calc(100% - 28px); justify-content: center; border-radius: var(--radius-lg) !important; padding: 9px 12px !important; }
+
+/* ---- Nav items ---- */
+.nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+
+.navItem {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; text-decoration: none;
+  color: var(--outline); font-size: 13px; font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: color 0.15s, background 0.12s, border-color 0.15s;
+  cursor: pointer; border-radius: 0;
+}
+.navItem:hover { color: var(--on-surface-variant); background: rgba(123,208,255,0.05); }
+.navItem.active { color: var(--on-surface); background: rgba(123,208,255,0.09); border-left-color: var(--primary); }
+.navItem.active .navIcon { color: var(--primary); }
+
+/* Items mis en avant (CV, CV Matching) */
+.navHighlight { }
+.navHighlight:not(.active) { color: var(--on-surface-variant); }
+.navHighlight.active .navIcon { color: var(--tertiary); }
+.navHighlight.active { border-left-color: var(--tertiary); }
+
+.navIcon { flex-shrink: 0; transition: color 0.15s; }
+.navLabel { white-space: nowrap; }
+
+/* ---- Bottom nav ---- */
+.bottomNav { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 2px; }
+.bottomItem { font-size: 12px; }

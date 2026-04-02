@@ -1,0 +1,81 @@
+.card {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.title {
+  font-family: var(--font-headline);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  font-size: 11px;
+  color: var(--outline);
+  margin-top: 3px;
+}
+
+.periods { display: flex; gap: 4px; }
+
+.periodBtn {
+  background: none;
+  border: none;
+  padding: 4px 9px;
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--outline);
+  transition: background 0.15s, color 0.15s;
+  font-family: var(--font-headline);
+  letter-spacing: 0.02em;
+}
+
+.periodBtn.active {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+.periodBtn:not(.active):hover { color: var(--on-surface-variant); }
+
+.empty {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--outline);
+}
+
+.tooltip {
+  background: var(--surface-container-highest);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+}
+
+.tooltipLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--outline);
+  margin-bottom: 3px;
+}
+
+.tooltipValue {
+  font-family: var(--font-headline);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--tertiary);
+}

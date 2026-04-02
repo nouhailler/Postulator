@@ -1,0 +1,171 @@
+.page {
+  position: relative;
+  padding-bottom: 64px;
+}
+
+/* ---- En-tête ---- */
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--on-surface);
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.pageSub {
+  font-size: 13px;
+  color: var(--outline);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+/* ---- Bannières ---- */
+.offlineBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(123, 208, 255, 0.07);
+  border: 1px solid rgba(123, 208, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 9px 14px;
+  font-size: 12px;
+  color: var(--on-surface-variant);
+  margin-bottom: 18px;
+}
+
+.offlineDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--outline);
+  flex-shrink: 0;
+}
+
+.offlineLink {
+  color: var(--primary);
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 12px;
+  text-decoration: none;
+}
+.offlineLink:hover { text-decoration: underline; }
+
+.errorBanner {
+  background: rgba(255, 180, 171, 0.08);
+  border: 1px solid rgba(255, 180, 171, 0.2);
+  border-radius: var(--radius-md);
+  padding: 9px 14px;
+  font-size: 12px;
+  color: var(--error);
+  margin-bottom: 18px;
+}
+
+/* ---- KPI Grid ---- */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 1100px) {
+  .kpiGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---- Graphique + Logs ---- */
+.midRow {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 900px) {
+  .midRow { grid-template-columns: 1fr; }
+}
+
+/* ---- Section Matches ---- */
+.matchesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.matchesTitle {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--on-surface);
+}
+
+.emptyMatches {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--outline);
+}
+
+/* ---- Jobs Grid ---- */
+.jobsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1000px) {
+  .jobsGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .jobsGrid { grid-template-columns: 1fr; }
+}
+
+/* ---- FAB ---- */
+.fab {
+  position: fixed;
+  bottom: 28px;
+  right: 32px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--tertiary));
+  color: var(--on-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 24px rgba(123, 208, 255, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+  z-index: 50;
+}
+
+.fab:hover {
+  transform: scale(1.07);
+  box-shadow: 0 6px 32px rgba(60, 221, 199, 0.4);
+}
+
+.fab:active { transform: scale(0.96); }

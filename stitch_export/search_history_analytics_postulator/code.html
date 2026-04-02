@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Postulator | Search History &amp; Analytics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#060e20",
+              "primary-container": "#00a7e0",
+              "surface-dim": "#0b1326",
+              "on-tertiary-fixed-variant": "#005047",
+              "on-surface-variant": "#bec8d2",
+              "surface-variant": "#2d3449",
+              "on-secondary-fixed": "#0d1c2d",
+              "on-primary-container": "#00374d",
+              "surface-container-highest": "#2d3449",
+              "background": "#0b1326",
+              "on-primary-fixed-variant": "#004c69",
+              "secondary-fixed-dim": "#b9c8de",
+              "primary": "#7bd0ff",
+              "surface-tint": "#7bd0ff",
+              "primary-fixed": "#c4e7ff",
+              "on-secondary": "#233143",
+              "surface-bright": "#31394d",
+              "outline": "#88929b",
+              "secondary-container": "#39485a",
+              "primary-fixed-dim": "#7bd0ff",
+              "outline-variant": "#3e4850",
+              "tertiary-container": "#00af9d",
+              "surface-container-low": "#131b2e",
+              "secondary": "#b9c8de",
+              "secondary-fixed": "#d4e4fa",
+              "on-tertiary-fixed": "#00201c",
+              "tertiary-fixed": "#62fae3",
+              "on-tertiary-container": "#003b34",
+              "on-secondary-container": "#a7b6cc",
+              "tertiary": "#3cddc7",
+              "on-primary-fixed": "#001e2c",
+              "on-primary": "#00354a",
+              "on-error": "#690005",
+              "surface-container-high": "#222a3d",
+              "surface-container": "#171f33",
+              "on-tertiary": "#003731",
+              "on-error-container": "#ffdad6",
+              "surface": "#0b1326",
+              "on-surface": "#dae2fd",
+              "error-container": "#93000a",
+              "on-secondary-fixed-variant": "#39485a",
+              "inverse-surface": "#dae2fd",
+              "inverse-primary": "#00668a",
+              "error": "#ffb4ab",
+              "tertiary-fixed-dim": "#3cddc7",
+              "on-background": "#dae2fd",
+              "inverse-on-surface": "#283044"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        vertical-align: middle;
+      }
+      body {
+        background-color: #0b1326;
+        color: #dae2fd;
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] border-b border-[#0ea5e9]/15 shadow-[0_32px_64px_-15px_rgba(11,19,38,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black tracking-tighter text-[#7bd0ff] font-manrope">Postulator</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-slate-400 hover:text-slate-200 transition-colors font-manrope tracking-tighter headline-sm" href="#">Dashboard</a>
+<a class="text-[#7bd0ff] border-b-2 border-[#7bd0ff] pb-1 font-manrope tracking-tighter headline-sm" href="#">History</a>
+<a class="text-slate-400 hover:text-slate-200 transition-colors font-manrope tracking-tighter headline-sm" href="#">Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-slate-400 hover:bg-slate-800/50 p-2 rounded-full transition-all active:scale-95 duration-100" data-icon="notifications">notifications</button>
+<button class="material-symbols-outlined text-slate-400 hover:bg-slate-800/50 p-2 rounded-full transition-all active:scale-95 duration-100" data-icon="settings">settings</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden">
+<img alt="User profile avatar" data-alt="professional portrait of a software architect in a dark studio setting with subtle blue backlighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8qzNfmNp_hWssjd5a5rDUD65QcK1aSM0AcazvgDsCcWy-eCmRiO5Oq6Ke4XPLVhPJuDi3ALXhxzwqyBWjwgQ6xo4XZi34cfPZnocaOi6VM7zJIboR2BtTyObxvgR54LnLEaxjixbM6OGpqvhXQSJEJaVPysTwZ4Z6K2mWfm-LXS50kWVeHaGVuT3l1996mUrs9WbaOm6zY5dn9aEVcZN1O99IRrdMbRWWmrykJa_DW3DFJj4simFKi_YUJ4qNYuR6tkeuVX7emtSj"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 z-40 bg-[#0b1326] flex flex-col py-4 bg-gradient-to-r from-transparent to-[#0ea5e9]/5 border-r border-[#0ea5e9]/5">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-[#3cddc7]/10 flex items-center justify-center text-[#3cddc7]">
+<span class="material-symbols-outlined" data-icon="radar">radar</span>
+</div>
+<div>
+<h3 class="text-lg font-bold text-[#3cddc7] leading-tight">Command Center</h3>
+<p class="text-xs text-slate-500 font-medium">Sovereign Architect</p>
+</div>
+</div>
+<button class="mt-6 w-full py-2.5 px-4 bg-gradient-to-r from-[#7bd0ff] to-[#00a7e0] text-on-primary rounded-xl font-bold text-sm tracking-tight active:translate-x-1 transition-transform">
+                New Search
+            </button>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-500 flex items-center gap-3 px-4 py-3 hover:text-slate-200 hover:bg-[#0ea5e9]/5 transition-all font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+                Search
+            </a>
+<a class="text-slate-500 flex items-center gap-3 px-4 py-3 hover:text-slate-200 hover:bg-[#0ea5e9]/5 transition-all font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="work_outline">work_outline</span>
+                Applications
+            </a>
+<a class="bg-[#7bd0ff]/10 text-[#7bd0ff] border-l-4 border-[#7bd0ff] flex items-center gap-3 px-4 py-3 font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="radar">radar</span>
+                Talent Radar
+            </a>
+<a class="text-slate-500 flex items-center gap-3 px-4 py-3 hover:text-slate-200 hover:bg-[#0ea5e9]/5 transition-all font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+                Documents
+            </a>
+<a class="text-slate-500 flex items-center gap-3 px-4 py-3 hover:text-slate-200 hover:bg-[#0ea5e9]/5 transition-all font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+                AI Coach
+            </a>
+</nav>
+<div class="mt-auto space-y-1 border-t border-[#0ea5e9]/10 pt-4">
+<a class="text-slate-500 flex items-center gap-3 px-4 py-3 hover:text-slate-200 hover:bg-[#0ea5e9]/5 transition-all font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+                Support
+            </a>
+<a class="text-slate-500 flex items-center gap-3 px-4 py-3 hover:text-slate-200 hover:bg-[#0ea5e9]/5 transition-all font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="manage_accounts">manage_accounts</span>
+                Account
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-8 min-h-[calc(100vh-64px)] bg-surface text-on-surface">
+<!-- Header & Top Analytics -->
+<div class="mb-12">
+<div class="flex items-end gap-2 mb-8">
+<h1 class="text-4xl font-black font-headline tracking-tighter text-on-surface">Search Analytics</h1>
+<span class="text-tertiary mb-1.5 material-symbols-outlined" data-icon="analytics">analytics</span>
+</div>
+<!-- Analytics Cards: Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="relative z-10">
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Total Searches</p>
+<h4 class="text-3xl font-black font-headline text-on-surface">1,429</h4>
+<p class="text-[10px] text-tertiary mt-2 flex items-center gap-1 font-bold">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                            +12% vs last month
+                        </p>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] text-6xl text-on-surface/5 material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="search">search</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="relative z-10">
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Avg Match Score</p>
+<h4 class="text-3xl font-black font-headline text-tertiary">84%</h4>
+<p class="text-[10px] text-primary mt-2 flex items-center gap-1 font-bold">
+                            High Quality Talent Stream
+                        </p>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] text-6xl text-tertiary/5 material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="star">star</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="relative z-10">
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">Most Active Source</p>
+<h4 class="text-2xl font-black font-headline text-on-surface">LinkedIn</h4>
+<p class="text-[10px] text-outline mt-2 font-medium">842 postings tracked</p>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] text-6xl text-on-surface/5 material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="hub">hub</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden group">
+<div class="relative z-10">
+<p class="text-xs font-bold text-outline uppercase tracking-widest mb-1">New Matches</p>
+<h4 class="text-3xl font-black font-headline text-primary">142</h4>
+<p class="text-[10px] text-primary mt-2 flex items-center gap-1 font-bold">This Week</p>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] text-6xl text-primary/5 material-symbols-outlined group-hover:scale-110 transition-transform" data-icon="new_releases">new_releases</div>
+</div>
+</div>
+</div>
+<!-- Charts and Filters Area -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+<!-- Trend Chart: Large Area -->
+<div class="lg:col-span-2 bg-surface-container-low rounded-xl p-6 relative overflow-hidden">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h3 class="text-lg font-bold font-headline">Postings Found Trend</h3>
+<p class="text-xs text-outline">Market volume over the last 30 days</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1 text-[10px] font-bold rounded bg-surface-container-highest text-primary">30D</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded hover:bg-surface-container-highest transition-colors">90D</button>
+</div>
+</div>
+<!-- Mock Chart using Gradients and Flex -->
+<div class="h-48 flex items-end gap-2 px-2">
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[30%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[45%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[60%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[55%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[80%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[70%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[90%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[75%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[65%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[85%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[100%]"></div>
+<div class="flex-1 bg-primary/20 hover:bg-primary/40 rounded-t-sm transition-all h-[80%]"></div>
+</div>
+<div class="flex justify-between mt-4 px-2 text-[10px] text-outline font-bold">
+<span>OCT 12</span>
+<span>OCT 22</span>
+<span>NOV 01</span>
+<span>TODAY</span>
+</div>
+</div>
+<!-- Filters Sidebar -->
+<div class="bg-surface-container-low rounded-xl p-6">
+<h3 class="text-lg font-bold font-headline mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="filter_list">filter_list</span>
+                    Advanced Filters
+                </h3>
+<div class="space-y-6">
+<div>
+<label class="block text-[10px] font-bold text-outline uppercase mb-2">Search Keywords</label>
+<input class="w-full bg-transparent border-b-2 border-surface-container-highest focus:border-primary outline-none py-2 text-sm transition-all placeholder:text-outline/30" placeholder="e.g. Senior Rust" type="text"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-outline uppercase mb-2">Platform Source</label>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 rounded bg-secondary-container text-on-secondary-container text-[10px] font-bold cursor-pointer">LinkedIn</span>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-outline text-[10px] font-bold cursor-pointer hover:bg-secondary-container hover:text-on-secondary-container">Indeed</span>
+<span class="px-2 py-1 rounded bg-surface-container-highest text-outline text-[10px] font-bold cursor-pointer hover:bg-secondary-container hover:text-on-secondary-container">GitHub Jobs</span>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-outline uppercase mb-2">Date Range</label>
+<select class="w-full bg-transparent border-b-2 border-surface-container-highest focus:border-primary outline-none py-2 text-sm text-outline">
+<option>Last 24 Hours</option>
+<option>Last 7 Days</option>
+<option selected="">Last 30 Days</option>
+</select>
+</div>
+<button class="w-full py-2 bg-surface-container-highest hover:bg-primary/20 text-on-surface text-xs font-bold rounded-lg transition-all mt-4">Apply Filters</button>
+</div>
+</div>
+</div>
+<!-- History List: High-Density Table -->
+<div class="bg-surface-container-low rounded-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-[#0ea5e9]/5 flex justify-between items-center">
+<h3 class="font-bold font-headline text-lg">Scraping History</h3>
+<span class="text-xs text-outline font-medium">124 total sessions logged</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container/50">
+<th class="px-6 py-4 text-[10px] font-bold text-outline uppercase tracking-wider">Session Info</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline uppercase tracking-wider">Parameters</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline uppercase tracking-wider">Sources</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline uppercase tracking-wider text-center">Metrics</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline uppercase tracking-wider text-center">Status</th>
+<th class="px-6 py-4 text-[10px] font-bold text-outline uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-highest/10">
+<!-- Entry 1 -->
+<tr class="hover:bg-surface-container-high transition-colors group">
+<td class="px-6 py-4">
+<div class="font-bold text-sm text-on-surface">Session #4028</div>
+<div class="text-[10px] text-outline">Today, 09:42 AM</div>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm font-medium">Senior Rust Engineer</div>
+<div class="text-[10px] text-outline">Berlin, Germany (Remote)</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">LI</span>
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">IND</span>
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">GH</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="text-sm font-black text-primary">24 Matches</div>
+<div class="text-[10px] text-tertiary font-bold">88.4 Score</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-tertiary/10 text-tertiary text-[10px] font-bold uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                                    Completed
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-primary/20 rounded-lg text-primary transition-all" title="Re-run"><span class="material-symbols-outlined text-[18px]" data-icon="refresh">refresh</span></button>
+<button class="p-1.5 hover:bg-tertiary/20 rounded-lg text-tertiary transition-all" title="View Results"><span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 hover:bg-error/20 rounded-lg text-error transition-all" title="Delete"><span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Entry 2 -->
+<tr class="hover:bg-surface-container-high transition-colors group">
+<td class="px-6 py-4">
+<div class="font-bold text-sm text-on-surface">Session #4027</div>
+<div class="text-[10px] text-outline">Yesterday, 11:15 PM</div>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm font-medium">Fullstack Architect (Next.js)</div>
+<div class="text-[10px] text-outline">San Francisco, CA</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">LI</span>
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">WC</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="text-sm font-black text-outline">0 Matches</div>
+<div class="text-[10px] text-outline font-bold">N/A Score</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-error/10 text-error text-[10px] font-bold uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                    Failed
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-primary/20 rounded-lg text-primary transition-all" title="Re-run"><span class="material-symbols-outlined text-[18px]" data-icon="refresh">refresh</span></button>
+<button class="p-1.5 hover:bg-outline/20 rounded-lg text-outline transition-all" title="View Details"><span class="material-symbols-outlined text-[18px]" data-icon="info">info</span></button>
+<button class="p-1.5 hover:bg-error/20 rounded-lg text-error transition-all" title="Delete"><span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Entry 3 -->
+<tr class="hover:bg-surface-container-high transition-colors group">
+<td class="px-6 py-4">
+<div class="font-bold text-sm text-on-surface">Session #4026</div>
+<div class="text-[10px] text-outline">Nov 02, 02:20 PM</div>
+</td>
+<td class="px-6 py-4">
+<div class="text-sm font-medium">Head of Engineering</div>
+<div class="text-[10px] text-outline">London, UK</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex gap-1">
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">IND</span>
+<span class="px-1.5 py-0.5 rounded-sm bg-secondary-container text-on-secondary-container text-[9px] font-black">LI</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="text-sm font-black text-primary">12 Matches</div>
+<div class="text-[10px] text-tertiary font-bold">92.1 Score</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-outline-variant/30 text-outline text-[10px] font-bold uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                    Interrupted
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 hover:bg-primary/20 rounded-lg text-primary transition-all" title="Resume"><span class="material-symbols-outlined text-[18px]" data-icon="play_arrow">play_arrow</span></button>
+<button class="p-1.5 hover:bg-tertiary/20 rounded-lg text-tertiary transition-all" title="View Results"><span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 hover:bg-error/20 rounded-lg text-error transition-all" title="Delete"><span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination-like Footer -->
+<div class="px-6 py-4 bg-surface-container/30 border-t border-[#0ea5e9]/5 flex justify-between items-center">
+<button class="text-[10px] font-bold text-outline hover:text-primary transition-colors flex items-center gap-1 uppercase">
+<span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span> Previous
+                </button>
+<div class="flex gap-2">
+<span class="w-6 h-6 rounded flex items-center justify-center bg-primary text-on-primary text-[10px] font-bold">1</span>
+<span class="w-6 h-6 rounded flex items-center justify-center hover:bg-surface-container-highest text-outline text-[10px] font-bold cursor-pointer">2</span>
+<span class="w-6 h-6 rounded flex items-center justify-center hover:bg-surface-container-highest text-outline text-[10px] font-bold cursor-pointer">3</span>
+</div>
+<button class="text-[10px] font-bold text-outline hover:text-primary transition-colors flex items-center gap-1 uppercase">
+                    Next <span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Floating AI Prompt (Decorative/Functional vibe) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="bg-[#3cddc7] text-on-tertiary-container p-4 rounded-full shadow-2xl flex items-center gap-2 group hover:scale-105 transition-transform">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<span class="text-sm font-bold tracking-tight">Ask AI Coach</span>
+</button>
+</div>
+</body></html>

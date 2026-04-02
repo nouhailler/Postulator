@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Postulator - New Search Configuration</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#a7b6cc",
+              "surface-bright": "#31394d",
+              "tertiary": "#3cddc7",
+              "surface-container-highest": "#2d3449",
+              "on-primary-container": "#00374d",
+              "surface-tint": "#7bd0ff",
+              "surface-container-high": "#222a3d",
+              "surface": "#0b1326",
+              "primary-fixed": "#c4e7ff",
+              "surface-dim": "#0b1326",
+              "secondary-container": "#39485a",
+              "primary-fixed-dim": "#7bd0ff",
+              "inverse-surface": "#dae2fd",
+              "on-tertiary-container": "#003b34",
+              "on-secondary-fixed": "#0d1c2d",
+              "surface-container": "#171f33",
+              "background": "#0b1326",
+              "tertiary-fixed-dim": "#3cddc7",
+              "error": "#ffb4ab",
+              "on-error-container": "#ffdad6",
+              "surface-container-low": "#131b2e",
+              "on-tertiary": "#003731",
+              "secondary-fixed": "#d4e4fa",
+              "on-secondary-fixed-variant": "#39485a",
+              "outline": "#88929b",
+              "on-surface": "#dae2fd",
+              "outline-variant": "#3e4850",
+              "on-primary": "#00354a",
+              "surface-variant": "#2d3449",
+              "inverse-on-surface": "#283044",
+              "secondary-fixed-dim": "#b9c8de",
+              "tertiary-fixed": "#62fae3",
+              "on-background": "#dae2fd",
+              "on-error": "#690005",
+              "error-container": "#93000a",
+              "on-primary-fixed-variant": "#004c69",
+              "primary": "#7bd0ff",
+              "on-surface-variant": "#bec8d2",
+              "on-secondary": "#233143",
+              "on-tertiary-fixed-variant": "#005047",
+              "on-primary-fixed": "#001e2c",
+              "tertiary-container": "#00af9d",
+              "surface-container-lowest": "#060e20",
+              "secondary": "#b9c8de",
+              "inverse-primary": "#00668a",
+              "on-tertiary-fixed": "#00201c",
+              "primary-container": "#00a7e0"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(23, 31, 51, 0.6);
+            backdrop-filter: blur(12px);
+        }
+        .shimmer-trace {
+            background: linear-gradient(90deg, transparent, #7bd0ff, #3cddc7, transparent);
+            background-size: 200% 100%;
+        }
+        input:focus {
+            box-shadow: 0 4px 12px -2px rgba(123, 208, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen selection:bg-primary/30">
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-[#0b1326] bg-slate-900/50 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-sky-400 font-['Manrope']">POSTULATOR</span>
+<nav class="hidden md:flex gap-6 items-center h-full">
+<a class="font-['Manrope'] tracking-tight text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors" href="#">Dashboard</a>
+<a class="font-['Manrope'] tracking-tight text-sm font-semibold text-sky-400 border-b-2 border-sky-400 pb-1" href="#">Jobs</a>
+<a class="font-['Manrope'] tracking-tight text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors" href="#">Scrapers</a>
+<a class="font-['Manrope'] tracking-tight text-sm font-semibold text-slate-400 hover:text-slate-200 transition-colors" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-slate-800/50 rounded-full transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-slate-800/50 rounded-full transition-all duration-200 active:scale-95">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/30">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" data-alt="Professional headshot of a developer in a dark studio setting with soft rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCa4-avDpYgh38kDTlwoDZSkISlNyfUFk1oCxVGO1PlHmJPpFZZNU45QJVC5-XYC0BRTafWuuxYgNpaSZyjMIj1mTocE-tHvZQD2ys7r6mAnqKrOj-I-PaCoj340TIpls0d76aenynNNkLIwK-oUHKIp1Rcx7Yl4xx0i1gp_ktWRG80Ym47G5dyyQBwnkRtLoIu9D6wZACwAkIydwGzAN-rS6fObynNGV8oX1-NMwTqPoZYBbpnZm_lfxD6B0kiyBqtzRDVT85Pi5WU"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-full z-40 pt-20 flex flex-col w-64 bg-[#0b1326] bg-slate-900/80 hidden lg:flex">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-2">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center border border-outline-variant/20">
+<span class="material-symbols-outlined text-sky-400" data-icon="terminal">terminal</span>
+</div>
+<div>
+<h3 class="font-black text-sky-400 text-xs uppercase tracking-widest">COMMAND CENTER</h3>
+<p class="text-[10px] text-outline">v4.2.0-stable</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-500 flex items-center px-4 py-3 hover:bg-slate-800/30 hover:text-sky-200 transition-all font-['Inter'] text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="overview">overview</span> Overview
+            </a>
+<a class="bg-slate-800/50 text-sky-300 border-l-4 border-sky-400 flex items-center px-4 py-3 font-['Inter'] text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings_input_component">settings_input_component</span> Configurations
+            </a>
+<a class="text-slate-500 flex items-center px-4 py-3 hover:bg-slate-800/30 hover:text-sky-200 transition-all font-['Inter'] text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="memory">memory</span> Engines
+            </a>
+<a class="text-slate-500 flex items-center px-4 py-3 hover:bg-slate-800/30 hover:text-sky-200 transition-all font-['Inter'] text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="router">router</span> Proxies
+            </a>
+<a class="text-slate-500 flex items-center px-4 py-3 hover:bg-slate-800/30 hover:text-sky-200 transition-all font-['Inter'] text-xs uppercase tracking-widest" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="reorder">reorder</span> Logs
+            </a>
+</nav>
+<div class="p-6">
+<button class="w-full py-3 px-4 bg-primary-container text-on-primary-container rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary-container/20">
+                Deploy New Scraper
+            </button>
+</div>
+<div class="mt-auto border-t border-outline-variant/10 p-4 space-y-2">
+<a class="text-slate-500 flex items-center px-2 py-2 hover:text-sky-200 text-[10px] uppercase tracking-widest font-semibold" href="#">
+<span class="material-symbols-outlined mr-2 scale-75" data-icon="help">help</span> Documentation
+            </a>
+<a class="text-slate-500 flex items-center px-2 py-2 hover:text-sky-200 text-[10px] uppercase tracking-widest font-semibold" href="#">
+<span class="material-symbols-outlined mr-2 scale-75" data-icon="contact_support">contact_support</span> Support
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:pl-64 pt-24 px-6 pb-12 min-h-screen">
+<div class="max-w-6xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12 border-l-4 border-tertiary pl-6 py-2">
+<h1 class="text-4xl font-extrabold font-headline tracking-tighter text-on-surface mb-2">NEW SEARCH CONFIGURATION</h1>
+<p class="text-on-surface-variant max-w-2xl text-lg leading-relaxed font-light">
+                    Define your architectural parameters for the next career pivot. Our <span class="text-tertiary font-medium">Local AI</span> will process candidates against your target profile in real-time.
+                </p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Core Parameters -->
+<div class="lg:col-span-7 space-y-8">
+<!-- Search Parameters Card -->
+<section class="glass-panel p-8 rounded-xl border-l border-t border-outline-variant/10 shadow-2xl">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary" data-icon="architecture">architecture</span>
+<h2 class="text-sm font-bold uppercase tracking-[0.2em] text-outline">Search Parameters</h2>
+</div>
+<div class="space-y-6">
+<div class="group">
+<label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-2 group-focus-within:text-primary transition-colors">Target Job Title</label>
+<input class="w-full bg-transparent border-b-2 border-surface-container-highest focus:border-primary outline-none py-3 text-lg font-headline transition-all placeholder:text-outline-variant" placeholder="e.g., Senior Rust Engineer" type="text"/>
+</div>
+<div class="group">
+<label class="block text-[10px] font-bold text-outline uppercase tracking-widest mb-2 group-focus-within:text-primary transition-colors">Location / Realm</label>
+<input class="w-full bg-transparent border-b-2 border-surface-container-highest focus:border-primary outline-none py-3 text-lg font-headline transition-all placeholder:text-outline-variant" placeholder="e.g., Remote / Berlin / London" type="text"/>
+</div>
+<div class="pt-4">
+<div class="flex justify-between items-end mb-4">
+<label class="text-[10px] font-bold text-outline uppercase tracking-widest">Salary Range (Annual)</label>
+<span class="text-primary font-headline font-bold text-xl">$120k — $240k+</span>
+</div>
+<div class="relative h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="absolute left-1/4 right-1/4 h-full bg-primary shadow-[0_0_15px_rgba(123,208,255,0.4)]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Platform Selection Card -->
+<section class="surface-container-low p-8 rounded-xl shadow-inner">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary" data-icon="hub">hub</span>
+<h2 class="text-sm font-bold uppercase tracking-[0.2em] text-outline">Platform Selection</h2>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+<!-- LinkedIn Active -->
+<div class="p-4 rounded-lg bg-surface-container-high border border-primary/40 flex flex-col items-center gap-3 cursor-pointer group transition-all hover:bg-surface-container-highest">
+<div class="w-10 h-10 flex items-center justify-center text-[#0A66C2]">
+<span class="material-symbols-outlined text-3xl" data-icon="work" data-weight="fill" style="font-variation-settings: 'FILL' 1;">work</span>
+</div>
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase">LinkedIn</span>
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+</div>
+<!-- Glassdoor Inactive -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant/10 flex flex-col items-center gap-3 cursor-pointer group opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+<div class="w-10 h-10 flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-3xl" data-icon="reviews">reviews</span>
+</div>
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface">Glassdoor</span>
+</div>
+<!-- Indeed Active -->
+<div class="p-4 rounded-lg bg-surface-container-high border border-primary/40 flex flex-col items-center gap-3 cursor-pointer group transition-all hover:bg-surface-container-highest">
+<div class="w-10 h-10 flex items-center justify-center text-[#2164f3]">
+<span class="material-symbols-outlined text-3xl" data-icon="search_insights" data-weight="fill" style="font-variation-settings: 'FILL' 1;">search_insights</span>
+</div>
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase">Indeed</span>
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+</div>
+<!-- ActivityPub -->
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant/10 flex flex-col items-center gap-3 cursor-pointer group opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+<div class="w-10 h-10 flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-3xl" data-icon="rss_feed">rss_feed</span>
+</div>
+<span class="text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface">Mastodon</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: AI & Scraper Settings -->
+<div class="lg:col-span-5 space-y-8">
+<!-- Local AI Matching Card -->
+<section class="glass-panel p-8 rounded-xl border border-tertiary/20 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-tertiary/5 blur-3xl -z-10"></div>
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-tertiary" data-icon="psychology">psychology</span>
+<h2 class="text-sm font-bold uppercase tracking-[0.2em] text-tertiary">Local AI Intelligence</h2>
+</div>
+<div class="mb-6">
+<p class="text-xs text-on-surface-variant mb-4 leading-relaxed">
+                                AI scoring occurs within your local encrypted vault. Data never leaves your machine.
+                            </p>
+<div class="relative group">
+<select class="w-full bg-surface-container-highest/50 border border-outline-variant/20 rounded-lg px-4 py-3 text-sm appearance-none cursor-pointer focus:border-tertiary outline-none">
+<option>Senior_SWE_2024.pdf</option>
+<option>Technical_Lead_Architect.pdf</option>
+<option>Rust_Dev_Portfolio.pdf</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<div class="p-4 rounded-lg bg-surface-container-highest/30 border border-outline-variant/10 flex items-center justify-between group cursor-default">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-tertiary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary" data-icon="description">description</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Senior_SWE_2024.pdf</p>
+<p class="text-[10px] text-outline uppercase tracking-tighter">Analyzed 12m ago</p>
+</div>
+</div>
+<button class="text-[10px] font-bold text-tertiary uppercase tracking-widest hover:underline">
+                                Change
+                            </button>
+</div>
+<button class="w-full mt-6 py-3 border border-dashed border-outline-variant/50 rounded-lg text-xs font-bold uppercase tracking-widest text-outline hover:text-tertiary hover:border-tertiary transition-all">
+                            + Upload New Identity
+                        </button>
+</section>
+<!-- Scraper Settings Card -->
+<section class="surface-container-low p-8 rounded-xl">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary" data-icon="settings_ethernet">settings_ethernet</span>
+<h2 class="text-sm font-bold uppercase tracking-[0.2em] text-outline">Scraper Engine</h2>
+</div>
+<div class="space-y-8">
+<div>
+<label class="text-[10px] font-bold text-outline uppercase tracking-widest mb-4 block">Frequency</label>
+<div class="grid grid-cols-3 gap-2 p-1 bg-surface-container-lowest rounded-xl">
+<button class="py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg bg-surface-container-highest text-on-surface">One-time</button>
+<button class="py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg text-outline hover:text-on-surface">Daily</button>
+<button class="py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg text-outline hover:text-on-surface">Real-time</button>
+</div>
+</div>
+<div>
+<label class="text-[10px] font-bold text-outline uppercase tracking-widest mb-4 block">Proxy Strategy</label>
+<div class="space-y-3">
+<label class="flex items-center gap-3 p-4 rounded-xl border-2 border-primary bg-primary/5 cursor-pointer">
+<input checked="" class="hidden" name="proxy" type="radio"/>
+<div class="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Residential Proxy</p>
+<p class="text-[10px] text-primary/70 uppercase">Max stealth • Low ban risk</p>
+</div>
+</label>
+<label class="flex items-center gap-3 p-4 rounded-xl border-2 border-outline-variant/20 hover:border-outline transition-all cursor-pointer">
+<input class="hidden" name="proxy" type="radio"/>
+<div class="w-4 h-4 rounded-full border-2 border-outline-variant flex items-center justify-center"></div>
+<div>
+<p class="text-xs font-bold text-outline">Standard Node</p>
+<p class="text-[10px] text-outline-variant uppercase">Datacenter • High speed</p>
+</div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Action Area -->
+<div class="pt-4">
+<button class="w-full py-6 rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary font-headline font-extrabold text-xl tracking-tight flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.98] shadow-2xl shadow-primary/20">
+<span class="material-symbols-outlined text-2xl" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                            START SEARCH
+                        </button>
+<p class="text-center mt-6 text-[10px] font-bold text-outline uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                            Approx. Completion Time: 4 Minutes per platform
+                        </p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Neural Trace Shimmer Line -->
+<div class="fixed bottom-0 left-0 w-full h-1 overflow-hidden opacity-30">
+<div class="shimmer-trace w-full h-full animate-[shimmer_2s_infinite]"></div>
+</div>
+<style>
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
+</body></html>
