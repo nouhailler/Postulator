@@ -3,9 +3,11 @@ import { useSearchParams } from 'react-router-dom'
 import {
   Upload, Star, Trash2, Brain, CheckCircle, ChevronDown,
   Loader, AlertCircle, Clock, Save, CheckCheck,
+  FileText, ArrowDownToLine,
 } from 'lucide-react'
 import { useAsync }     from '../hooks/useAsync.js'
-import { fetchCVs, uploadCV, deleteCV, updateCV, analyzeCV } from '../api/cvs.js'
+import { fetchCVs, uploadCV, deleteCV, updateCV, analyzeCV, importCVFromStore } from '../api/cvs.js'
+import { fetchCVList }  from '../api/cvStore.js'
 import { fetchJobs }    from '../api/jobs.js'
 import { scoreJobSync } from '../api/analysis.js'
 import { saveMatch }    from '../api/history.js'
@@ -30,29 +32,33 @@ function ElapsedTimer({ running }) {
 }
 
 // ── CVCard ────────────────────────────────────────────────────────────────────
-function SkillBadge({ skill }) {
-  return <span className={styles.skill}>{skill}</span>
-}
-
 function CVCard({ cv, onDelete, onSetDefault, onAnalyze, analyzing, analyzeError }) {
   let skills = []
   try { skills = JSON.parse(cv.skills || '[]') } catch { /* noop */ }
   const isAnalyzing = analyzing === cv.id
   const hasError    = analyzeError?.id === cv.id
+  const isImported  = !cv.filepath || cv.filepath === ''
 
   return (
     <div className={`${styles.cvCard} ${cv.is_default ? styles.cvDefault : ''}`}>
       {cv.is_default && <span className={styles.defaultBadge}>✦ CV actif</span>}
       <div className={styles.cvHeader}>
-        <div className={styles.cvIconWrap}><span className={styles.cvIcon}>CV</span></div>
+        <div className={styles.cvIconWrap}>
+          <span className={styles.cvIcon}>{isImported ? '📋' : 'CV'}</span>
+        </div>
         <div className={styles.cvMeta}>
           <p className={styles.cvName}>{cv.name}</p>
-          <p className={styles.cvFile}>{cv.filename} · {cv.file_type.toUpperCase()}</p>
+          <p className={styles.cvFile}>
+            {isImported
+              ? <span className={styles.importedTag}>Importé depuis CV</span>
+              : `${cv.filename} · ${cv.file_type.toUpperCase()}`
+            }
+          </p>
         </div>
       </div>
       {skills.length > 0 && (
         <div className={styles.skills}>
-          {skills.slice(0, 10).map(s => <SkillBadge key={s} skill={s} />)}
+          {skills.slice(0, 10).map(s => <span key={s} className={styles.skill}>{s}</span>)}
           {skills.length > 10 && <span className={styles.skillMore}>+{skills.length - 10}</span>}
         </div>
       )}
@@ -147,11 +153,12 @@ function ScoreResult({ result, onSave, saving, saved }) {
 
 // ── Page principale ───────────────────────────────────────────────────────────
 export default function AnalysisPage() {
-  // ── Lecture du paramètre ?job_id=X (passé depuis JobsPage) ───────────────
   const [searchParams] = useSearchParams()
   const jobIdFromUrl   = searchParams.get('job_id')
 
   const { data: cvs, refetch: refetchCVs } = useAsync(fetchCVs, [], { fallback: [] })
+  const { data: storedCVs } = useAsync(fetchCVList, [], { fallback: [] })
+
   const [analyzing,    setAnalyzing]    = useState(null)
   const [analyzeError, setAnalyzeError] = useState(null)
   const [uploading,    setUploading]    = useState(false)
@@ -160,12 +167,16 @@ export default function AnalysisPage() {
   const [dragOver,     setDragOver]     = useState(false)
   const fileInputRef = useRef()
 
+  const [importing,  setImporting]  = useState(null)
+  const [importError, setImportError] = useState(null)
+  const [importDone,  setImportDone]  = useState(null)
+
+  // ── Même tri que le menu Offres : scraped_at DESC ─────────────────────────
   const { data: jobs } = useAsync(
-    () => fetchJobs({ limit: 100, sort_by: 'published_at', sort_order: 'desc' }),
+    () => fetchJobs({ limit: 200, sort_by: 'scraped_at', sort_order: 'desc' }),
     [], { fallback: [] }
   )
 
-  // Présélection de l'offre — initialisée depuis l'URL, puis modifiable par l'utilisateur
   const [selectedJob,  setSelectedJob]  = useState(jobIdFromUrl ?? '')
   const [scoring,      setScoring]      = useState(false)
   const [scoreResult,  setScoreResult]  = useState(null)
@@ -173,18 +184,13 @@ export default function AnalysisPage() {
   const [saving,       setSaving]       = useState(false)
   const [saved,        setSaved]        = useState(false)
 
-  // Si le job_id arrive dans l'URL après le chargement des offres, l'appliquer
-  useEffect(() => {
-    if (jobIdFromUrl) setSelectedJob(jobIdFromUrl)
-  }, [jobIdFromUrl])
+  useEffect(() => { if (jobIdFromUrl) setSelectedJob(jobIdFromUrl) }, [jobIdFromUrl])
 
-  // Bandeau de notification si on vient depuis JobsPage
   const cameFromJobs   = !!jobIdFromUrl
   const preselectedJob = jobs?.find(j => String(j.id) === String(selectedJob))
-
   useEffect(() => { setSaved(false) }, [selectedJob, scoreResult])
 
-  // ── Upload ────────────────────────────────────────────────────────────────
+  // ── Upload fichier ────────────────────────────────────────────────────────
   const handleFileSelect = useCallback(async (file) => {
     if (!file) return
     const name = uploadName.trim() || file.name.replace(/\.[^.]+$/, '')
@@ -200,7 +206,20 @@ export default function AnalysisPage() {
     if (file) handleFileSelect(file)
   }, [handleFileSelect])
 
-  // ── CVs ───────────────────────────────────────────────────────────────────
+  // ── Import depuis stored_cvs ──────────────────────────────────────────────
+  const handleImportFromStore = useCallback(async (storeId, storeName) => {
+    setImporting(storeId); setImportError(null); setImportDone(null)
+    try {
+      await importCVFromStore(storeId)
+      await refetchCVs()
+      setImportDone(`"${storeName}" importé avec succès — cliquez sur "Activer" pour l'utiliser.`)
+      setTimeout(() => setImportDone(null), 5000)
+    } catch (err) {
+      setImportError(err.detail ?? err.message ?? 'Erreur import')
+    } finally { setImporting(null) }
+  }, [refetchCVs])
+
+  // ── Gestion CVs ───────────────────────────────────────────────────────────
   const handleDelete = useCallback(async (id) => {
     if (!window.confirm('Supprimer ce CV ?')) return
     try { await deleteCV(id); await refetchCVs() } catch (err) { console.error(err) }
@@ -247,6 +266,8 @@ export default function AnalysisPage() {
     } finally { setSaving(false) }
   }, [scoreResult, defaultCV, selectedJob, saved])
 
+  const importedNames = new Set((cvs ?? []).map(c => c.name))
+
   // ── Rendu ─────────────────────────────────────────────────────────────────
   return (
     <div className={styles.page}>
@@ -257,7 +278,6 @@ export default function AnalysisPage() {
         </div>
       </div>
 
-      {/* Bandeau de contexte — quand on arrive depuis JobsPage */}
       {cameFromJobs && preselectedJob && (
         <div className={styles.contextBanner}>
           <Brain size={13} strokeWidth={2} style={{ color: 'var(--primary)', flexShrink: 0 }} />
@@ -274,6 +294,64 @@ export default function AnalysisPage() {
         {/* ── Colonne gauche : CVs ── */}
         <div>
           <p className={styles.sectionTitle}>Mes CVs</p>
+
+          {storedCVs && storedCVs.length > 0 && (
+            <div className={styles.importPanel}>
+              <div className={styles.importPanelHeader}>
+                <ArrowDownToLine size={13} strokeWidth={2} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                <div>
+                  <p className={styles.importPanelTitle}>Importer depuis le menu CV</p>
+                  <p className={styles.importPanelSub}>
+                    Vos CVs créés dans le menu "CV" peuvent être utilisés ici directement.
+                  </p>
+                </div>
+              </div>
+              <div className={styles.importList}>
+                {storedCVs.map(s => {
+                  const alreadyImported = importedNames.has(s.name)
+                  const isLoading       = importing === s.id
+                  return (
+                    <div key={s.id} className={styles.importItem}>
+                      <div className={styles.importItemInfo}>
+                        <FileText size={12} strokeWidth={2} style={{ color: 'var(--outline)', flexShrink: 0 }} />
+                        <span className={styles.importItemName}>{s.name}</span>
+                        {alreadyImported && (
+                          <span className={styles.importItemDone}>
+                            <CheckCircle size={11} strokeWidth={2} /> déjà importé
+                          </span>
+                        )}
+                      </div>
+                      {!alreadyImported && (
+                        <button
+                          className={styles.importBtn}
+                          onClick={() => handleImportFromStore(s.id, s.name)}
+                          disabled={isLoading}
+                        >
+                          {isLoading
+                            ? <><Loader size={11} className={styles.spin} strokeWidth={2} /> Import…</>
+                            : <><ArrowDownToLine size={11} strokeWidth={2} /> Importer</>
+                          }
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              {importDone && (
+                <div className={styles.importSuccess}>
+                  <CheckCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
+                  {importDone}
+                </div>
+              )}
+              {importError && (
+                <div className={styles.importError}>
+                  <AlertCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
+                  {importError}
+                </div>
+              )}
+            </div>
+          )}
+
           <div
             className={`${styles.dropZone} ${dragOver ? styles.dropZoneOver : ''} ${uploading ? styles.dropZoneLoading : ''}`}
             onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -287,7 +365,7 @@ export default function AnalysisPage() {
               ? <Loader size={24} strokeWidth={1.5} className={styles.spin} style={{ color: 'var(--primary)', marginBottom: 8 }} />
               : <Upload size={24} strokeWidth={1.5} style={{ color: 'var(--primary)', marginBottom: 8 }} />
             }
-            <p className={styles.dropText}>{uploading ? 'Upload en cours…' : 'Déposer un CV ici ou cliquer'}</p>
+            <p className={styles.dropText}>{uploading ? 'Upload en cours…' : 'Ou déposer un fichier CV ici'}</p>
             <p className={styles.dropHint}>PDF, TXT ou Markdown · max 10 MB</p>
           </div>
           {uploadError && (
@@ -295,9 +373,10 @@ export default function AnalysisPage() {
           )}
           <input className={styles.nameInput} type="text" placeholder="Nom du CV (optionnel)"
             value={uploadName} onChange={e => setUploadName(e.target.value)} />
+
           <div className={styles.cvList}>
             {!cvs?.length
-              ? <p className={styles.emptyMsg}>Aucun CV chargé. Déposez un fichier ci-dessus.</p>
+              ? <p className={styles.emptyMsg}>Aucun CV chargé. Importez depuis le menu CV ou déposez un fichier.</p>
               : cvs.map(cv => (
                   <CVCard key={cv.id} cv={cv}
                     onDelete={handleDelete} onSetDefault={handleSetDefault}
@@ -335,8 +414,11 @@ export default function AnalysisPage() {
                     <select className={styles.select} value={selectedJob}
                       onChange={e => { setSelectedJob(e.target.value); setScoreResult(null) }}>
                       <option value="">— Choisir une offre —</option>
-                      {jobs.map(j => (
-                        <option key={j.id} value={j.id}>{j.title} · {j.company}</option>
+                      {/* ── Même ordre + même numérotation que le menu Offres ── */}
+                      {(jobs ?? []).map((j, idx) => (
+                        <option key={j.id} value={j.id}>
+                          #{idx + 1} · {j.title} · {j.company}
+                        </option>
                       ))}
                     </select>
                     <ChevronDown size={13} className={styles.selectIcon} strokeWidth={2} />
@@ -373,7 +455,7 @@ export default function AnalysisPage() {
           <div className={styles.infoBox}>
             <p className={styles.infoTitle}>⚡ Mode synchrone</p>
             <p className={styles.infoText}>
-              Modèle actif : <code>phi3.5:3.8b</code> · Timeout : 5 min.<br />
+              Modèle actif : <code>{defaultCV ? 'modèle configuré' : 'aucun CV actif'}</code> · Timeout : 5 min.<br />
               Résultats sauvegardables dans l'historique après analyse.
             </p>
           </div>

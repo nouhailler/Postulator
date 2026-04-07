@@ -14,7 +14,6 @@ export async function fetchTopMatches({ limit = 6, minScore = 80 } = {}) {
   return api.get(`/jobs/top-matches?limit=${limit}&min_score=${minScore}`)
 }
 
-/** GET /api/jobs/:id  — retourne JobRead complet avec description */
 export async function fetchJob(id) {
   return api.get(`/jobs/${id}`)
 }
@@ -25,4 +24,24 @@ export async function updateJobStatus(id, status) {
 
 export async function deleteJob(id) {
   return api.delete(`/jobs/${id}`)
+}
+
+/**
+ * DELETE /api/jobs — purge la base d'offres.
+ * @param {number} keepRecent  - nb d'offres récentes à garder (défaut 20)
+ * @param {boolean} keepSelected - garder les offres avec statut != 'new' (défaut true)
+ */
+export async function purgeJobs({ keepRecent = 20, keepSelected = true } = {}) {
+  const qs = new URLSearchParams({
+    keep_recent:    keepRecent,
+    keep_selected:  keepSelected,
+  }).toString()
+  // DELETE avec params dans l'URL
+  const BASE_URL = (import.meta.env.VITE_API_URL ?? '') + '/api'
+  const res = await fetch(`${BASE_URL}/jobs?${qs}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `HTTP ${res.status}`)
+  }
+  return res.json()
 }

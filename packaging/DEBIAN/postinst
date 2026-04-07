@@ -5,6 +5,7 @@ INSTALL_DIR="/opt/postulator"
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 echo ""
@@ -12,6 +13,14 @@ echo -e "${BLUE}╔════════════════════�
 echo -e "${BLUE}║       Installation de Postulator         ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════╝${NC}"
 echo ""
+
+# ── Identifier l'utilisateur réel (pas root) ─────────────────
+# SUDO_USER est défini quand on lance via sudo
+# Si non disponible, on utilise l'utilisateur courant
+REAL_USER="${SUDO_USER:-$USER}"
+REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+
+echo -e "      → Installation pour l'utilisateur : ${GREEN}${REAL_USER}${NC}"
 
 # ── Python virtualenv + dépendances ──────────────────────────
 echo -e "${YELLOW}[1/4] Création de l'environnement Python...${NC}"
@@ -31,22 +40,39 @@ cd "${INSTALL_DIR}/frontend"
 npm install --silent 2>/dev/null || npm install
 
 # ── Configuration par défaut ──────────────────────────────────
-echo -e "${YELLOW}[4/4] Configuration initiale...${NC}"
+echo -e "${YELLOW}[4/4] Configuration et permissions...${NC}"
 if [ ! -f "${INSTALL_DIR}/backend/.env" ]; then
     cp "${INSTALL_DIR}/backend/.env.example" "${INSTALL_DIR}/backend/.env"
     echo "      → Fichier .env créé depuis .env.example"
 fi
 
-# Droits d'exécution
+# ── Droits d'exécution du script principal ────────────────────
 chmod +x /usr/bin/postulator
-chmod -R 755 "${INSTALL_DIR}"
 
-# Mettre à jour le cache des icônes
+# ── Permissions : donner la propriété à l'utilisateur réel ───
+# C'est la correction clé : sans ça, Vite ne peut pas créer ses
+# fichiers temporaires (.timestamp-*.mjs) dans /opt/postulator/frontend/
+# et le frontend crashe silencieusement avec EACCES.
+if [ -n "$REAL_USER" ] && [ "$REAL_USER" != "root" ]; then
+    echo "      → Attribution des droits à : ${REAL_USER}"
+    chown -R "${REAL_USER}:${REAL_USER}" "${INSTALL_DIR}"
+    chmod -R 755 "${INSTALL_DIR}"
+    # S'assurer que les dossiers où Vite écrit ses caches sont accessibles
+    chmod -R u+w "${INSTALL_DIR}/frontend"
+    chmod -R u+w "${INSTALL_DIR}/backend"
+else
+    # Fallback : permissions larges si on ne trouve pas l'utilisateur
+    chmod -R 777 "${INSTALL_DIR}"
+    echo -e "      ${YELLOW}⚠ Impossible de déterminer l'utilisateur — permissions 777 appliquées${NC}"
+    echo -e "      ${YELLOW}  Corrigez manuellement : sudo chown -R \$USER:\$USER ${INSTALL_DIR}${NC}"
+fi
+
+# ── Mettre à jour le cache des icônes ────────────────────────
 if command -v gtk-update-icon-cache &>/dev/null; then
     gtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true
 fi
 
-# Mettre à jour la base de données des applications desktop
+# ── Mettre à jour la base de données des applications desktop ─
 if command -v update-desktop-database &>/dev/null; then
     update-desktop-database /usr/share/applications 2>/dev/null || true
 fi

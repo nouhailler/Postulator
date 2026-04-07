@@ -60,20 +60,76 @@ sudo dpkg -i postulator_X.X.X_all.deb
 - Le seuil d'alerte email
 - L'URL Redis (si différente de localhost)
 
+---
+
 ## Problèmes courants
 
-**Redis ne démarre pas :**
-```bash
-sudo systemctl start redis-server
-sudo systemctl enable redis-server  # pour démarrer automatiquement
+### ❌ Frontend inaccessible — `ERR_CONNECTION_REFUSED` sur localhost:5173
+
+**Cause** : Vite ne peut pas créer ses fichiers temporaires dans `/opt/postulator/frontend/`
+car le dossier appartient à `root` après l'installation.
+
+**Log révélateur** (`~/.postulator/logs/frontend.log`) :
+```
+Error: EACCES: permission denied, open '/opt/postulator/frontend/vite.config.js.timestamp-...mjs'
 ```
 
-**Ollama non disponible :**
+**Solution** :
+```bash
+sudo chown -R $USER:$USER /opt/postulator
+postulator
+```
+
+---
+
+### ❌ Scoring Ollama ne retourne pas de JSON (après mise à jour Ollama ≥ 0.5)
+
+**Cause** : Les nouvelles versions d'Ollama exigent le paramètre `format="json"` explicite
+dans les appels `client.generate()`. Sans ce paramètre, Ollama retourne du texte libre
+au lieu de JSON structuré, ce qui fait échouer le parsing côté backend.
+
+**Symptôme** : Le scoring affiche une erreur "Réponse non parsable" ou un score de 0.
+
+**Solution** : Ce correctif est intégré depuis la version 1.0.1. Si vous avez une version
+antérieure, mettez à jour le paquet :
+```bash
+sudo dpkg -i postulator_1.0.1_all.deb
+```
+
+Ou modifiez manuellement `/opt/postulator/backend/app/services/ollama_service.py` :
+dans les deux appels `client.generate()` (fonctions `score_job` et `extract_skills`),
+ajoutez la ligne `format="json",` après `stream=False,`.
+
+---
+
+### ❌ Redis ne démarre pas
+
+```bash
+sudo systemctl start redis-server
+sudo systemctl enable redis-server  # démarrage automatique au boot
+```
+
+### ❌ Ollama non disponible
+
 ```bash
 curl -fsSL https://ollama.ai/install.sh | sh
-ollama serve &   # démarrer le daemon
+ollama serve &
 ollama pull phi3.5:3.8b
 ```
 
-**Port 8000 ou 5173 occupé :**
-Vérifiez les processus en cours : `lsof -i :8000` et `lsof -i :5173`
+### ❌ Port 8000 ou 5173 déjà occupé
+
+```bash
+lsof -i :8000   # voir quel processus utilise le port
+lsof -i :5173
+kill <PID>      # tuer le processus si nécessaire
+```
+
+### ❌ Consulter les logs en cas de problème
+
+```bash
+tail -f ~/.postulator/logs/api.log       # API FastAPI
+tail -f ~/.postulator/logs/frontend.log  # Frontend Vite
+tail -f ~/.postulator/logs/celery.log    # Worker Celery
+tail -f ~/.postulator/logs/redis.log     # Redis
+```

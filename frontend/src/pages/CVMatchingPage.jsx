@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import {
   Sparkles, Trash2, Download, FileText, Loader,
   AlertCircle, Clock, ExternalLink, StickyNote, CheckCheck,
+  GitCompare,
 } from 'lucide-react'
 import { useAsync }    from '../hooks/useAsync.js'
 import { fetchCVList } from '../api/cvStore.js'
 import { fetchJobs }   from '../api/jobs.js'
 import {
-  fetchGenerated, generateMatchingCV, deleteGenerated,
+  fetchGenerated, fetchGeneratedOne, generateMatchingCV, deleteGenerated,
   updateNotes, exportDocx,
 } from '../api/cvMatching.js'
 import styles from './CVMatchingPage.module.css'
@@ -25,27 +26,63 @@ function ElapsedTimer({ running }) {
   return <span className={styles.timer}><Clock size={10} strokeWidth={2} />{m > 0 ? `${m}m ` : ''}{sec}s</span>
 }
 
-// ── Rendu Markdown ────────────────────────────────────────────────────────────
-function MarkdownCV({ text }) {
+// ── Algorithme de diff mot par mot ────────────────────────────────────────────
+function tokenize(text) {
+  return text.split(/(\s+|[.,;:!?()\[\]{}«»"'\-–—\/\\])/).filter(t => t.length > 0)
+}
+
+const STOPWORDS = new Set([
+  'le','la','les','de','du','des','un','une','et','en','à','au','aux',
+  'dans','sur','par','pour','avec','sans','sous','entre','vers',
+  'que','qui','quoi','dont','où','mais','ou','donc','car','ni','si',
+  'je','tu','il','elle','nous','vous','ils','elles','on',
+  'ce','cet','cette','ces','mon','ton','son','ma','ta','sa',
+  'mes','tes','ses','notre','votre','leur','leurs',
+  'est','sont','a','ont','été','avoir','être',
+  'the','of','and','in','to','a','an','for','with','on','at','by',
+  'is','are','was','were','be','been','have','has','that','this',
+])
+
+function isNewWord(word, sourceText) {
+  const w = word.toLowerCase().replace(/[.,;:!?()\[\]{}«»"']/g, '')
+  if (w.length <= 2) return false
+  if (STOPWORDS.has(w)) return false
+  if (/^\d+$/.test(w)) return false
+  return !sourceText.toLowerCase().includes(w)
+}
+
+function renderLineWithDiff(text, sourceText, enabled) {
+  if (!enabled || !sourceText) return text
+  const tokens = tokenize(text)
+  return tokens.map((token, i) => {
+    if (/^\s+$/.test(token) || /^[.,;:!?()\[\]{}«»"'\-–—\/\\]+$/.test(token)) return token
+    if (isNewWord(token, sourceText)) return <span key={i} className={styles.diffNew}>{token}</span>
+    return token
+  })
+}
+
+// ── Rendu Markdown avec diff ──────────────────────────────────────────────────
+function MarkdownCV({ text, sourceText, diffMode }) {
   if (!text) return null
   return (
     <div className={styles.cvMarkdown}>
       {text.split('\n').map((line, i) => {
-        if (line.startsWith('# '))   return <h1 key={i} className={styles.mdH1}>{line.slice(2)}</h1>
-        if (line.startsWith('## '))  return <h2 key={i} className={styles.mdH2}>{line.slice(3)}</h2>
-        if (line.startsWith('### ')) return <h3 key={i} className={styles.mdH3}>{line.slice(4)}</h3>
-        if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className={styles.mdBold}>{line.slice(2,-2)}</p>
-        if (line.startsWith('- '))   return <li key={i} className={styles.mdLi}>{line.slice(2)}</li>
+        const render = (content) => renderLineWithDiff(content, sourceText, diffMode)
+        if (line.startsWith('# '))   return <h1 key={i} className={styles.mdH1}>{render(line.slice(2))}</h1>
+        if (line.startsWith('## '))  return <h2 key={i} className={styles.mdH2}>{render(line.slice(3))}</h2>
+        if (line.startsWith('### ')) return <h3 key={i} className={styles.mdH3}>{render(line.slice(4))}</h3>
+        if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className={styles.mdBold}>{render(line.slice(2,-2))}</p>
+        if (line.startsWith('- '))   return <li key={i} className={styles.mdLi}>{render(line.slice(2))}</li>
         if (line.startsWith('---'))  return <hr key={i} className={styles.mdHr} />
         if (!line.trim())            return <div key={i} style={{ height: 6 }} />
-        return <p key={i} className={styles.mdP}>{line}</p>
+        return <p key={i} className={styles.mdP}>{render(line)}</p>
       })}
     </div>
   )
 }
 
 // ── Carte CV généré ───────────────────────────────────────────────────────────
-function GeneratedCard({ gen, onDelete, onSelect, selected }) {
+function GeneratedCard({ gen, onDelete, onSelect, selected, loading }) {
   return (
     <div
       className={`${styles.genCard} ${selected ? styles.genCardActive : ''}`}
@@ -53,9 +90,12 @@ function GeneratedCard({ gen, onDelete, onSelect, selected }) {
     >
       <div className={styles.genCardHeader}>
         <div className={styles.genJobTitle}>{gen.job_title}</div>
-        <span className={styles.genDate}>
-          {new Date(gen.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {loading && <Loader size={11} className={styles.spin} strokeWidth={2} style={{ color: 'var(--primary)' }} />}
+          <span className={styles.genDate}>
+            {new Date(gen.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+          </span>
+        </div>
       </div>
       <div className={styles.genCardMeta}>
         <span>{gen.job_company}</span>
@@ -82,7 +122,7 @@ function GeneratedCard({ gen, onDelete, onSelect, selected }) {
 export default function CVMatchingPage() {
   const { data: cvList } = useAsync(fetchCVList, [], { fallback: [] })
   const { data: jobs }   = useAsync(
-    () => fetchJobs({ limit: 100, sort_by: 'published_at', sort_order: 'desc' }),
+    () => fetchJobs({ limit: 200, sort_by: 'scraped_at', sort_order: 'desc' }),
     [], { fallback: [] }
   )
   const { data: genList, refetch: refetchGen } = useAsync(fetchGenerated, [], { fallback: [] })
@@ -92,7 +132,14 @@ export default function CVMatchingPage() {
   const [language,   setLanguage]   = useState('fr')
   const [generating, setGenerating] = useState(false)
   const [genError,   setGenError]   = useState(null)
-  const [viewGen,    setViewGen]    = useState(null)
+
+  // CV affiché — toujours l'objet complet (cv_markdown + source_cv_text)
+  const [viewGen,     setViewGen]     = useState(null)
+  const [loadingView, setLoadingView] = useState(false)  // chargement depuis l'historique
+  const [loadingId,   setLoadingId]   = useState(null)   // id de la carte en cours de chargement
+
+  // Mode diff
+  const [diffMode, setDiffMode] = useState(true)
 
   // Notes
   const [editNotes,   setEditNotes]   = useState(false)
@@ -100,7 +147,7 @@ export default function CVMatchingPage() {
   const [savingNotes, setSavingNotes] = useState(false)
   const [notesSaved,  setNotesSaved]  = useState(false)
 
-  // Export DOCX — message retour pandoc
+  // Export DOCX
   const [docxMsg, setDocxMsg] = useState(null)
 
   // ── Helpers export ────────────────────────────────────────────────────────
@@ -132,12 +179,7 @@ export default function CVMatchingPage() {
     setDocxMsg(null)
     const filename = `CV_${viewGen.job_company}_${viewGen.job_title}.docx`
     const result = await exportDocx(viewGen.id, filename)
-    if (!result.ok) {
-      // pandoc absent → fallback gracieux
-      setDocxMsg(result.message)
-      // Télécharger quand même le .md comme fallback
-      handleExportMD()
-    }
+    if (!result.ok) { setDocxMsg(result.message); handleExportMD() }
   }
 
   // ── Génération ────────────────────────────────────────────────────────────
@@ -145,9 +187,11 @@ export default function CVMatchingPage() {
     if (!selCvId || !selJobId) return
     setGenerating(true); setGenError(null)
     try {
+      // generateMatchingCV retourne déjà le GeneratedCVFull complet (cv_markdown + source_cv_text)
       const gen = await generateMatchingCV(parseInt(selCvId), parseInt(selJobId), language)
       await refetchGen()
       setViewGen(gen)
+      setDiffMode(true)
     } catch (err) {
       setGenError(err.detail ?? err.message ?? 'Erreur Ollama')
     } finally { setGenerating(false) }
@@ -160,12 +204,27 @@ export default function CVMatchingPage() {
     refetchGen()
   }
 
-  const handleSelect = (gen) => {
-    setViewGen(gen)
-    setNotesText(gen.notes ?? '')
-    setEditNotes(false)
-    setNotesSaved(false)
+  // ── Sélection depuis l'historique ─────────────────────────────────────────
+  // La liste genList contient des GeneratedCVSummary (sans cv_markdown ni source_cv_text).
+  // On doit charger le GeneratedCVFull via GET /cv-matching/{id}.
+  const handleSelect = async (summary) => {
+    if (loadingId === summary.id) return   // déjà en cours
+    setLoadingId(summary.id)
+    setLoadingView(true)
     setDocxMsg(null)
+    try {
+      const full = await fetchGeneratedOne(summary.id)
+      setViewGen(full)
+      setNotesText(full.notes ?? '')
+      setEditNotes(false)
+      setNotesSaved(false)
+      setDiffMode(!!full.source_cv_text)
+    } catch (err) {
+      console.error('[CVMatching] fetchGeneratedOne failed:', err)
+    } finally {
+      setLoadingView(false)
+      setLoadingId(null)
+    }
   }
 
   const handleSaveNotes = async () => {
@@ -178,6 +237,8 @@ export default function CVMatchingPage() {
       refetchGen()
     } finally { setSavingNotes(false) }
   }
+
+  const hasDiff = !!(viewGen?.source_cv_text)
 
   // ── Rendu ─────────────────────────────────────────────────────────────────
   return (
@@ -209,7 +270,9 @@ export default function CVMatchingPage() {
               <label className={styles.label}>Offre cible *</label>
               <select className={styles.select} value={selJobId} onChange={e => setSelJobId(e.target.value)}>
                 <option value="">— Choisir une offre —</option>
-                {(jobs ?? []).map(j => <option key={j.id} value={j.id}>{j.title} · {j.company}</option>)}
+                {(jobs ?? []).map((j, idx) => (
+                  <option key={j.id} value={j.id}>#{idx + 1} · {j.title} · {j.company}</option>
+                ))}
               </select>
               {!jobs?.length && <p className={styles.noDataHint}>Aucune offre — lancez un scraping.</p>}
             </div>
@@ -255,8 +318,11 @@ export default function CVMatchingPage() {
               : <div className={styles.genList}>
                   {genList.map(g => (
                     <GeneratedCard key={g.id} gen={g}
-                      onDelete={handleDelete} onSelect={handleSelect}
-                      selected={viewGen?.id === g.id} />
+                      onDelete={handleDelete}
+                      onSelect={handleSelect}
+                      selected={viewGen?.id === g.id}
+                      loading={loadingId === g.id}
+                    />
                   ))}
                 </div>
             }
@@ -265,7 +331,16 @@ export default function CVMatchingPage() {
 
         {/* ── Colonne droite : visualisation ── */}
         <div className={styles.rightCol}>
-          {!viewGen ? (
+
+          {/* Spinner pendant le chargement depuis l'historique */}
+          {loadingView && (
+            <div className={styles.loadingView}>
+              <Loader size={22} className={styles.spin} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
+              <p>Chargement du CV…</p>
+            </div>
+          )}
+
+          {!loadingView && !viewGen && (
             <div className={styles.emptyView}>
               <FileText size={40} strokeWidth={1} style={{ color: 'var(--outline)', marginBottom: 16 }} />
               <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: 18, color: 'var(--on-surface)', marginBottom: 8 }}>
@@ -275,18 +350,31 @@ export default function CVMatchingPage() {
                 Générez un CV ou sélectionnez-en un dans l'historique pour le visualiser et l'exporter.
               </p>
             </div>
-          ) : (
+          )}
+
+          {!loadingView && viewGen && (
             <>
-              {/* Barre d'actions */}
+              {/* Toolbar */}
               <div className={styles.viewToolbar}>
                 <div>
                   <p className={styles.viewTitle}>{viewGen.job_title} · {viewGen.job_company}</p>
                   <p className={styles.viewMeta}>
-                    CV : {viewGen.source_cv_name} · {new Date(viewGen.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                    CV source : {viewGen.source_cv_name} · {new Date(viewGen.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
                     {viewGen.ollama_model && <span> · {viewGen.ollama_model}</span>}
                   </p>
                 </div>
                 <div className={styles.exportBtns}>
+                  {hasDiff && (
+                    <button
+                      className={`btn-ghost ${diffMode ? styles.diffBtnActive : ''}`}
+                      onClick={() => setDiffMode(d => !d)}
+                      title={diffMode ? 'Désactiver la vue diff' : 'Activer la vue diff'}
+                      style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}
+                    >
+                      <GitCompare size={12} strokeWidth={2} />
+                      {diffMode ? 'Diff ON' : 'Diff OFF'}
+                    </button>
+                  )}
                   <button className="btn-ghost" onClick={handleExportTXT}
                     style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Download size={12} strokeWidth={2} /> .txt
@@ -313,7 +401,14 @@ export default function CVMatchingPage() {
                 </div>
               </div>
 
-              {/* Message pandoc absent → fallback .md téléchargé */}
+              {/* Légende diff */}
+              {hasDiff && diffMode && (
+                <div className={styles.diffLegend}>
+                  <span className={styles.diffDot} />
+                  <span>Mots <span className={styles.diffNewInline}>en rouge</span> = absents du CV original (ajoutés par l'IA pour correspondre à l'offre)</span>
+                </div>
+              )}
+
               {docxMsg && (
                 <div className={styles.docxFallback}>
                   <AlertCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
@@ -345,9 +440,13 @@ export default function CVMatchingPage() {
                 )}
               </div>
 
-              {/* CV affiché */}
+              {/* CV affiché avec diff */}
               <div className={styles.cvPreview}>
-                <MarkdownCV text={viewGen.cv_markdown} />
+                <MarkdownCV
+                  text={viewGen.cv_markdown}
+                  sourceText={viewGen.source_cv_text}
+                  diffMode={hasDiff && diffMode}
+                />
               </div>
             </>
           )}

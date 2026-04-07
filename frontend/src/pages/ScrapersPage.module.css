@@ -38,130 +38,56 @@
 
 .btnDisabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
+/* ── Bloc localisation ── */
+.locationBlock { display: flex; flex-direction: column; }
+.locationRow { display: flex; gap: 8px; align-items: stretch; }
+.countrySelectWrap { flex: 1.4; position: relative; }
+.countrySelect { width: 100%; background: var(--surface-container); border: none; border-bottom: 2px solid var(--surface-container-highest); border-radius: var(--radius-sm) var(--radius-sm) 0 0; padding: 9px 30px 9px 12px; font-family: var(--font-body); font-size: 13px; color: var(--on-surface); outline: none; appearance: none; cursor: pointer; transition: border-color 0.15s; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+.countrySelect:focus { border-bottom-color: var(--primary); }
+.countrySelect option { background: #1a2540; color: var(--on-surface); }
+.countrySelect optgroup { color: var(--outline); font-size: 10px; }
+.cityInput { flex: 1; background: var(--surface-container); border: none; border-bottom: 2px solid var(--surface-container-highest); border-radius: var(--radius-sm) var(--radius-sm) 0 0; padding: 9px 12px; font-family: var(--font-body); font-size: 13px; color: var(--on-surface); outline: none; transition: border-color 0.15s; }
+.cityInput::placeholder { color: var(--outline); }
+.cityInput:focus { border-bottom-color: var(--primary); }
+
+/* Aperçu localisation */
+.locationPreview { margin-top: 6px; font-size: 11px; color: var(--outline); line-height: 1.4; }
+.locationPreview strong { color: var(--primary); font-weight: 700; }
+.locationNote { color: var(--outline); font-style: italic; }   /* ← nouveau : info domaine Indeed */
+.locationPreviewEmpty { margin-top: 6px; font-size: 11px; color: var(--outline); font-style: italic; line-height: 1.4; }
+
 /* ── Zone proxy résidentiel ── */
-.proxySeparator {
-  margin: 18px 0 0;
-  border-top: 1px dashed rgba(60, 221, 199, 0.2);
-}
-
+.proxySeparator { margin: 18px 0 0; border-top: 1px dashed rgba(60, 221, 199, 0.2); }
 .proxySection { margin-top: 14px; }
-
-/* Bouton toggle proxy */
-.proxyToggleBtn {
-  width: 100%;
-  background: rgba(60, 221, 199, 0.04);
-  border: 1px solid rgba(60, 221, 199, 0.2);
-  border-radius: var(--radius-lg);
-  padding: 13px 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  transition: background 0.15s, border-color 0.15s;
-  text-align: left;
-}
+.proxyToggleBtn { width: 100%; background: rgba(60, 221, 199, 0.04); border: 1px solid rgba(60, 221, 199, 0.2); border-radius: var(--radius-lg); padding: 13px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.15s, border-color 0.15s; text-align: left; }
 .proxyToggleBtn:hover { background: rgba(60, 221, 199, 0.08); border-color: rgba(60, 221, 199, 0.35); }
 .proxyToggleBtnOpen { background: rgba(60, 221, 199, 0.08); border-color: rgba(60, 221, 199, 0.4); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-
 .proxyToggleLeft { display: flex; align-items: center; gap: 12px; }
 .proxyShieldIcon { color: var(--tertiary); flex-shrink: 0; }
 .proxyToggleLabel { display: block; font-family: var(--font-headline); font-size: 13px; font-weight: 700; color: var(--on-surface); }
 .proxyToggleSub { display: block; font-size: 11px; color: var(--outline); margin-top: 2px; }
 .proxyToggleRight { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-
-.proxyCountBadge {
-  display: inline-flex; align-items: center; gap: 4px;
-  background: rgba(60, 221, 199, 0.15);
-  color: var(--tertiary);
-  font-size: 10px; font-weight: 700;
-  padding: 2px 8px; border-radius: 10px;
-  font-family: var(--font-headline);
-}
-
-/* Panneau proxy expandable */
-.proxyPanel {
-  background: var(--surface-container);
-  border: 1px solid rgba(60, 221, 199, 0.25);
-  border-top: none;
-  border-bottom-left-radius: var(--radius-lg);
-  border-bottom-right-radius: var(--radius-lg);
-  padding: 16px 18px;
-  animation: fadeSlide 0.15s ease;
-}
+.proxyCountBadge { display: inline-flex; align-items: center; gap: 4px; background: rgba(60, 221, 199, 0.15); color: var(--tertiary); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; font-family: var(--font-headline); }
+.proxyPanel { background: var(--surface-container); border: 1px solid rgba(60, 221, 199, 0.25); border-top: none; border-bottom-left-radius: var(--radius-lg); border-bottom-right-radius: var(--radius-lg); padding: 16px 18px; animation: fadeSlide 0.15s ease; }
 @keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-
 .proxyHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .proxyPanelTitle { font-family: var(--font-headline); font-size: 13px; font-weight: 700; color: var(--on-surface); margin-bottom: 4px; }
 .proxyPanelSub { font-size: 11px; color: var(--outline); line-height: 1.4; }
 .proxyPanelSub code { font-size: 10px; background: var(--surface-container-high); padding: 1px 5px; border-radius: 3px; color: var(--primary); }
-
 .proxyStats { flex-shrink: 0; }
 .proxyValid { display: inline-flex; align-items: center; gap: 4px; color: var(--tertiary); font-size: 11px; font-weight: 700; }
 .proxyInvalid { display: inline-flex; align-items: center; gap: 4px; color: var(--outline); font-size: 11px; }
-
-.proxyTextarea {
-  width: 100%;
-  background: var(--surface-container-low);
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: var(--on-surface);
-  outline: none;
-  resize: vertical;
-  line-height: 1.7;
-  transition: border-color 0.15s;
-  min-height: 140px;
-}
+.proxyTextarea { width: 100%; background: var(--surface-container-low); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); padding: 10px 12px; font-family: 'Courier New', monospace; font-size: 12px; color: var(--on-surface); outline: none; resize: vertical; line-height: 1.7; transition: border-color 0.15s; min-height: 140px; }
 .proxyTextarea:focus { border-color: var(--tertiary); }
 .proxyTextarea::placeholder { color: var(--outline); }
-
-.proxyInfo {
-  display: flex; align-items: flex-start; gap: 8px;
-  margin: 10px 0 14px;
-  padding: 8px 10px;
-  background: rgba(255,255,255,0.02);
-  border-radius: var(--radius-md);
-  font-size: 11px; color: var(--outline); line-height: 1.5;
-}
-
-/* Bouton lancer avec proxy */
-.proxyLaunchBtn {
-  width: 100%;
-  background: rgba(60, 221, 199, 0.15);
-  border: 1.5px solid var(--tertiary);
-  color: var(--tertiary);
-  font-family: var(--font-headline);
-  font-size: 13px; font-weight: 700;
-  padding: 11px 20px;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: background 0.15s, transform 0.1s;
-}
+.proxyInfo { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0 14px; padding: 8px 10px; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); font-size: 11px; color: var(--outline); line-height: 1.5; }
+.proxyLaunchBtn { width: 100%; background: rgba(60, 221, 199, 0.15); border: 1.5px solid var(--tertiary); color: var(--tertiary); font-family: var(--font-headline); font-size: 13px; font-weight: 700; padding: 11px 20px; border-radius: var(--radius-lg); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s, transform 0.1s; }
 .proxyLaunchBtn:hover:not(:disabled) { background: rgba(60, 221, 199, 0.25); transform: translateY(-1px); }
 .proxyLaunchBtn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-
 .proxyWarning { font-size: 11px; color: var(--outline); margin-top: 8px; font-style: italic; }
-
-/* Badge proxy dans les indicateurs */
-.proxyIndicator {
-  display: inline-flex; align-items: center; gap: 3px;
-  background: rgba(60, 221, 199, 0.12); color: var(--tertiary);
-  font-size: 9px; font-weight: 700;
-  padding: 1px 6px; border-radius: 8px;
-  margin-left: 6px;
-}
-
-/* Badge proxy dans les logs */
+.proxyIndicator { display: inline-flex; align-items: center; gap: 3px; background: rgba(60, 221, 199, 0.12); color: var(--tertiary); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
 .logSourceCell { display: flex; align-items: center; gap: 8px; }
-.proxyBadge {
-  display: inline-flex; align-items: center; gap: 3px;
-  background: rgba(60, 221, 199, 0.1); color: var(--tertiary);
-  font-size: 9px; font-weight: 600;
-  padding: 1px 5px; border-radius: 3px;
-}
+.proxyBadge { display: inline-flex; align-items: center; gap: 3px; background: rgba(60, 221, 199, 0.1); color: var(--tertiary); font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; }
 .resultProxy { color: var(--tertiary); opacity: 0.8; }
 .resultError { color: var(--error); font-size: 12px; }
 

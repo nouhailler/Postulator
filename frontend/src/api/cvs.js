@@ -27,10 +27,17 @@ export async function deleteCV(id) {
 }
 
 /**
+ * POST /api/cvs/import-from-store/{id}
+ * Importe un StoredCV (menu CV) dans la table cvs (CV Intelligence)
+ * sans re-télécharger de fichier.
+ */
+export async function importCVFromStore(storeId) {
+  return api.post(`/cvs/import-from-store/${storeId}`, {})
+}
+
+/**
  * POST /api/cvs/{id}/analyze
  * Lance l'extraction de compétences Ollama.
- * - Pas de body JSON (la route FastAPI n'en attend pas)
- * - Timeout 2 min (inférence Ollama peut être longue)
  */
 export async function analyzeCV(id, model) {
   const qs = model ? `?model=${encodeURIComponent(model)}` : ''

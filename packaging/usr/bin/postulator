@@ -15,6 +15,18 @@ NC='\033[0m'
 
 mkdir -p "$LOG_DIR"
 
+# ── Vérification des permissions au premier lancement ────────
+if [ ! -w "${INSTALL_DIR}/frontend" ]; then
+    echo -e "${RED}╔══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║  ERREUR : Permissions insuffisantes sur ${INSTALL_DIR}  ║${NC}"
+    echo -e "${RED}╠══════════════════════════════════════════════════════════╣${NC}"
+    echo -e "${RED}║  Corrigez avec :                                         ║${NC}"
+    echo -e "${RED}║    sudo chown -R \$USER:\$USER ${INSTALL_DIR}             ║${NC}"
+    echo -e "${RED}║  puis relancez : postulator                              ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════════════════════╝${NC}"
+    exit 1
+fi
+
 echo ""
 echo -e "${BLUE}╔══════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║         Démarrage Postulator         ║${NC}"
@@ -36,16 +48,24 @@ cd "$INSTALL_DIR/backend"
 source .venv/bin/activate
 nohup uvicorn app.main:app --port 8000 > "$LOG_DIR/api.log" 2>&1 &
 API_PID=$!
-sleep 2
-curl -s http://localhost:8000/api/dashboard/overview &>/dev/null && \
-    echo -e "      ${GREEN}✓ API OK (pid $API_PID)${NC}" || \
-    echo -e "      ${YELLOW}⚠ API en démarrage... (pid $API_PID)${NC}"
+# Attendre que l'API réponde (jusqu'à 15s)
+for i in $(seq 1 15); do
+    sleep 1
+    if curl -s http://localhost:8000/api/dashboard/overview &>/dev/null; then
+        echo -e "      ${GREEN}✓ API OK (pid $API_PID)${NC}"
+        break
+    fi
+    if [ "$i" -eq 15 ]; then
+        echo -e "      ${YELLOW}⚠ API en démarrage... (pid $API_PID) — vérifiez $LOG_DIR/api.log${NC}"
+    fi
+done
 
 # ── Worker Celery ──────────────────────────────────────────
 echo -e "${YELLOW}[3/4] Worker Celery...${NC}"
 nohup celery -A app.workers.celery_app.celery_app worker \
     --loglevel=warning > "$LOG_DIR/celery.log" 2>&1 &
 CELERY_PID=$!
+sleep 1
 echo -e "      ${GREEN}✓ Worker OK (pid $CELERY_PID)${NC}"
 deactivate
 
@@ -54,10 +74,32 @@ echo -e "${YELLOW}[4/4] Frontend...${NC}"
 cd "$INSTALL_DIR/frontend"
 nohup npm run dev > "$LOG_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
-sleep 3
-echo -e "      ${GREEN}✓ Frontend OK (pid $FRONTEND_PID)${NC}"
 
-# ── Ouvrir le navigateur ───────────────────────────────────
+# Vérification réelle : attendre que le port 5173 réponde (jusqu'à 20s)
+FRONTEND_OK=false
+for i in $(seq 1 20); do
+    sleep 1
+    if curl -s http://localhost:5173 &>/dev/null; then
+        FRONTEND_OK=true
+        break
+    fi
+    # Détecter l'erreur de permissions dès qu'elle apparaît dans les logs
+    if grep -q "EACCES: permission denied" "$LOG_DIR/frontend.log" 2>/dev/null; then
+        echo -e "      ${RED}✗ Erreur de permissions sur le frontend${NC}"
+        echo -e "      ${RED}  Corrigez : sudo chown -R \$USER:\$USER ${INSTALL_DIR}${NC}"
+        kill "$API_PID" "$CELERY_PID" "$FRONTEND_PID" 2>/dev/null
+        exit 1
+    fi
+done
+
+if $FRONTEND_OK; then
+    echo -e "      ${GREEN}✓ Frontend OK (pid $FRONTEND_PID) — http://localhost:5173${NC}"
+else
+    echo -e "      ${YELLOW}⚠ Frontend lent à démarrer (pid $FRONTEND_PID)${NC}"
+    echo -e "      ${YELLOW}  Logs : tail -f $LOG_DIR/frontend.log${NC}"
+fi
+
+# ── Résumé ─────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║   Postulator prêt !                  ║${NC}"

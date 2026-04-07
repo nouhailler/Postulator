@@ -4,7 +4,7 @@
 
 ### Agrégateur de recherche d'emploi — Open Source · Self-Hosted · IA 100% locale
 
-[![Version](https://img.shields.io/badge/version-1.0.0-7bd0ff?style=for-the-badge&logo=github)](https://github.com/nouhailler/postulator/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-7bd0ff?style=for-the-badge&logo=github)](https://github.com/nouhailler/postulator/releases)
 [![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
@@ -30,6 +30,7 @@ et génère des CVs adaptés à chaque offre — **sans envoyer une seule donné
 
 ### 🔍 Collecte intelligente
 - **5 sources simultanées** : Indeed, LinkedIn, Glassdoor, ZipRecruiter, Google Jobs
+- **Scraping international** : 24 pays avec sélecteur ville/pays
 - Déduplication automatique (SHA-256)
 - Rotation de proxies résidentiels
 - Scraping asynchrone via Celery + Redis
@@ -41,6 +42,7 @@ et génère des CVs adaptés à chaque offre — **sans envoyer une seule donné
 - Scoring CV ↔ offre (0-100) via **Ollama**
 - Extraction automatique des compétences
 - Génération de CVs adaptés à chaque offre
+- **Diff visuel** des mots ajoutés par l'IA (surlignage rouge)
 - Compatible `phi3.5:3.8b`, `qwen2.5:14b` et tous modèles Ollama
 
 </td>
@@ -50,9 +52,11 @@ et génère des CVs adaptés à chaque offre — **sans envoyer une seule donné
 
 ### 📋 Gestion des candidatures
 - Pipeline Kanban 5 colonnes (À voir → Rejeté)
-- Export CSV des offres filtrées
+- **Lien web entreprise** direct (ou recherche Google auto)
+- Export CSV enrichi (numéro, date scraping, URL entreprise)
+- **Purge intelligente** des offres (conserve les offres sélectionnées)
 - Historique complet de toutes les analyses
-- Alertes email pour les meilleures correspondances
+- Alertes email auto + bouton d'envoi manuel par analyse
 
 </td>
 <td width="50%">
@@ -216,18 +220,31 @@ PROXY_LIST=
 ## 🔄 Flux de travail recommandé
 
 ```
-1. 🔍 Scrapers       → Collecter des offres (Indeed + LinkedIn simultanément)
+1. 🔍 Scrapers       → Choisir pays + ville, lancer le scraping (Indeed + LinkedIn…)
         ↓
-2. 💼 Offres         → Parcourir, filtrer, changer le statut pipeline
+2. 💼 Offres         → Parcourir (tri date scraping), consulter le lien entreprise,
+                        changer le statut pipeline, purger les offres obsolètes
         ↓
 3. 📄 CV             → Créer ou importer votre CV (PDF → parsing Ollama)
         ↓
-4. 🧠 CV Intelligence → Scorer les offres les plus prometteuses (0-100)
+4. 🧠 CV Intelligence → Importer votre CV, scorer les offres prometteuses (0-100)
         ↓
-5. ✨ CV Matching    → Générer un CV adapté pour les meilleures offres
+5. ✨ CV Matching    → Générer un CV adapté, activer le diff visuel, exporter en .docx
         ↓
-6. 📊 Historique     → Retrouver toutes vos analyses et statistiques
+6. 📊 Historique     → Retrouver toutes vos analyses, envoyer des alertes email
 ```
+
+---
+
+## 🌍 Scraping international
+
+La page **Scrapers** propose un sélecteur de **24 pays** (avec drapeaux) et un champ ville avec suggestions automatiques :
+
+| Pays favoris | Autres pays disponibles |
+|---|---|
+| 🇫🇷 France · 🇨🇭 Suisse | 🇩🇪 🇧🇪 🇪🇸 🇳🇱 🇮🇹 🇵🇹 🇸🇪 🇩🇰 🇳🇴 🇫🇮 🇦🇹 🇵🇱 🇨🇿 🇮🇪 🇬🇧 🇱🇺 🇺🇸 🇨🇦 🇦🇺 🇸🇬 🇯🇵 🇦🇪 |
+
+Le backend envoie automatiquement le bon paramètre `country_indeed` à jobspy selon le pays sélectionné (ex: `ch.indeed.com` pour la Suisse, `fr.indeed.com` pour la France).
 
 ---
 
@@ -252,12 +269,12 @@ La rotation est automatique en **round-robin** — chaque source utilise un prox
 |------|-------------|-----------|
 | 📊 **Overview** | KPIs, velocity, dernières activités | `/dashboard` |
 | 📄 **CV** | Gestion CVs nommés/datés, import PDF | `/cv` |
-| 💼 **Offres** | Table filtrée, export CSV, drawer détail | `/jobs` |
-| 🔍 **Scrapers** | Lancer, configurer, historique scraping | `/scrapers` |
-| 🧠 **CV Intelligence** | Scoring CV ↔ offre, extraction skills | `/analysis` |
-| ✨ **CV Matching** | Générer CVs adaptés, export .txt/.md/.docx | `/cv-matching` |
+| 💼 **Offres** | Table filtrée, lien entreprise, export CSV, purge | `/jobs` |
+| 🔍 **Scrapers** | Scraping international (24 pays), proxies, historique | `/scrapers` |
+| 🧠 **CV Intelligence** | Scoring CV ↔ offre, extraction skills, import CV | `/analysis` |
+| ✨ **CV Matching** | Générer CVs adaptés, diff visuel, export .docx | `/cv-matching` |
 | 📋 **Pipeline** | Kanban 5 colonnes, suivi candidatures | `/board` |
-| 📜 **Historique** | Archive analyses, stats, audit trail | `/history` |
+| 📜 **Historique** | Archive analyses, alertes email par ligne | `/history` |
 
 > **Tip :** Appuyez sur `?` sur n'importe quelle page pour afficher l'aide contextuelle.
 

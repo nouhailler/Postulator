@@ -2,13 +2,16 @@ import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, RefreshCw, Download, ExternalLink,
-  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown, Brain,
+  ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown,
+  Brain, Trash2, AlertTriangle, Globe,
 } from 'lucide-react'
-import { useAsync }                          from '../hooks/useAsync.js'
-import { fetchJobs, fetchJob, updateJobStatus, deleteJob } from '../api/jobs.js'
-import { mockJobs }                          from '../data/mockData.js'
-import JobDetailDrawer                       from '../components/jobs/JobDetailDrawer.jsx'
-import styles                                from './JobsPage.module.css'
+import { useAsync }    from '../hooks/useAsync.js'
+import { fetchJobs, fetchJob, updateJobStatus, deleteJob, purgeJobs } from '../api/jobs.js'
+import { mockJobs }    from '../data/mockData.js'
+import JobDetailDrawer from '../components/jobs/JobDetailDrawer.jsx'
+import styles          from './JobsPage.module.css'
+
+// ── Constantes ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 25
 const SOURCES   = ['', 'indeed', 'linkedin', 'glassdoor', 'ziprecruiter', 'google']
@@ -24,11 +27,14 @@ const STATUS_COLORS = {
 }
 
 const SORT_COLS = [
-  { key: 'published_at', label: 'Publiée' },
-  { key: 'ai_score',     label: 'Score IA' },
-  { key: 'title',        label: 'Offre' },
+  { key: 'scraped_at',   label: 'Scrapée'    },
+  { key: 'published_at', label: 'Publiée'    },
+  { key: 'ai_score',     label: 'Score IA'   },
+  { key: 'title',        label: 'Offre'      },
   { key: 'company',      label: 'Entreprise' },
 ]
+
+// ── Sous-composants ───────────────────────────────────────────────────────────
 
 function SortIcon({ colKey, sortBy, sortOrder }) {
   if (sortBy !== colKey) return <ArrowUpDown size={11} strokeWidth={2} style={{ opacity: 0.35 }} />
@@ -39,7 +45,7 @@ function SortIcon({ colKey, sortBy, sortOrder }) {
 
 function ScorePill({ score }) {
   if (score == null) return <span className={styles.scoreNone}>—</span>
-  const v = Math.round(score)
+  const v   = Math.round(score)
   const cls = v >= 80 ? styles.scoreTeal : v >= 60 ? styles.scoreBlue : styles.scoreGray
   return <span className={`${styles.scorePill} ${cls}`}>{v}%</span>
 }
@@ -58,7 +64,49 @@ function RemoteBadge({ isRemote }) {
   return <span className={styles.remoteBadge}>Remote</span>
 }
 
-function formatDate(iso) {
+/**
+ * Lien web entreprise — URL directe si disponible, sinon Google Search.
+ */
+function CompanyLink({ companyUrl, company }) {
+  const href  = companyUrl || `https://www.google.com/search?q=${encodeURIComponent(company)}`
+  const label = companyUrl ? _shortDomain(companyUrl) : 'Google →'
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className={`${styles.companyLink} ${companyUrl ? styles.companyLinkDirect : styles.companyLinkGoogle}`}
+      onClick={e => e.stopPropagation()}
+      title={companyUrl ? companyUrl : `Rechercher "${company}" sur Google`}
+    >
+      <Globe size={11} strokeWidth={2} className={styles.companyLinkIcon} />
+      <span className={styles.companyLinkText}>{label}</span>
+    </a>
+  )
+}
+
+function _shortDomain(url) {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '')
+    return hostname.length > 22 ? hostname.slice(0, 20) + '…' : hostname
+  } catch {
+    return url.slice(0, 20)
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Date + heure précises — jamais "Aujourd'hui". */
+function formatScrapedAt(iso) {
+  if (!iso) return '—'
+  const d    = new Date(iso)
+  const date = d.toLocaleDateString('fr-FR',  { day: '2-digit', month: '2-digit' })
+  const time = d.toLocaleTimeString('fr-FR',  { hour: '2-digit', minute: '2-digit' })
+  return `${date} ${time}`
+}
+
+/** Format relatif pour la date de publication de l'offre. */
+function formatPublishedAt(iso) {
   if (!iso) return '—'
   const d    = new Date(iso)
   const diff = Math.floor((Date.now() - d.getTime()) / 86400000)
@@ -71,27 +119,83 @@ function formatDate(iso) {
 function formatSalary(min, max, cur) {
   if (!min && !max) return null
   const fmt = n => (n / 1000).toFixed(0) + 'k'
-  const c = cur ?? '€'
+  const c   = cur ?? '€'
   if (min && max) return `${fmt(min)}–${fmt(max)} ${c}`
-  if (min) return `≥ ${fmt(min)} ${c}`
-  return `≤ ${fmt(max)} ${c}`
+  if (min)        return `≥ ${fmt(min)} ${c}`
+  return          `≤ ${fmt(max)} ${c}`
+}
+
+function isoToCSV(iso) {
+  if (!iso) return ''
+  const d   = new Date(iso)
+  const pad = n => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function exportCSV(jobs) {
-  const header = 'id,title,company,location,source,remote,salary,score,status,published_at,url'
-  const rows = jobs.map(j => [
-    j.id, `"${j.title}"`, `"${j.company}"`, `"${j.location ?? ''}"`,
-    j.source, j.is_remote ? 'oui' : 'non',
+  const header = 'num,id,title,company,company_url,location,source,remote,salary,score,status,published_at,scraped_at,url'
+  const rows = jobs.map((j, idx) => [
+    idx + 1,                                              // ← numéro
+    j.id,
+    `"${(j.title    ?? '').replace(/"/g, '""')}"`,
+    `"${(j.company  ?? '').replace(/"/g, '""')}"`,
+    j.company_url ?? '',
+    `"${(j.location ?? '').replace(/"/g, '""')}"`,
+    j.source,
+    j.is_remote ? 'oui' : 'non',
     formatSalary(j.salary_min, j.salary_max, j.salary_currency) ?? '',
     j.ai_score != null ? Math.round(j.ai_score) : '',
-    j.status, j.published_at ?? '', j.url,
+    j.status,
+    isoToCSV(j.published_at),
+    isoToCSV(j.scraped_at),
+    j.url,
   ].join(','))
-  const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([[header, ...rows].join('\n'), { type: 'text/csv;charset=utf-8;' }])
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href = url; a.download = `postulator-jobs-${Date.now()}.csv`; a.click()
   URL.revokeObjectURL(url)
 }
+
+// ── Modal Réinitialiser ───────────────────────────────────────────────────────
+
+function ResetModal({ onConfirm, onCancel, loading }) {
+  const [keepRecent, setKeepRecent] = useState(20)
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modal}>
+        <div className={styles.modalIcon}>
+          <AlertTriangle size={24} strokeWidth={2} style={{ color: 'var(--error)' }} />
+        </div>
+        <h3 className={styles.modalTitle}>Réinitialiser les offres</h3>
+        <p className={styles.modalText}>
+          Cette action va supprimer les offres en base.
+          Les offres que vous avez sélectionnées (statut ≠ "À voir") seront toujours conservées.
+        </p>
+        <div className={styles.modalField}>
+          <label className={styles.modalLabel}>
+            Garder les{' '}
+            <input
+              type="number" min={0} max={200}
+              value={keepRecent}
+              onChange={e => setKeepRecent(Math.max(0, parseInt(e.target.value) || 0))}
+              className={styles.modalInput}
+            />
+            {' '}offres les plus récentes (0 = tout supprimer)
+          </label>
+        </div>
+        <div className={styles.modalActions}>
+          <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
+          <button className={styles.modalConfirm} onClick={() => onConfirm(keepRecent)} disabled={loading}>
+            {loading ? 'Suppression…' : 'Confirmer la réinitialisation'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Page principale ───────────────────────────────────────────────────────────
 
 export default function JobsPage() {
   const navigate = useNavigate()
@@ -102,10 +206,14 @@ export default function JobsPage() {
   const [remoteOnly, setRemoteOnly] = useState(false)
   const [minScore,   setMinScore]   = useState('')
   const [page,       setPage]       = useState(0)
-  const [sortBy,     setSortBy]     = useState('published_at')
-  const [sortOrder,  setSortOrder]  = useState('desc')
+  // Tri par défaut : scraped_at DESC — mêmes nouvelles en tête après scraping
+  const [sortBy,    setSortBy]    = useState('scraped_at')
+  const [sortOrder, setSortOrder] = useState('desc')
   const [selectedJob,   setSelectedJob]   = useState(null)
   const [loadingDrawer, setLoadingDrawer] = useState(false)
+  const [showReset,  setShowReset]  = useState(false)
+  const [resetting,  setResetting]  = useState(false)
+  const [resetMsg,   setResetMsg]   = useState(null)
 
   const buildParams = () => ({
     q:          q         || undefined,
@@ -122,12 +230,11 @@ export default function JobsPage() {
   const { data: apiJobs, loading, error, refetch } = useAsync(
     () => fetchJobs(buildParams()),
     [q, source, status, remoteOnly, minScore, sortBy, sortOrder, page],
-    { fallback: null }
+    { fallback: null, refetchInterval: 10_000 }
   )
 
-  const isOffline  = !!error
-  const allJobs    = apiJobs ?? mockJobs
-
+  const isOffline     = !!error
+  const allJobs       = apiJobs ?? mockJobs
   const displayedJobs = isOffline
     ? (() => {
         let list = allJobs.filter(j => {
@@ -152,6 +259,9 @@ export default function JobsPage() {
   const hasNext    = displayedJobs.length === PAGE_SIZE
   const hasPrev    = page > 0
 
+  // Numéro global de la première ligne de la page courante (base 1)
+  const pageOffset = page * PAGE_SIZE
+
   const applyFilter = fn => { fn(); setPage(0) }
 
   function handleSort(colKey) {
@@ -164,10 +274,8 @@ export default function JobsPage() {
     setSelectedJob(summaryJob)
     if (isOffline) return
     setLoadingDrawer(true)
-    try {
-      const full = await fetchJob(summaryJob.id)
-      setSelectedJob(full)
-    } catch (err) { console.error(err) }
+    try { const full = await fetchJob(summaryJob.id); setSelectedJob(full) }
+    catch (err) { console.error(err) }
     finally { setLoadingDrawer(false) }
   }, [isOffline])
 
@@ -186,14 +294,30 @@ export default function JobsPage() {
     } catch (err) { console.error(err) }
   }, [selectedJob, refetch])
 
-  // ── Scorer une offre → navigate vers /analysis?job_id=X ──────────────────
   const handleScore = useCallback((job) => {
     navigate(`/analysis?job_id=${job.id}`)
   }, [navigate])
 
+  const handleReset = async (keepRecent) => {
+    setResetting(true)
+    try {
+      const result = await purgeJobs({ keepRecent, keepSelected: true })
+      setShowReset(false)
+      setResetMsg(`✓ ${result.deleted} offre${result.deleted !== 1 ? 's' : ''} supprimée${result.deleted !== 1 ? 's' : ''} · ${result.remaining} conservée${result.remaining !== 1 ? 's' : ''}`)
+      setTimeout(() => setResetMsg(null), 5000)
+      setPage(0); refetch()
+    } catch (err) { console.error(err) }
+    finally { setResetting(false) }
+  }
+
   return (
     <div className={styles.page}>
 
+      {showReset && (
+        <ResetModal onConfirm={handleReset} onCancel={() => setShowReset(false)} loading={resetting} />
+      )}
+
+      {/* En-tête */}
       <div className={styles.pageHeader}>
         <div>
           <h1 className={`${styles.pageTitle} font-headline tracking-tight`}>Offres</h1>
@@ -209,16 +333,19 @@ export default function JobsPage() {
           <button className="btn-ghost" onClick={() => exportCSV(displayedJobs)} title="Exporter CSV">
             <Download size={13} strokeWidth={2} /> CSV
           </button>
-          <button className="btn-ghost" onClick={refetch} disabled={loading}>
+          <button className="btn-ghost" onClick={refetch} disabled={loading} title="Rafraîchir">
             <RefreshCw size={13} strokeWidth={2} className={loading ? styles.spin : ''} />
+          </button>
+          <button className={styles.resetBtn} onClick={() => setShowReset(true)}>
+            <Trash2 size={13} strokeWidth={2} /> Réinitialiser
           </button>
         </div>
       </div>
 
-      {isOffline && (
-        <div className={styles.offlineBanner}>◎ Backend hors ligne — données de démonstration.</div>
-      )}
+      {resetMsg  && <div className={styles.resetBanner}>{resetMsg}</div>}
+      {isOffline && <div className={styles.offlineBanner}>◎ Backend hors ligne — données de démonstration.</div>}
 
+      {/* Filtres */}
       <div className={styles.filtersBar}>
         <div className={styles.searchWrap}>
           <Search size={13} className={styles.searchIcon} strokeWidth={2} />
@@ -235,13 +362,14 @@ export default function JobsPage() {
           min={0} max={100} value={minScore} onChange={e => applyFilter(() => setMinScore(e.target.value))} />
         <label className={styles.toggleLabel}>
           <div className={`${styles.toggle} ${remoteOnly ? styles.toggleOn : ''}`}
-            onClick={() => applyFilter(() => setRemoteOnly(p => !p))} role="switch" aria-checked={remoteOnly}>
+            onClick={() => applyFilter(() => setRemoteOnly(p => !p))} role="switch">
             <span className={styles.toggleThumb} />
           </div>
           Remote
         </label>
       </div>
 
+      {/* Tableau */}
       {displayedJobs.length === 0 && !loading ? (
         <div className={styles.empty}>
           <p>Aucune offre ne correspond aux critères.</p>
@@ -254,72 +382,101 @@ export default function JobsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th className={`${styles.th} ${styles.thSortable}`} onClick={() => handleSort('title')}>
+                {/* ── Numéro ── */}
+                <th className={`${styles.th} ${styles.thNum}`}
+                  title="Numéro d'ordre — identique dans le select 'Offre cible' de CV Matching">
+                  #
+                </th>
+                {/* Offre */}
+                <th className={`${styles.th} ${styles.thSortable} ${styles.thOffre}`}
+                  onClick={() => handleSort('title')}>
                   Offre <SortIcon colKey="title" sortBy={sortBy} sortOrder={sortOrder} />
                 </th>
+                {/* Entreprise */}
                 <th className={`${styles.th} ${styles.thSortable}`} onClick={() => handleSort('company')}>
                   Entreprise <SortIcon colKey="company" sortBy={sortBy} sortOrder={sortOrder} />
                 </th>
+                {/* Lien web */}
+                <th className={`${styles.th} ${styles.thLien}`} title="Site web de l'entreprise ou recherche Google">
+                  Lien web
+                </th>
                 <th className={styles.th}>Lieu</th>
                 <th className={styles.th}>Source</th>
-                <th className={`${styles.th} ${styles.thCenter} ${styles.thSortable}`} onClick={() => handleSort('ai_score')}>
+                <th className={`${styles.th} ${styles.thCenter} ${styles.thSortable}`}
+                  onClick={() => handleSort('ai_score')}>
                   Score IA <SortIcon colKey="ai_score" sortBy={sortBy} sortOrder={sortOrder} />
                 </th>
                 <th className={styles.th}>Statut</th>
+                <th className={`${styles.th} ${styles.thSortable} ${sortBy === 'scraped_at' ? styles.thSortActive : ''}`}
+                  onClick={() => handleSort('scraped_at')} title="Date et heure exactes du scraping">
+                  Scrapée <SortIcon colKey="scraped_at" sortBy={sortBy} sortOrder={sortOrder} />
+                </th>
                 <th className={`${styles.th} ${styles.thSortable} ${sortBy === 'published_at' ? styles.thSortActive : ''}`}
                   onClick={() => handleSort('published_at')}>
                   Publiée <SortIcon colKey="published_at" sortBy={sortBy} sortOrder={sortOrder} />
                 </th>
-                <th className={styles.th}>Salaire</th>
                 <th className={`${styles.th} ${styles.thRight}`}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {displayedJobs.map(job => {
-                const salary = formatSalary(job.salary_min, job.salary_max, job.salary_currency)
-                return (
-                  <tr
-                    key={job.id}
-                    className={`${styles.row} ${selectedJob?.id === job.id ? styles.rowSelected : ''}`}
-                    onClick={() => handleRowClick(job)}
-                  >
-                    <td className={`${styles.td} ${styles.tdTitle}`}>
+              {displayedJobs.map((job, idx) => (
+                <tr
+                  key={job.id}
+                  className={`${styles.row} ${selectedJob?.id === job.id ? styles.rowSelected : ''}`}
+                  onClick={() => handleRowClick(job)}
+                >
+                  {/* ── Numéro d'ordre global (continue d'une page à l'autre) ── */}
+                  <td className={`${styles.td} ${styles.tdNum}`}>
+                    {pageOffset + idx + 1}
+                  </td>
+
+                  {/* Titre sur 2 lignes */}
+                  <td className={`${styles.td} ${styles.tdOffre}`}>
+                    <a href={job.url} target="_blank" rel="noreferrer"
+                      className={styles.jobTitleLink} onClick={e => e.stopPropagation()}>
+                      {job.title}
+                    </a>
+                    {job.is_remote && <RemoteBadge isRemote />}
+                  </td>
+
+                  {/* Entreprise */}
+                  <td className={styles.td}>
+                    <span className={styles.company}>{job.company}</span>
+                  </td>
+
+                  {/* Lien web */}
+                  <td className={`${styles.td} ${styles.tdLien}`} onClick={e => e.stopPropagation()}>
+                    <CompanyLink companyUrl={job.company_url} company={job.company} />
+                  </td>
+
+                  <td className={`${styles.td} ${styles.tdMuted}`}>{job.location ?? '—'}</td>
+                  <td className={`${styles.td} ${styles.tdSource}`}>{job.source}</td>
+                  <td className={`${styles.td} ${styles.thCenter}`}>
+                    <ScorePill score={job.ai_score} />
+                  </td>
+                  <td className={styles.td}><StatusDot status={job.status} /></td>
+                  <td className={`${styles.td} ${styles.tdTimestamp} ${sortBy === 'scraped_at' ? styles.tdSortActive : ''}`}>
+                    {formatScrapedAt(job.scraped_at)}
+                  </td>
+                  <td className={`${styles.td} ${styles.tdMuted} ${sortBy === 'published_at' ? styles.tdSortActive : ''}`}>
+                    {formatPublishedAt(job.published_at)}
+                  </td>
+                  <td className={`${styles.td} ${styles.thRight}`} onClick={e => e.stopPropagation()}>
+                    <div className={styles.rowActions}>
+                      <button className={styles.actionIcon} title="Scorer avec mon CV"
+                        onClick={() => handleScore(job)}>
+                        <Brain size={12} strokeWidth={2} />
+                      </button>
                       <a href={job.url} target="_blank" rel="noreferrer"
-                        className={styles.jobTitleLink} onClick={e => e.stopPropagation()}>
-                        {job.title}
-                        <ExternalLink size={10} strokeWidth={2} className={styles.titleLinkIcon} />
+                        className={styles.actionIcon} title="Voir l'offre">
+                        <ExternalLink size={13} strokeWidth={2} />
                       </a>
-                      <RemoteBadge isRemote={job.is_remote} />
-                    </td>
-                    <td className={styles.td}><span className={styles.company}>{job.company}</span></td>
-                    <td className={`${styles.td} ${styles.tdMuted}`}>{job.location ?? '—'}</td>
-                    <td className={`${styles.td} ${styles.tdSource}`}>{job.source}</td>
-                    <td className={`${styles.td} ${styles.thCenter}`}>
-                      <ScorePill score={job.ai_score} />
-                    </td>
-                    <td className={styles.td}><StatusDot status={job.status} /></td>
-                    <td className={`${styles.td} ${styles.tdMuted} ${sortBy === 'published_at' ? styles.tdSortActive : ''}`}>
-                      {formatDate(job.published_at)}
-                    </td>
-                    <td className={`${styles.td} ${styles.tdMuted}`}>{salary ?? '—'}</td>
-                    <td className={`${styles.td} ${styles.thRight}`} onClick={e => e.stopPropagation()}>
-                      <div className={styles.rowActions}>
-                        {/* Scorer → navigate vers /analysis?job_id */}
-                        <button className={styles.actionIcon} title="Scorer avec mon CV"
-                          onClick={() => handleScore(job)}>
-                          <Brain size={12} strokeWidth={2} />
-                        </button>
-                        <a href={job.url} target="_blank" rel="noreferrer"
-                          className={styles.actionIcon} title="Voir l'offre">
-                          <ExternalLink size={13} strokeWidth={2} />
-                        </a>
-                        <button className={`${styles.actionIcon} ${styles.actionDelete}`}
-                          title="Supprimer" onClick={() => handleDelete(job.id)}>✕</button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+                      <button className={`${styles.actionIcon} ${styles.actionDelete}`}
+                        title="Supprimer" onClick={() => handleDelete(job.id)}>✕</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

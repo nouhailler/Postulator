@@ -26,6 +26,55 @@ const JOB_TYPES = [
   { id: 'internship', label: 'Stage' },
 ]
 
+const COUNTRIES = [
+  { value: 'France',               label: '🇫🇷 France',               favorite: true },
+  { value: 'Switzerland',          label: '🇨🇭 Suisse',               favorite: true },
+  { value: 'Germany',              label: '🇩🇪 Allemagne' },
+  { value: 'Belgium',              label: '🇧🇪 Belgique' },
+  { value: 'Spain',                label: '🇪🇸 Espagne' },
+  { value: 'Netherlands',          label: '🇳🇱 Pays-Bas' },
+  { value: 'Italy',                label: '🇮🇹 Italie' },
+  { value: 'Portugal',             label: '🇵🇹 Portugal' },
+  { value: 'Sweden',               label: '🇸🇪 Suède' },
+  { value: 'Denmark',              label: '🇩🇰 Danemark' },
+  { value: 'Norway',               label: '🇳🇴 Norvège' },
+  { value: 'Finland',              label: '🇫🇮 Finlande' },
+  { value: 'Austria',              label: '🇦🇹 Autriche' },
+  { value: 'Poland',               label: '🇵🇱 Pologne' },
+  { value: 'Czech Republic',       label: '🇨🇿 République Tchèque' },
+  { value: 'Ireland',              label: '🇮🇪 Irlande' },
+  { value: 'United Kingdom',       label: '🇬🇧 Royaume-Uni' },
+  { value: 'Luxembourg',           label: '🇱🇺 Luxembourg' },
+  { value: 'United States',        label: '🇺🇸 États-Unis' },
+  { value: 'Canada',               label: '🇨🇦 Canada' },
+  { value: 'Australia',            label: '🇦🇺 Australie' },
+  { value: 'Singapore',            label: '🇸🇬 Singapour' },
+  { value: 'Japan',                label: '🇯🇵 Japon' },
+  { value: 'United Arab Emirates', label: '🇦🇪 Émirats arabes unis' },
+]
+
+/**
+ * Suggestions de villes par pays — affichées comme datalist dans le champ ville.
+ * Pour la Suisse : utiliser le nom allemand/français sans canton (ex: "Zürich" pas "Zürich, ZH").
+ * Le backend se charge d'extraire country_indeed séparément.
+ */
+const CITY_SUGGESTIONS = {
+  'France':        ['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Nantes', 'Lille', 'Strasbourg', 'Montpellier', 'Nice'],
+  'Switzerland':   ['Zürich', 'Genève', 'Basel', 'Bern', 'Lausanne', 'Zug', 'Lugano', 'St. Gallen', 'Winterthur', 'Lucerne'],
+  'Germany':       ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Köln', 'Stuttgart', 'Düsseldorf', 'Leipzig'],
+  'Belgium':       ['Bruxelles', 'Anvers', 'Gand', 'Liège'],
+  'United Kingdom':['London', 'Manchester', 'Birmingham', 'Edinburgh', 'Bristol'],
+  'Netherlands':   ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven'],
+  'Spain':         ['Madrid', 'Barcelona', 'Valencia', 'Séville', 'Bilbao'],
+  'Italy':         ['Milan', 'Rome', 'Turin', 'Florence', 'Bologne'],
+  'Luxembourg':    ['Luxembourg'],
+  'Austria':       ['Vienne', 'Graz', 'Salzbourg', 'Linz'],
+  'Canada':        ['Toronto', 'Montréal', 'Vancouver', 'Calgary', 'Ottawa'],
+  'United States': ['New York', 'San Francisco', 'Los Angeles', 'Chicago', 'Boston', 'Seattle', 'Austin'],
+  'Australia':     ['Sydney', 'Melbourne', 'Brisbane', 'Perth'],
+  'Singapore':     ['Singapore'],
+}
+
 const STATUS_META = {
   idle:    { color: 'var(--outline)',  label: 'Prêt' },
   queued:  { color: 'var(--primary)', label: 'En attente…' },
@@ -34,7 +83,6 @@ const STATUS_META = {
   error:   { color: 'var(--error)',   label: 'Erreur' },
 }
 
-// Proxies de test pré-remplis (format IP:PORT:USER:PASS)
 const DEFAULT_PROXIES = `31.59.20.176:6754:nbnzyhqa:xmqbrwxlh5ov
 23.95.150.145:6114:nbnzyhqa:xmqbrwxlh5ov
 198.23.239.134:6540:nbnzyhqa:xmqbrwxlh5ov
@@ -48,7 +96,6 @@ const DEFAULT_PROXIES = `31.59.20.176:6754:nbnzyhqa:xmqbrwxlh5ov
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Parse les lignes proxy et retourne le nombre de lignes valides */
 function countValidProxies(text) {
   return text.split('\n').filter(line => {
     const parts = line.trim().split(':')
@@ -56,11 +103,24 @@ function countValidProxies(text) {
   }).length
 }
 
-/** Retourne les lignes proxy valides sous forme de tableau */
 function parseProxyLines(text) {
   return text.split('\n')
     .map(l => l.trim())
     .filter(l => l.length > 0 && l.split(':').length === 4)
+}
+
+/**
+ * Construit la chaîne de localisation envoyée au scraper.
+ * Format : "Ville, Pays" ou "Pays" seul.
+ * Le backend (jobspy_scraper.py) extrait ensuite le pays pour country_indeed
+ * et envoie seulement la ville à jobspy.
+ */
+function buildLocation(country, city) {
+  const c = city.trim()
+  const p = country.trim()
+  if (!p) return null
+  if (c) return `${c}, ${p}`
+  return p
 }
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
@@ -129,17 +189,16 @@ function LogRow({ log }) {
 
 export default function ScrapersPage() {
   const [keywords,   setKeywords]   = useState('')
-  const [location,   setLocation]   = useState('')
+  const [country,    setCountry]    = useState('France')
+  const [city,       setCity]       = useState('')
   const [sources,    setSources]    = useState(['indeed', 'linkedin', 'glassdoor'])
   const [jobTypes,   setJobTypes]   = useState([])
   const [results,    setResults]    = useState(50)
   const [remoteOnly, setRemoteOnly] = useState(false)
-  const [hoursOld,   setHoursOld]   = useState('')
+  const [daysOld,    setDaysOld]    = useState('5')
 
-  // Proxy section
-  const [proxyOpen,    setProxyOpen]    = useState(false)
-  const [proxyText,    setProxyText]    = useState(DEFAULT_PROXIES)
-
+  const [proxyOpen, setProxyOpen] = useState(false)
+  const [proxyText, setProxyText] = useState(DEFAULT_PROXIES)
   const validProxyCount = countValidProxies(proxyText)
 
   const { launch, launchWithProxies, status, result, launching, error, reset, proxyMode } = useScraper()
@@ -147,17 +206,23 @@ export default function ScrapersPage() {
 
   useEffect(() => { if (status === 'success') refetchLogs() }, [status, refetchLogs])
 
+  // Réinitialiser la ville quand on change de pays
+  useEffect(() => { setCity('') }, [country])
+
   const toggleSource = id => setSources(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id])
   const toggleType   = id => setJobTypes(p => p.includes(id) ? p.filter(t => t !== id) : [...p, id])
 
+  const locationValue = buildLocation(country, city)
+  const citySuggestions = CITY_SUGGESTIONS[country] ?? []
+
   const basePayload = () => ({
     keywords:           keywords.trim(),
-    location:           location.trim() || null,
+    location:           locationValue,
     sources,
     job_types:          jobTypes,
     results_per_source: results,
     remote_only:        remoteOnly,
-    hours_old:          hoursOld ? parseInt(hoursOld, 10) : null,
+    hours_old:          daysOld ? parseInt(daysOld, 10) * 24 : null,
   })
 
   const handleLaunch = async () => {
@@ -167,14 +232,11 @@ export default function ScrapersPage() {
 
   const handleLaunchWithProxies = async () => {
     if (!keywords.trim() || sources.length === 0 || validProxyCount === 0) return
-    await launchWithProxies({
-      ...basePayload(),
-      proxies: parseProxyLines(proxyText),
-    })
+    await launchWithProxies({ ...basePayload(), proxies: parseProxyLines(proxyText) })
   }
 
-  const isRunning = status === 'queued' || status === 'running'
-  const canLaunch = keywords.trim().length > 0 && sources.length > 0 && !isRunning
+  const isRunning      = status === 'queued' || status === 'running'
+  const canLaunch      = keywords.trim().length > 0 && sources.length > 0 && !isRunning
   const canLaunchProxy = canLaunch && validProxyCount > 0
 
   return (
@@ -199,18 +261,72 @@ export default function ScrapersPage() {
         <p className={styles.formTitle}>Nouvelle recherche</p>
 
         <div className={styles.formGrid}>
+          {/* Mots-clés */}
           <div className={styles.fieldFull}>
             <label className={styles.label}>Mots-clés *</label>
             <input className={styles.input} type="text"
-              placeholder="Ex : senior react developer typescript"
+              placeholder="Ex : développeur Python senior, supply chain manager…"
               value={keywords} onChange={e => setKeywords(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && canLaunch && handleLaunch()} />
           </div>
-          <div>
+
+          {/* ── Localisation ── */}
+          <div className={styles.locationBlock}>
             <label className={styles.label}>Localisation</label>
-            <input className={styles.input} type="text" placeholder="Ex : Paris, France"
-              value={location} onChange={e => setLocation(e.target.value)} />
+
+            <div className={styles.locationRow}>
+              {/* Select pays */}
+              <div className={styles.countrySelectWrap}>
+                <select
+                  className={styles.countrySelect}
+                  value={country}
+                  onChange={e => setCountry(e.target.value)}
+                >
+                  <option value="">🌍 Monde entier</option>
+                  <optgroup label="⭐ Mes pays favoris">
+                    {COUNTRIES.filter(c => c.favorite).map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Autres pays">
+                    {COUNTRIES.filter(c => !c.favorite).map(c => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Champ ville avec datalist de suggestions */}
+              <input
+                className={styles.cityInput}
+                type="text"
+                placeholder={citySuggestions[0] ? `Ex : ${citySuggestions[0]}` : 'Ville (optionnel)'}
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                list="city-suggestions"
+              />
+              {/* Datalist — suggestions selon le pays choisi */}
+              <datalist id="city-suggestions">
+                {citySuggestions.map(c => <option key={c} value={c} />)}
+              </datalist>
+            </div>
+
+            {/* Aperçu + note Indeed */}
+            {locationValue ? (
+              <p className={styles.locationPreview}>
+                → Envoyé au scraper : <strong>{locationValue}</strong>
+                {sources.includes('indeed') && country && (
+                  <span className={styles.locationNote}> · Indeed {country} ({country === 'Switzerland' ? 'ch' : country === 'France' ? 'fr' : '…'}.indeed.com)</span>
+                )}
+              </p>
+            ) : (
+              <p className={styles.locationPreviewEmpty}>
+                → Sans pays sélectionné : résultats mondiaux (souvent US en pratique)
+              </p>
+            )}
           </div>
+
+          {/* Résultats par source */}
           <div>
             <label className={styles.label}>
               Résultats par source&nbsp;<span className={styles.labelHint}>({results})</span>
@@ -219,13 +335,23 @@ export default function ScrapersPage() {
               value={results} onChange={e => setResults(Number(e.target.value))} />
             <div className={styles.rangeLabels}><span>5</span><span>200</span></div>
           </div>
+
+          {/* Jours (défaut 5) */}
           <div>
-            <label className={styles.label}>Offres publiées depuis (heures)</label>
-            <input className={styles.input} type="number" placeholder="Ex : 48 (vide = toutes)"
-              min={1} value={hoursOld} onChange={e => setHoursOld(e.target.value)} />
+            <label className={styles.label}>Offres publiées depuis (jours)</label>
+            <input
+              className={styles.input}
+              type="number"
+              placeholder="Ex : 5 (vide = toutes)"
+              min={1}
+              max={30}
+              value={daysOld}
+              onChange={e => setDaysOld(e.target.value)}
+            />
           </div>
         </div>
 
+        {/* Sources */}
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Sources *</label>
           <div className={styles.chips}>
@@ -237,6 +363,7 @@ export default function ScrapersPage() {
           </div>
         </div>
 
+        {/* Types */}
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Type de contrat</label>
           <div className={styles.chips}>
@@ -248,7 +375,7 @@ export default function ScrapersPage() {
           </div>
         </div>
 
-        {/* Remote + boutons d'action */}
+        {/* Remote + actions */}
         <div className={styles.formFooter}>
           <label className={styles.toggleLabel}>
             <div className={`${styles.toggle} ${remoteOnly ? styles.toggleOn : ''}`}
@@ -277,11 +404,10 @@ export default function ScrapersPage() {
           </div>
         </div>
 
-        {/* ── Zone proxy résidentiel ── */}
+        {/* ── Zone proxy ── */}
         <div className={styles.proxySeparator} />
 
         <div className={styles.proxySection}>
-          {/* Bouton toggle */}
           <button
             className={`${styles.proxyToggleBtn} ${proxyOpen ? styles.proxyToggleBtnOpen : ''}`}
             onClick={() => setProxyOpen(o => !o)}
@@ -308,7 +434,6 @@ export default function ScrapersPage() {
             </div>
           </button>
 
-          {/* Panneau proxy expandable */}
           {proxyOpen && (
             <div className={styles.proxyPanel}>
               <div className={styles.proxyHeader}>
@@ -316,20 +441,13 @@ export default function ScrapersPage() {
                   <p className={styles.proxyPanelTitle}>Proxies résidentiels</p>
                   <p className={styles.proxyPanelSub}>
                     Format requis : <code>IP:PORT:USERNAME:PASSWORD</code> — un proxy par ligne.
-                    La rotation est automatique (round-robin) : chaque source utilise un proxy différent.
                   </p>
                 </div>
                 <div className={styles.proxyStats}>
-                  {validProxyCount > 0 ? (
-                    <span className={styles.proxyValid}>
-                      <Wifi size={11} strokeWidth={2} />
-                      {validProxyCount} valide{validProxyCount > 1 ? 's' : ''}
-                    </span>
-                  ) : (
-                    <span className={styles.proxyInvalid}>
-                      <WifiOff size={11} strokeWidth={2} /> Aucun proxy valide
-                    </span>
-                  )}
+                  {validProxyCount > 0
+                    ? <span className={styles.proxyValid}><Wifi size={11} strokeWidth={2} />{validProxyCount} valide{validProxyCount > 1 ? 's' : ''}</span>
+                    : <span className={styles.proxyInvalid}><WifiOff size={11} strokeWidth={2} /> Aucun proxy valide</span>
+                  }
                 </div>
               </div>
 
@@ -337,21 +455,16 @@ export default function ScrapersPage() {
                 className={styles.proxyTextarea}
                 value={proxyText}
                 onChange={e => setProxyText(e.target.value)}
-                placeholder={`31.59.20.176:6754:username:password\n23.95.150.145:6114:username:password\n...`}
+                placeholder={`31.59.20.176:6754:username:password\n...`}
                 rows={8}
                 spellCheck={false}
               />
 
               <div className={styles.proxyInfo}>
                 <AlertCircle size={11} strokeWidth={2} style={{ flexShrink: 0, color: 'var(--outline)' }} />
-                <p>
-                  Les lignes mal formatées sont ignorées silencieusement.
-                  Si un proxy échoue (blocage ou déconnexion), il est automatiquement retiré de la rotation.
-                  Les logs indiquent quel proxy a été utilisé pour chaque source (colonne 🛡️).
-                </p>
+                <p>Si un proxy échoue, il est automatiquement retiré de la rotation. Les logs indiquent quel proxy a été utilisé (colonne 🛡️).</p>
               </div>
 
-              {/* Bouton lancer avec proxy */}
               <button
                 className={`${styles.proxyLaunchBtn} ${!canLaunchProxy ? styles.btnDisabled : ''}`}
                 onClick={handleLaunchWithProxies}
@@ -364,16 +477,14 @@ export default function ScrapersPage() {
               </button>
 
               {!keywords.trim() && (
-                <p className={styles.proxyWarning}>
-                  ⚠️ Renseignez les mots-clés et sélectionnez au moins une source avant de lancer.
-                </p>
+                <p className={styles.proxyWarning}>⚠️ Renseignez les mots-clés avant de lancer.</p>
               )}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Barre de progression ── */}
+      {/* ── Progression ── */}
       {status !== 'idle' && (
         <div className={styles.progressCard}>
           <div className={styles.progressHeader}>

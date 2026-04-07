@@ -21,6 +21,9 @@ class GeneratedCV(Base):
     )
     source_cv_name: Mapped[str] = mapped_column(String(255))  # snapshot du nom
 
+    # Snapshot du texte brut du CV original — pour le diff côté frontend
+    source_cv_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Offre cible
     job_id:      Mapped[int | None] = mapped_column(
         Integer, ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True
@@ -30,8 +33,8 @@ class GeneratedCV(Base):
     job_url:     Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
     # Résultat généré
-    cv_markdown: Mapped[str] = mapped_column(Text)          # CV complet en Markdown
-    language:    Mapped[str] = mapped_column(String(8), default="fr")
+    cv_markdown:  Mapped[str]        = mapped_column(Text)
+    language:     Mapped[str]        = mapped_column(String(8), default="fr")
     ollama_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     # Note manuelle optionnelle
