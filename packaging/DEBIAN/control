@@ -1,5 +1,5 @@
 Package: postulator
-Version: 1.0.0
+Version: 1.1.0
 Architecture: all
 Maintainer: Patrick Nouhailler <patrick@nouhailler.fr>
 Installed-Size: 1348
@@ -15,10 +15,13 @@ Description: Agregateur de recherche d'emploi open source avec IA locale
  correspondance avec votre CV via Ollama (IA 100% locale) et genere des
  CVs adaptes a chaque offre — sans envoyer de donnees dans le cloud.
  .
- Fonctionnalites :
-  - Scraping multi-sources avec deduplication SHA-256
+ Fonctionnalites v1.1.0 :
+  - Scraping international : 24 pays avec detection country_indeed automatique
   - Scoring CV <-> offre (0-100) via Ollama local
-  - Generation de CVs adaptes par IA
+  - Generation de CVs adaptes par IA avec diff visuel
+  - Lien web entreprise direct (CompanyLink) dans la liste des offres
+  - Purge intelligente des offres (conserve les candidatures en cours)
+  - Import CV depuis le menu CV vers CV Intelligence
+  - Alertes email par analyse dans l'historique
   - Pipeline Kanban pour le suivi des candidatures
   - Rotation de proxies residentiels
-  - Alertes email pour les meilleures correspondances
