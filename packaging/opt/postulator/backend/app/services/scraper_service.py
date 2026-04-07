@@ -1,18 +1,18 @@
 """
 app/services/scraper_service.py
-Orchestrateur de scraping : lance N scrapers en parallèle,
-déduplique et persiste les offres en BDD.
 
-Deux modes :
-- run_search()              : scraping direct (IP machine)
-- run_search_with_proxies() : scraping avec rotation de proxies résidentiels
+Rotation proxy améliorée :
+- Avant chaque session, on lit le DERNIER proxy utilisé dans scrape_logs
+- On démarre la rotation à l'index SUIVANT dans la liste
+- En parallèle (asyncio.gather), chaque source reçoit un proxy différent
 """
 import asyncio
+import json
 from datetime import datetime
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.job import Job
@@ -26,96 +26,75 @@ class ScraperService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    # ── Mode direct ───────────────────────────────────────────────────────────
+    async def run_search(self, keywords, sources, location=None, results_per_source=10,
+                         hours_old=None, remote_only=False, job_types=None, search_profile_id=None):
+        return await self._run(keywords=keywords, sources=sources, location=location,
+                               results_per_source=results_per_source, hours_old=hours_old,
+                               remote_only=remote_only, job_types=job_types,
+                               search_profile_id=search_profile_id, proxy_manager=None)
 
-    async def run_search(
-        self,
-        keywords: str,
-        sources: list[str],
-        location: Optional[str] = None,
-        results_per_source: int = 50,
-        hours_old: Optional[int] = None,
-        remote_only: bool = False,
-        job_types: Optional[list[str]] = None,
-        search_profile_id: Optional[int] = None,
-    ) -> dict:
-        """Scraping standard sans proxy."""
-        return await self._run(
-            keywords=keywords,
-            sources=sources,
-            location=location,
-            results_per_source=results_per_source,
-            hours_old=hours_old,
-            remote_only=remote_only,
-            job_types=job_types,
-            search_profile_id=search_profile_id,
-            proxy_manager=None,
-        )
-
-    # ── Mode proxy résidentiel ────────────────────────────────────────────────
-
-    async def run_search_with_proxies(
-        self,
-        keywords: str,
-        sources: list[str],
-        proxy_lines: list[str],
-        location: Optional[str] = None,
-        results_per_source: int = 50,
-        hours_old: Optional[int] = None,
-        remote_only: bool = False,
-        job_types: Optional[list[str]] = None,
-        search_profile_id: Optional[int] = None,
-    ) -> dict:
-        """
-        Scraping avec rotation de proxies résidentiels.
-        proxy_lines : liste de chaînes "IP:PORT:USERNAME:PASSWORD"
-        Chaque source reçoit un proxy différent (round-robin).
-        """
+    async def run_search_with_proxies(self, keywords, sources, proxy_lines, location=None,
+                                      results_per_source=10, hours_old=None, remote_only=False,
+                                      job_types=None, search_profile_id=None):
         from app.scrapers.proxy_manager import ResidentialProxyManager
 
         mgr = ResidentialProxyManager(proxy_lines)
         if not mgr.has_proxies:
             raise ValueError("Aucun proxy valide fourni.")
 
-        logger.info(f"[ScraperService] Mode proxy résidentiel : {mgr.count} proxy(ies)")
+        # ── Rotation intelligente : récupérer le dernier proxy utilisé ────────
+        last_proxy = await self._get_last_used_proxy()
+        if last_proxy:
+            mgr.advance_past(last_proxy)
+            logger.info(f"[ScraperService] Rotation : dernier proxy utilisé = {last_proxy!r}, démarrage au suivant.")
+        else:
+            logger.info(f"[ScraperService] Aucun proxy précédent trouvé, démarrage au proxy 0.")
 
-        return await self._run(
-            keywords=keywords,
-            sources=sources,
-            location=location,
-            results_per_source=results_per_source,
-            hours_old=hours_old,
-            remote_only=remote_only,
-            job_types=job_types,
-            search_profile_id=search_profile_id,
-            proxy_manager=mgr,
-        )
+        logger.info(f"[ScraperService] Mode proxy résidentiel : {mgr.count} proxy(ies) disponibles.")
+        return await self._run(keywords=keywords, sources=sources, location=location,
+                               results_per_source=results_per_source, hours_old=hours_old,
+                               remote_only=remote_only, job_types=job_types,
+                               search_profile_id=search_profile_id, proxy_manager=mgr)
 
-    # ── Moteur commun ─────────────────────────────────────────────────────────
+    async def _get_last_used_proxy(self) -> Optional[str]:
+        """
+        Lit le dernier proxy utilisé dans l'Audit Trail (scrape_logs).
+        Retourne l'IP:PORT du dernier proxy, ou None si aucun.
+        """
+        try:
+            stmt = (
+                select(ScrapeLog.proxy_used)
+                .where(ScrapeLog.proxy_used.isnot(None))
+                .order_by(desc(ScrapeLog.started_at))
+                .limit(1)
+            )
+            result = await self.db.execute(stmt)
+            row = result.scalar_one_or_none()
+            return row  # IP:PORT ou None
+        except Exception as exc:
+            logger.warning(f"[ScraperService] Impossible de lire le dernier proxy : {exc}")
+            return None
 
-    async def _run(
-        self,
-        keywords: str,
-        sources: list[str],
-        location: Optional[str],
-        results_per_source: int,
-        hours_old: Optional[int],
-        remote_only: bool,
-        job_types: Optional[list[str]],
-        search_profile_id: Optional[int],
-        proxy_manager,  # ResidentialProxyManager | None
-    ) -> dict:
-
+    async def _run(self, keywords, sources, location, results_per_source, hours_old,
+                   remote_only, job_types, search_profile_id, proxy_manager):
         total_new = 0
         total_dup = 0
         logs: list[ScrapeLog] = []
 
+        # Pré-attribuer un proxy par source AVANT le gather
+        # (évite que toutes les coroutines parallèles prennent le même index)
+        source_proxies: dict[str, Optional[str]] = {}
+        for source in sources:
+            proxy_url = proxy_manager.get_next() if proxy_manager else None
+            source_proxies[source] = proxy_url
+            if proxy_url:
+                logger.info(f"[{source}] Proxy attribué : {_proxy_display(proxy_url)}")
+
         async def _scrape_one(source: str) -> None:
             nonlocal total_new, total_dup
-
-            # Sélectionner le proxy pour cette source (round-robin)
-            proxy_url = proxy_manager.get_next() if proxy_manager else None
-            proxy_display = (proxy_url.split('@')[-1] if proxy_url and '@' in proxy_url else None)
+            proxy_url     = source_proxies[source]
+            proxy_display = _proxy_display(proxy_url)
+            proxies_tried_list = [proxy_display] if proxy_display else []
 
             log = ScrapeLog(
                 source=source,
@@ -130,24 +109,16 @@ class ScraperService:
             t0 = datetime.utcnow()
             try:
                 scraper = get_scraper(source)
-
-                # Injecter le proxy directement dans le scraper
                 if proxy_url:
                     scraper.proxy = proxy_url
-                    logger.info(f"[{source}] Utilise proxy : {proxy_display}")
 
                 raw_jobs = await scraper.run(
-                    keywords=keywords,
-                    location=location,
-                    results=results_per_source,
-                    hours_old=hours_old,
-                    remote_only=remote_only,
-                    job_types=job_types or [],
+                    keywords=keywords, location=location, results=results_per_source,
+                    hours_old=hours_old, remote_only=remote_only, job_types=job_types or [],
                 )
                 new, dup = await self._persist_jobs(raw_jobs)
                 total_new += new
                 total_dup += dup
-
                 log.status = "success"
                 log.jobs_found = len(raw_jobs)
                 log.jobs_new = new
@@ -157,17 +128,21 @@ class ScraperService:
                 log.status = "error"
                 log.error_message = str(exc)
                 logger.error(f"[ScraperService] {source} failed : {exc}")
-
-                # Retirer le proxy défaillant si on est en mode proxy
+                # Proxy défaillant → retirer + noter le retry
                 if proxy_url and proxy_manager:
                     proxy_manager.remove(proxy_url)
-
+                    retry_proxy = proxy_manager.get_next() if proxy_manager.has_proxies else None
+                    if retry_proxy:
+                        retry_display = _proxy_display(retry_proxy)
+                        proxies_tried_list.append(retry_display)
+                        logger.info(f"[{source}] Retry avec proxy : {retry_display}")
             finally:
                 log.finished_at = datetime.utcnow()
                 log.duration_sec = (log.finished_at - t0).total_seconds()
+                if proxies_tried_list:
+                    log.proxies_tried = json.dumps(proxies_tried_list, ensure_ascii=False)
                 logs.append(log)
 
-        # Lancer toutes les sources en parallèle
         await asyncio.gather(*[_scrape_one(s) for s in sources])
         await self.db.commit()
 
@@ -188,8 +163,6 @@ class ScraperService:
             ],
         }
 
-    # ── Persistance ───────────────────────────────────────────────────────────
-
     async def _persist_jobs(self, raw_jobs: list[RawJob]) -> tuple[int, int]:
         new = dup = 0
         for rj in raw_jobs:
@@ -204,6 +177,7 @@ class ScraperService:
                 content_hash=h,
                 title=rj.title,
                 company=rj.company,
+                company_url=rj.company_url,
                 location=rj.location,
                 job_type=rj.job_type,
                 is_remote=rj.is_remote,
@@ -218,3 +192,19 @@ class ScraperService:
             self.db.add(job)
             new += 1
         return new, dup
+
+
+def _proxy_display(proxy_url: Optional[str]) -> Optional[str]:
+    """Extrait IP:PORT depuis un proxy_url, sans les credentials."""
+    if not proxy_url:
+        return None
+    if "@" in proxy_url:
+        host_part = proxy_url.split("@")[-1]
+        return host_part.rstrip("/")
+    try:
+        parts = proxy_url.split(":")
+        if len(parts) >= 2:
+            return f"{parts[0]}:{parts[1]}"
+    except Exception:
+        pass
+    return proxy_url

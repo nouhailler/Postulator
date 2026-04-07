@@ -6,6 +6,7 @@ from app.api.routes.cv_matching import router as cv_matching_router
 from app.api.routes.cv_store    import router as cv_store_router
 from app.api.routes.cvs         import router as cvs_router
 from app.api.routes.dashboard   import router as dashboard_router
+from app.api.routes.esco        import router as esco_router
 from app.api.routes.history     import router as history_router
 from app.api.routes.jobs        import router as jobs_router
 from app.api.routes.profile     import router as profile_router
@@ -22,3 +23,4 @@ api_router.include_router(profile_router)
 api_router.include_router(cv_store_router)
 api_router.include_router(cv_matching_router)
 api_router.include_router(alerts_router)
+api_router.include_router(esco_router)

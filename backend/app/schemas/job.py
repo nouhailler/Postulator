@@ -37,12 +37,13 @@ class JobSummary(BaseModel):
     id:              int
     title:           str
     company:         str
-    company_url:     Optional[str]   = None   # ← site web pour la colonne "Lien web"
+    company_url:     Optional[str]   = None
     location:        Optional[str]   = None
     source:          str
     is_remote:       bool
     url:             str
     ai_score:        Optional[float] = None
+    ai_summary:      Optional[str]   = None   # ← pour afficher l'icône résumé dans la liste
     status:          str
     published_at:    Optional[datetime] = None
     scraped_at:      datetime

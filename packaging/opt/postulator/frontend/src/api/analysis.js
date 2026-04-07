@@ -17,6 +17,35 @@ export async function scoreJobSync(cvId, jobId, model) {
   })
 }
 
+/** POST /api/analysis/summarize-jobs — résumé IA des N dernières offres (max 10) */
+export async function summarizeJobs(limit = 10) {
+  return api.post('/analysis/summarize-jobs', { limit })
+}
+
+/** GET /api/analysis/summarize-jobs/status — état du batch résumé */
+export async function getSummarizeStatus() {
+  return api.get('/analysis/summarize-jobs/status')
+}
+
+/**
+ * POST /api/analysis/score-batch — score en masse
+ * @param {number} cvId
+ * @param {number} limit — nombre d'offres à scorer
+ * @param {string} statusFilter — filtre statut ('new' par défaut)
+ */
+export async function scoreBatch(cvId, limit = 20, statusFilter = 'new') {
+  return api.postAI('/analysis/score-batch', {
+    cv_id: cvId,
+    limit,
+    status_filter: statusFilter,
+  })
+}
+
+/** GET /api/analysis/score-batch/status — état + résultats du dernier batch */
+export async function getScoreBatchStatus() {
+  return api.get('/analysis/score-batch/status')
+}
+
 export async function pingOllama() {
   return api.get('/analysis/ollama/ping')
 }

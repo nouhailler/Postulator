@@ -1,0 +1,22 @@
+/* Ajout des styles pour la colonne numéro — à fusionner dans JobsPage.module.css */
+
+/* ── Colonne # (numéro) ── */
+.thNum {
+  width: 32px;
+  min-width: 32px;
+  text-align: center;
+  color: var(--outline) !important;
+  cursor: default !important;
+  user-select: none;
+}
+
+.tdNum {
+  width: 32px;
+  text-align: center;
+  font-family: var(--font-headline);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--outline);
+  white-space: nowrap;
+  padding: 11px 6px;
+}

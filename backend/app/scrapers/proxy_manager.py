@@ -122,6 +122,28 @@ class ResidentialProxyManager:
             self._index += 1
         return proxy
 
+    def advance_past(self, last_proxy_display: str) -> None:
+        """
+        Avance l'index pour que le PROCHAIN get_next() retourne
+        le proxy qui suit `last_proxy_display` (IP:PORT).
+        Appeler avant la première session pour ne pas réutiliser le même proxy.
+        """
+        with self._lock:
+            for i, url in enumerate(self._proxies):
+                if _proxy_display_from_url(url) == last_proxy_display:
+                    # Pointer sur le proxy SUIVANT
+                    self._index = (i + 1) % len(self._proxies)
+                    logger.info(
+                        f"[ResidentialProxy] Index avancé à {self._index} "
+                        f"(passe {last_proxy_display!r})"
+                    )
+                    return
+            # Proxy non trouvé dans la liste (liste différente) : index inchangé
+            logger.info(
+                f"[ResidentialProxy] Proxy précédent {last_proxy_display!r} "
+                f"absent de la liste courante, démarrage à l'index {self._index}."
+            )
+
     def get_all_urls(self) -> list[str]:
         """Retourne toutes les URLs proxy (pour debug/log)."""
         return list(self._proxies)
@@ -157,3 +179,19 @@ class ResidentialProxyManager:
 
 # Singleton pour les proxies statiques (.env)
 proxy_manager = ProxyManager()
+
+
+def _proxy_display_from_url(proxy_url: str) -> Optional[str]:
+    """Extrait IP:PORT depuis une URL proxy, sans credentials."""
+    if not proxy_url:
+        return None
+    if "@" in proxy_url:
+        host_part = proxy_url.split("@")[-1]
+        return host_part.rstrip("/")
+    try:
+        parts = proxy_url.split(":")
+        if len(parts) >= 2:
+            return f"{parts[0]}:{parts[1]}"
+    except Exception:
+        pass
+    return proxy_url

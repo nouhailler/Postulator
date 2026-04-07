@@ -118,3 +118,13 @@ async def scrape_logs(
         stmt = stmt.where(ScrapeLog.source == source)
     result = await db.execute(stmt)
     return result.scalars().all()
+
+
+@router.get("/logs/{log_id}", response_model=ScrapeLogRead)
+async def scrape_log_detail(log_id: int, db: DBSession) -> ScrapeLogRead:
+    """Détail complet d'un log de scraping (proxies, erreurs)."""
+    from app.models.scrape_log import ScrapeLog
+    log = await db.get(ScrapeLog, log_id)
+    if not log:
+        raise HTTPException(status_code=404, detail=f"Log {log_id} introuvable.")
+    return log

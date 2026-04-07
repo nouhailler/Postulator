@@ -9,6 +9,7 @@ Stratégie performance :
   - keep_alive=600s → modèle reste en VRAM
   - timeout=300s (5 min) → largement suffisant avec phi3.5 @ 2s/requête simple
   - generate() plutôt que chat() → plus direct
+  - format="json" → obligatoire depuis Ollama ≥ 0.5 pour garantir du JSON pur
 """
 import json
 import re
@@ -67,12 +68,9 @@ def _clean_html(text: str) -> str:
     """Supprime les balises HTML et décode les entités basiques."""
     if not text:
         return ""
-    # Supprimer les balises HTML
     clean = re.sub(r'<[^>]+>', ' ', text)
-    # Décoder entités HTML basiques
     clean = clean.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>') \
                  .replace('&nbsp;', ' ').replace('&quot;', '"').replace('&#39;', "'")
-    # Normaliser les espaces et sauts de ligne
     clean = re.sub(r'\s+', ' ', clean).strip()
     return clean
 
@@ -137,7 +135,7 @@ class OllamaService:
         if not client:
             return self._error_result("package ollama manquant")
 
-        # Nettoyer et tronquer — garder court pour rester rapide
+        # Nettoyer et tronquer
         cv_short   = cv_text[:1500].strip()
         desc_clean = _clean_html(job_description)[:800].strip()
 
@@ -148,19 +146,18 @@ class OllamaService:
             job_description=desc_clean,
         )
 
-        total_chars = len(prompt)
-        logger.info(f"[Ollama] score_job — prompt {total_chars} chars → {self.model}")
+        logger.info(f"[Ollama] score_job — prompt {len(prompt)} chars → {self.model}")
 
         try:
             response = await client.generate(
                 model=self.model,
                 prompt=prompt,
                 stream=False,
+                format="json",          # ← obligatoire depuis Ollama ≥ 0.5
                 keep_alive=KEEP_ALIVE_SEC,
                 options={
                     "temperature": 0.1,
                     "num_predict": 250,
-                    "stop": ["\n\n", "```"],
                 },
             )
             raw = response["response"].strip()
@@ -198,11 +195,11 @@ class OllamaService:
                 model=self.model,
                 prompt=prompt,
                 stream=False,
+                format="json",          # ← obligatoire depuis Ollama ≥ 0.5
                 keep_alive=KEEP_ALIVE_SEC,
                 options={
                     "temperature": 0.0,
                     "num_predict": 200,
-                    "stop": ["\n\n", "```"],
                 },
             )
             raw = response["response"].strip()
@@ -223,7 +220,7 @@ class OllamaService:
             return []
 
         except json.JSONDecodeError:
-            # Fallback regex
+            # Fallback regex si le format JSON est quand même imparfait
             items = re.findall(r'"([^"]{2,50})"', raw)
             logger.info(f"[Ollama] fallback regex : {len(items)} items")
             return items[:30]

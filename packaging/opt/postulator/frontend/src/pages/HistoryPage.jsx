@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Trash2, ExternalLink, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
+import { Trash2, ExternalLink, ChevronDown, ChevronUp, RefreshCw, Mail, Loader, CheckCircle } from 'lucide-react'
 import { useAsync }   from '../hooks/useAsync.js'
 import { fetchHistory, deleteMatch } from '../api/history.js'
+import { sendMatchAlert } from '../api/alerts.js'
 import styles from './HistoryPage.module.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -27,15 +28,29 @@ function ScoreBadge({ score }) {
 // ── Ligne détaillée (expandable) ─────────────────────────────────────────────
 
 function HistoryRow({ entry, onDelete }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded,    setExpanded]    = useState(false)
+  const [sendingMail, setSendingMail] = useState(false)
+  const [mailSent,    setMailSent]    = useState(false)
+  const [mailError,   setMailError]   = useState(null)
 
   const skills    = parseJson(entry.cv_skills).slice(0, 8)
   const strengths = parseJson(entry.strengths)
   const gaps      = parseJson(entry.gaps)
 
+  const handleSendAlert = async (e) => {
+    e.stopPropagation()
+    setSendingMail(true); setMailError(null)
+    try {
+      const res = await sendMatchAlert(entry.id)
+      if (res.ok) { setMailSent(true); setTimeout(() => setMailSent(false), 4000) }
+      else setMailError(res.error ?? 'Échec envoi email')
+    } catch (err) {
+      setMailError(err.detail ?? err.message ?? 'Erreur SMTP')
+    } finally { setSendingMail(false) }
+  }
+
   return (
     <>
-      {/* ── Ligne principale ── */}
       <tr
         className={`${styles.row} ${expanded ? styles.rowExpanded : ''}`}
         onClick={() => setExpanded(e => !e)}
@@ -73,6 +88,21 @@ function HistoryRow({ entry, onDelete }) {
         {/* Actions */}
         <td className={`${styles.td} ${styles.tdRight}`} onClick={e => e.stopPropagation()}>
           <div className={styles.rowActions}>
+            {/* Bouton alerte email */}
+            <button
+              className={`${styles.actionIcon} ${mailSent ? styles.actionSent : ''}`}
+              onClick={handleSendAlert}
+              disabled={sendingMail || mailSent}
+              title={mailSent ? 'Email envoyé !' : 'Envoyer une alerte email pour ce match'}
+            >
+              {sendingMail
+                ? <Loader size={12} className={styles.spin} strokeWidth={2} />
+                : mailSent
+                  ? <CheckCircle size={12} strokeWidth={2} />
+                  : <Mail size={12} strokeWidth={2} />
+              }
+            </button>
+
             {entry.job_url && (
               <a href={entry.job_url} target="_blank" rel="noreferrer"
                 className={styles.actionIcon} title="Voir l'offre originale">
@@ -87,6 +117,11 @@ function HistoryRow({ entry, onDelete }) {
               {expanded ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
             </span>
           </div>
+
+          {/* Message erreur email (inline sous les boutons) */}
+          {mailError && (
+            <p className={styles.mailError}>{mailError}</p>
+          )}
         </td>
       </tr>
 
@@ -96,7 +131,6 @@ function HistoryRow({ entry, onDelete }) {
           <td colSpan={5} className={styles.detailCell}>
             <div className={styles.detailGrid}>
 
-              {/* Recommandation */}
               {entry.recommendation && (
                 <div className={styles.detailFull}>
                   <p className={styles.detailLabel}>Synthèse Ollama</p>
@@ -104,38 +138,27 @@ function HistoryRow({ entry, onDelete }) {
                 </div>
               )}
 
-              {/* Points forts */}
               {strengths.length > 0 && (
                 <div>
-                  <p className={styles.detailLabel} style={{ color: 'var(--tertiary)' }}>
-                    ✦ Points forts
-                  </p>
+                  <p className={styles.detailLabel} style={{ color: 'var(--tertiary)' }}>✦ Points forts</p>
                   <ul className={styles.detailList}>
                     {strengths.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
                 </div>
               )}
 
-              {/* Points de développement */}
               {gaps.length > 0 && (
                 <div>
-                  <p className={styles.detailLabel} style={{ color: 'var(--primary)' }}>
-                    ◎ Points de développement
-                  </p>
+                  <p className={styles.detailLabel} style={{ color: 'var(--primary)' }}>◎ Points de développement</p>
                   <ul className={styles.detailList}>
                     {gaps.map((g, i) => <li key={i}>{g}</li>)}
                   </ul>
                 </div>
               )}
 
-              {/* Métadonnées */}
               <div className={styles.detailMeta}>
-                {entry.ollama_model && (
-                  <span className={styles.metaChip}>🤖 {entry.ollama_model}</span>
-                )}
-                {entry.job_source && (
-                  <span className={styles.metaChip}>📡 {entry.job_source}</span>
-                )}
+                {entry.ollama_model && <span className={styles.metaChip}>🤖 {entry.ollama_model}</span>}
+                {entry.job_source   && <span className={styles.metaChip}>📡 {entry.job_source}</span>}
                 {entry.job_url && (
                   <a href={entry.job_url} target="_blank" rel="noreferrer" className={styles.metaLink}>
                     <ExternalLink size={11} strokeWidth={2} /> Voir l'offre originale
@@ -153,20 +176,12 @@ function HistoryRow({ entry, onDelete }) {
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function HistoryPage() {
-  const { data: history, loading, error, refetch } = useAsync(
-    fetchHistory,
-    [],
-    { fallback: [] }
-  )
+  const { data: history, loading, error, refetch } = useAsync(fetchHistory, [], { fallback: [] })
 
   const handleDelete = async (id) => {
     if (!window.confirm('Supprimer cette entrée de l\'historique ?')) return
-    try {
-      await deleteMatch(id)
-      refetch()
-    } catch (err) {
-      console.error(err)
-    }
+    try { await deleteMatch(id); refetch() }
+    catch (err) { console.error(err) }
   }
 
   const totalMatches = history?.length ?? 0
@@ -180,12 +195,9 @@ export default function HistoryPage() {
   return (
     <div className={styles.page}>
 
-      {/* ── En-tête ── */}
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={`${styles.pageTitle} font-headline tracking-tight`}>
-            Historique des Matches
-          </h1>
+          <h1 className={`${styles.pageTitle} font-headline tracking-tight`}>Historique des Matches</h1>
           <p className={styles.pageSub}>
             Résultats d'analyses CV ↔ offres sauvegardés — cliquez sur une ligne pour le détail.
           </p>
@@ -195,7 +207,6 @@ export default function HistoryPage() {
         </button>
       </div>
 
-      {/* ── Stats rapides ── */}
       {totalMatches > 0 && (
         <div className={styles.statsRow}>
           <div className={styles.statCard}>
@@ -203,7 +214,9 @@ export default function HistoryPage() {
             <p className={styles.statLabel}>Analyses sauvegardées</p>
           </div>
           <div className={styles.statCard}>
-            <p className={styles.statValue} style={{ color: avgScore >= 80 ? 'var(--tertiary)' : avgScore >= 60 ? 'var(--primary)' : 'var(--outline)' }}>
+            <p className={styles.statValue} style={{
+              color: avgScore >= 80 ? 'var(--tertiary)' : avgScore >= 60 ? 'var(--primary)' : 'var(--outline)'
+            }}>
               {avgScore}/100
             </p>
             <p className={styles.statLabel}>Score moyen</p>
@@ -221,7 +234,6 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* ── Contenu ── */}
       {error && (
         <div className={styles.errorBanner}>
           Impossible de charger l'historique. Vérifiez que le backend est démarré.

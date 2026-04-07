@@ -5,11 +5,14 @@ Génération et gestion des CVs adaptés à des offres spécifiques.
 Routes :
   GET    /api/cv-matching                  → liste des CVs générés
   POST   /api/cv-matching/generate         → génère + sauvegarde un CV pour une offre
+  POST   /api/cv-matching/generate-ats     → génère un CV ATS-optimisé + score + keywords (pas sauvegardé)
+  POST   /api/cv-matching/save-ats         → sauvegarde un résultat ATS déjà calculé en base
   GET    /api/cv-matching/{id}             → détail d'un CV généré (avec source_cv_text)
   GET    /api/cv-matching/{id}/export/docx → export DOCX via pandoc
   PATCH  /api/cv-matching/{id}/notes       → ajouter une note
   DELETE /api/cv-matching/{id}             → suppression
 """
+import json
 import re
 import shutil
 import subprocess
@@ -45,12 +48,19 @@ class GeneratedCVSummary(BaseModel):
     language:       str
     ollama_model:   Optional[str]
     notes:          Optional[str]
+    # Champs ATS optionnels
+    is_ats:      Optional[bool]  = None
+    ats_total:   Optional[float] = None
     model_config = {"from_attributes": True}
 
 
 class GeneratedCVFull(GeneratedCVSummary):
     cv_markdown:    str
-    source_cv_text: Optional[str] = None   # ← snapshot du CV original pour le diff
+    source_cv_text: Optional[str] = None
+    # Champs ATS dénormalisés pour affichage direct
+    ats_score_json:       Optional[str] = None
+    ats_keywords_json:    Optional[str] = None
+    ats_suggestions_json: Optional[str] = None
 
 
 class GenerateCVRequest(BaseModel):
@@ -62,6 +72,48 @@ class GenerateCVRequest(BaseModel):
 
 class NotesUpdate(BaseModel):
     notes: str
+
+
+# ── Schémas ATS ───────────────────────────────────────────────────────────────
+
+class KeywordGap(BaseModel):
+    keyword:    str
+    found:      bool
+    importance: str   # "high" | "medium" | "low"
+    category:   str   # "skill" | "tool" | "soft_skill" | "title" | "certification"
+
+
+class ATSScore(BaseModel):
+    score_keywords:   float   # 0-35
+    score_experience: float   # 0-25
+    score_skills:     float   # 0-20
+    score_education:  float   # 0-10
+    score_format:     float   # 0-10
+    total:            float   # 0-100
+    label:            str     # "rejet" | "possible" | "bon" | "top"
+
+
+class ATSResult(BaseModel):
+    cv_markdown:     str
+    source_cv_text:  Optional[str]
+    ats_score:       ATSScore
+    keyword_gaps:    list[KeywordGap]
+    missing_count:   int
+    found_count:     int
+    suggestions:     list[str]
+
+
+class SaveATSRequest(BaseModel):
+    """Payload pour sauvegarder un résultat ATS déjà calculé côté client."""
+    source_cv_id: int
+    job_id:       int
+    language:     str
+    model:        Optional[str] = None
+    cv_markdown:  str
+    source_cv_text: Optional[str] = None
+    ats_score:    ATSScore
+    keyword_gaps: list[KeywordGap]
+    suggestions:  list[str]
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -95,18 +147,16 @@ async def generate_cv(
     if not job:
         raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
 
-    model       = payload.model or settings.ollama_model
-    cv_markdown = await _generate_with_ollama(
+    model          = payload.model or settings.ollama_model
+    cv_markdown    = await _generate_with_ollama(
         source_cv, job, model, settings.ollama_base_url, payload.language or "fr"
     )
-
-    # Construire le texte brut du CV original pour le diff frontend
     source_cv_text = _build_source_text(source_cv)
 
     gen = GeneratedCV(
         source_cv_id=source_cv.id,
         source_cv_name=source_cv.name,
-        source_cv_text=source_cv_text,   # ← snapshot pour le diff
+        source_cv_text=source_cv_text,
         job_id=job.id,
         job_title=job.title,
         job_company=job.company,
@@ -114,6 +164,74 @@ async def generate_cv(
         cv_markdown=cv_markdown,
         language=payload.language or "fr",
         ollama_model=model,
+        is_ats=False,
+    )
+    db.add(gen)
+    await db.commit()
+    await db.refresh(gen)
+    return gen
+
+
+@router.post("/generate-ats", response_model=ATSResult, status_code=201)
+async def generate_ats_cv(
+    payload:  GenerateCVRequest,
+    db:       DBSession,
+    settings: AppSettings,
+) -> ATSResult:
+    """
+    Génère un CV optimisé ATS + score ATS + analyse keywords.
+    Ne sauvegarde PAS en base — utiliser /save-ats pour persister le résultat.
+    """
+    source_cv = await db.get(StoredCV, payload.source_cv_id)
+    if not source_cv:
+        raise HTTPException(status_code=404, detail=f"CV source {payload.source_cv_id} introuvable.")
+
+    job = await db.get(Job, payload.job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
+
+    model          = payload.model or settings.ollama_model
+    source_cv_text = _build_source_text(source_cv)
+
+    return await _generate_ats_with_ollama(
+        source_cv, job, model, settings.ollama_base_url, payload.language or "fr", source_cv_text
+    )
+
+
+@router.post("/save-ats", response_model=GeneratedCVFull, status_code=201)
+async def save_ats_cv(
+    payload: SaveATSRequest,
+    db:      DBSession,
+    settings: AppSettings,
+) -> GeneratedCVFull:
+    """
+    Sauvegarde un résultat ATS déjà calculé (renvoyé par /generate-ats) en base.
+    Aucun appel Ollama supplémentaire — simple persistance.
+    """
+    source_cv = await db.get(StoredCV, payload.source_cv_id)
+    if not source_cv:
+        raise HTTPException(status_code=404, detail=f"CV source {payload.source_cv_id} introuvable.")
+
+    job = await db.get(Job, payload.job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
+
+    gen = GeneratedCV(
+        source_cv_id=source_cv.id,
+        source_cv_name=source_cv.name,
+        source_cv_text=payload.source_cv_text,
+        job_id=job.id,
+        job_title=job.title,
+        job_company=job.company,
+        job_url=job.url,
+        cv_markdown=payload.cv_markdown,
+        language=payload.language,
+        ollama_model=payload.model or settings.ollama_model,
+        is_ats=True,
+        ats_total=payload.ats_score.total,
+        ats_score_json=payload.ats_score.model_dump_json(),
+        ats_keywords_json=json.dumps([k.model_dump() for k in payload.keyword_gaps], ensure_ascii=False),
+        ats_suggestions_json=json.dumps(payload.suggestions, ensure_ascii=False),
     )
     db.add(gen)
     await db.commit()
@@ -228,10 +346,6 @@ def _build_cv_context(cv: StoredCV) -> dict:
 
 
 def _build_source_text(cv: StoredCV) -> str:
-    """
-    Reconstruit le texte complet du CV original sous forme de texte brut.
-    Utilisé pour le diff côté frontend afin de surligner les parties modifiées.
-    """
     parts = []
     if cv.full_name:      parts.append(cv.full_name)
     if cv.title:          parts.append(cv.title)
@@ -251,7 +365,14 @@ def _section(title: str, content: str) -> str:
     return f"[{title}]\n{content.strip()}\n"
 
 
-# ── Génération Ollama ─────────────────────────────────────────────────────────
+def _ats_label(score: float) -> str:
+    if score < 40:  return "rejet"
+    if score < 60:  return "possible"
+    if score < 80:  return "bon"
+    return "top"
+
+
+# ── Génération Ollama standard ────────────────────────────────────────────────
 
 async def _generate_with_ollama(
     cv: StoredCV, job: Job, model: str, base_url: str, lang: str
@@ -361,6 +482,203 @@ RÈGLE ABSOLUE : Réponds UNIQUEMENT avec le Markdown du CV. Aucun commentaire, 
         return raw
     except Exception as e:
         raise RuntimeError(f"Ollama error : {e}")
+
+
+# ── Génération Ollama ATS ─────────────────────────────────────────────────────
+
+async def _generate_ats_with_ollama(
+    cv: StoredCV, job: Job, model: str, base_url: str, lang: str, source_cv_text: str
+) -> ATSResult:
+    import httpx
+    import ollama as ol
+
+    ctx = _build_cv_context(cv)
+    desc_clean = _clean_html(job.description or "")[:2500]
+    lang_label = "français" if lang == "fr" else "English"
+
+    prompt = f"""Tu es un expert ATS optimizer, senior recruiter et HR data scientist.
+Ta mission : produire le CV qui obtiendra le SCORE MAXIMUM dans un Applicant Tracking System (ATS)
+ET qui sera le plus convaincant possible pour un recruteur humain.
+
+=== OFFRE D'EMPLOI CIBLE ===
+Poste : {job.title}
+Entreprise : {job.company}
+Description complète :
+{desc_clean}
+
+=== CV SOURCE DU CANDIDAT ===
+{_section("IDENTITÉ", ctx["identity"])}
+{_section("RÉSUMÉ PROFESSIONNEL", ctx["summary"])}
+{_section("EXPÉRIENCES PROFESSIONNELLES", ctx["experiences"])}
+{_section("COMPÉTENCES TECHNIQUES", ctx["skills"])}
+{_section("FORMATION", ctx["education"])}
+{_section("LANGUES", ctx["languages"])}
+{_section("CERTIFICATIONS", ctx["certifications"])}
+{_section("PROJETS", ctx["projects"])}
+
+=== ÉTAPES OBLIGATOIRES ===
+
+ÉTAPE 1 — Extraire les mots-clés critiques de l'offre :
+  - Compétences obligatoires (poids 10), outils demandés (poids 7), soft skills (poids 3)
+  - Titre exact du poste, synonymes acceptés, niveau d'expérience attendu
+
+ÉTAPE 2 — Analyser le CV source :
+  - Identifier quels mots-clés sont déjà présents (ou leurs synonymes)
+  - Identifier les gaps (mots-clés manquants que le candidat POSSÈDE peut-être mais n'a pas mentionnés)
+
+ÉTAPE 3 — Générer le CV optimisé ATS en {lang_label} selon ces règles STRICTES :
+
+  STRUCTURE ATS-FRIENDLY OBLIGATOIRE (sections dans cet ordre) :
+    1. En-tête : Nom, Titre (aligné sur le poste), coordonnées
+    2. SUMMARY : 3-4 phrases, contient le titre du poste + 4-5 mots-clés de l'offre
+    3. CORE SKILLS : liste dense, les mots-clés de l'offre EN PREMIER
+    4. PROFESSIONAL EXPERIENCE : expériences reformulées (voir règles ci-dessous)
+    5. EDUCATION
+    6. LANGUAGES (si pertinent)
+
+  RÈGLES POUR LE TITRE :
+    - Aligner EXACTEMENT le titre sur le poste : "{job.title}"
+    - Si le titre du CV source est différent, le modifier pour correspondre
+
+  RÈGLES CRITIQUES POUR LES EXPÉRIENCES PROFESSIONNELLES :
+    ⚠ OBLIGATION ABSOLUE : reformuler chaque bullet point des expériences PERTINENTES
+    pour y intégrer le vocabulaire et les éléments de langage de l'offre.
+    
+    MÉTHODE pour chaque bullet :
+    1. Identifier l'action réalisée dans le CV source
+    2. Identifier le mot-clé ou concept correspondant dans l'offre
+    3. Reformuler en utilisant EXACTEMENT le terme de l'offre, pas un synonyme
+    
+    EXEMPLES de reformulation :
+    - CV source : "Géré les stocks du dépôt"
+      Offre contient "Inventory Management" → REFORMULER : "Managed inventory optimization for 3 distribution centers"
+    - CV source : "Travaillé avec les équipes ventes"
+      Offre contient "S&OP" → REFORMULER : "Led S&OP process with cross-functional teams (Sales, Finance, Operations)"
+    - CV source : "Réduit les coûts logistiques"
+      Offre contient "Lean Six Sigma" → REFORMULER : "Applied Lean Six Sigma methodology to reduce logistics costs by X%"
+    
+    OBLIGATOIRE : chaque expérience PERTINENTE doit avoir AU MOINS 2 bullets reformulés
+    avec des mots-clés tirés directement de l'offre.
+    
+    INTERDIT : copier-coller les bullets sans les reformuler.
+    INTERDIT : inventer des réalisations absentes du CV source.
+    AUTORISÉ : reformuler, préciser, enrichir avec le vocabulaire de l'offre.
+
+  RÈGLES POUR CORE SKILLS :
+    - Lister EN PREMIER les compétences qui apparaissent textuellement dans l'offre
+    - Keyword mirroring : utiliser EXACTEMENT les termes de l'offre, pas des traductions
+    - Si l'offre dit "Demand Planning", écrire "Demand Planning" (pas "planification de la demande")
+
+  FORMAT TEXTE PUR (ATS parser-friendly) :
+    - Aucune table, aucun tableau, aucune colonne, aucun graphique, aucune icône
+    - Sections clairement titrées avec ##
+    - Bullet points avec -
+    - Pas de caractères spéciaux sauf | pour séparer les coordonnées
+
+ÉTAPE 4 — Calculer le score ATS simulé :
+  score_keywords (0-35) : % mots-clés importants présents dans le CV optimisé × 35
+  score_experience (0-25) : alignement titre + années d'exp + progression
+  score_skills (0-20) : densité et pertinence compétences vs offre
+  score_education (0-10) : niveau diplôme vs requis
+  score_format (0-10) : structure ATS-friendly respectée
+
+ÉTAPE 5 — Lister 3-5 suggestions concrètes pour améliorer encore le score
+(ex : "Ajouter la certification X si vous la possédez", "Mentionner explicitement Y dans l'expérience Z").
+
+=== FORMAT DE RÉPONSE : JSON UNIQUEMENT ===
+Réponds UNIQUEMENT avec ce JSON, sans backtick, sans commentaire, sans texte avant ou après :
+
+{{"cv_markdown": "# NOM\\n**{job.title}** | Ville | email\\n\\n---\\n## SUMMARY\\n3-4 phrases avec mots-clés offre\\n\\n---\\n## CORE SKILLS\\n- Mot-clé offre 1\\n- Mot-clé offre 2\\n\\n---\\n## PROFESSIONAL EXPERIENCE\\n### Titre · Entreprise *(dates)*\\n- Bullet reformulé avec vocabulaire offre\\n- Autre bullet reformulé\\n\\n---\\n## EDUCATION\\n### Diplôme · École *(année)*\\n\\n---\\n## LANGUAGES\\n- Langue : Niveau", "keyword_gaps": [{{"keyword": "Supply Chain Management", "found": true, "importance": "high", "category": "skill"}}, {{"keyword": "SAP S/4HANA", "found": false, "importance": "high", "category": "tool"}}, {{"keyword": "Lean Six Sigma", "found": true, "importance": "medium", "category": "certification"}}], "ats_score": {{"score_keywords": 28, "score_experience": 20, "score_skills": 16, "score_education": 8, "score_format": 9, "total": 81}}, "suggestions": ["Ajouter Lean Six Sigma si certification réelle", "Mentionner SAP explicitement si utilisé"]}}
+
+CONTRAINTES JSON STRICTES :
+- cv_markdown : CV COMPLET en Markdown, sauts de ligne = \\n, guillemets = \\"
+- keyword_gaps : TOUS les mots-clés importants de l'offre, minimum 8 entrées
+- importance : "high" (obligatoire, poids 10), "medium" (outil, poids 7), "low" (soft skill, poids 3)
+- category : skill | tool | soft_skill | title | certification
+- found : true si présent dans le CV source OU dans le CV optimisé généré
+- scores : entiers, plafonds stricts (keywords≤35, experience≤25, skills≤20, education≤10, format≤10)
+- NE PAS inventer de compétences/expériences absentes du CV source
+"""
+
+    client = ol.AsyncClient(
+        host=base_url,
+        timeout=httpx.Timeout(connect=10, read=480, write=10, pool=5),
+    )
+
+    try:
+        response = await client.generate(
+            model=model,
+            prompt=prompt,
+            stream=False,
+            format="json",
+            options={"temperature": 0.2, "num_predict": 4000},
+        )
+        raw = response["response"].strip()
+
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+            else:
+                raise RuntimeError("Réponse JSON invalide d'Ollama")
+
+        cv_markdown = data.get("cv_markdown", "")
+        if cv_markdown:
+            md_start = cv_markdown.find("#")
+            if md_start > 0:
+                cv_markdown = cv_markdown[md_start:]
+
+        keyword_gaps = [
+            KeywordGap(
+                keyword=k.get("keyword", ""),
+                found=bool(k.get("found", False)),
+                importance=k.get("importance", "medium"),
+                category=k.get("category", "skill"),
+            )
+            for k in data.get("keyword_gaps", [])
+        ]
+
+        raw_score = data.get("ats_score", {})
+        sk  = min(float(raw_score.get("score_keywords",   0)), 35)
+        se  = min(float(raw_score.get("score_experience", 0)), 25)
+        ssl = min(float(raw_score.get("score_skills",     0)), 20)
+        sed = min(float(raw_score.get("score_education",  0)), 10)
+        sf  = min(float(raw_score.get("score_format",     0)), 10)
+        final_total = min(round(sk + se + ssl + sed + sf, 1), 100.0)
+
+        ats_score = ATSScore(
+            score_keywords=round(sk, 1),
+            score_experience=round(se, 1),
+            score_skills=round(ssl, 1),
+            score_education=round(sed, 1),
+            score_format=round(sf, 1),
+            total=final_total,
+            label=_ats_label(final_total),
+        )
+
+        suggestions = data.get("suggestions", [])
+        if not isinstance(suggestions, list):
+            suggestions = []
+
+        found_count   = sum(1 for k in keyword_gaps if k.found)
+        missing_count = sum(1 for k in keyword_gaps if not k.found)
+
+        return ATSResult(
+            cv_markdown=cv_markdown,
+            source_cv_text=source_cv_text,
+            ats_score=ats_score,
+            keyword_gaps=keyword_gaps,
+            missing_count=missing_count,
+            found_count=found_count,
+            suggestions=suggestions,
+        )
+
+    except RuntimeError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Ollama ATS error : {e}")
 
 
 def _cleanup_background(path: Path):

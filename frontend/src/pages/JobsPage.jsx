@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, RefreshCw, Download, ExternalLink,
   ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown,
-  Brain, Trash2, AlertTriangle, Globe,
+  Brain, Trash2, AlertTriangle, Globe, Sparkles, Loader, X, CheckCheck,
 } from 'lucide-react'
 import { useAsync }    from '../hooks/useAsync.js'
 import { fetchJobs, fetchJob, updateJobStatus, deleteJob, purgeJobs } from '../api/jobs.js'
+import { fetchCVs }   from '../api/cvs.js'
+import { scoreBatch, getScoreBatchStatus } from '../api/analysis.js'
 import { mockJobs }    from '../data/mockData.js'
 import JobDetailDrawer from '../components/jobs/JobDetailDrawer.jsx'
 import styles          from './JobsPage.module.css'
@@ -14,7 +16,7 @@ import styles          from './JobsPage.module.css'
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 25
-const SOURCES   = ['', 'indeed', 'linkedin', 'glassdoor', 'ziprecruiter', 'google']
+const SOURCES   = ['', 'indeed', 'linkedin', 'glassdoor', 'ziprecruiter', 'jobup', 'jobsch', 'jobteaser', 'adzuna']
 const STATUSES  = ['', 'new', 'to_apply', 'applied', 'interview', 'rejected']
 
 const STATUS_LABELS = {
@@ -157,6 +159,59 @@ function exportCSV(jobs) {
   URL.revokeObjectURL(url)
 }
 
+// ── Modal Score en masse ─────────────────────────────────────────────────────
+
+function ScoreBatchModal({ cvs, onConfirm, onCancel, loading }) {
+  const [selCvId, setSelCvId] = useState(cvs?.[0]?.id ?? '')
+  const [limit,   setLimit]   = useState(20)
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modal}>
+        <div className={styles.modalIcon}>
+          <Brain size={24} strokeWidth={2} style={{ color: 'var(--tertiary)' }} />
+        </div>
+        <h3 className={styles.modalTitle}>Score en masse</h3>
+        <p className={styles.modalText}>
+          Scorer plusieurs offres contre votre CV en une seule fois.
+          Les scores seront visibles dans la colonne <strong>Score IA</strong>
+          et dans les <strong>Alertes &amp; Activité</strong>.
+        </p>
+        <div className={styles.modalField}>
+          <label className={styles.modalLabel} style={{ flexDirection: 'column', gap: 10 }}>
+            <select
+              value={selCvId}
+              onChange={e => setSelCvId(e.target.value)}
+              style={{ width: '100%', background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-md)', padding: '7px 10px', color: 'var(--on-surface)', fontSize: 13 }}>
+              {(cvs ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+              Scorer les
+              <input
+                type="number" min={1} max={50}
+                value={limit}
+                onChange={e => setLimit(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+                className={styles.modalInput}
+              />
+              premières offres (max 50)
+            </span>
+          </label>
+        </div>
+        <div className={styles.modalActions}>
+          <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
+          <button
+            className={styles.modalConfirmAI}
+            onClick={() => onConfirm(parseInt(selCvId), limit)}
+            disabled={loading || !selCvId}>
+            {loading
+              ? <><Loader size={13} style={{ animation: 'spin 0.8s linear infinite' }} strokeWidth={2} /> En cours…</>
+              : <><Brain size={13} strokeWidth={2} /> Lancer le scoring</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal Réinitialiser ───────────────────────────────────────────────────────
 
 function ResetModal({ onConfirm, onCancel, loading }) {
@@ -214,6 +269,13 @@ export default function JobsPage() {
   const [showReset,  setShowReset]  = useState(false)
   const [resetting,  setResetting]  = useState(false)
   const [resetMsg,   setResetMsg]   = useState(null)
+
+  // Score en masse
+  const [showScoreBatch,  setShowScoreBatch]  = useState(false)
+  const [scoreBatching,   setScoreBatching]   = useState(false)
+  const [scoreBatchMsg,   setScoreBatchMsg]   = useState(null)  // message rapide post-lancement
+
+  const { data: cvList } = useAsync(fetchCVs, [], { fallback: [] })
 
   const buildParams = () => ({
     q:          q         || undefined,
@@ -310,11 +372,46 @@ export default function JobsPage() {
     finally { setResetting(false) }
   }
 
+  const handleScoreBatchConfirm = async (cvId, limit) => {
+    setScoreBatching(true)
+    try {
+      const res = await scoreBatch(cvId, limit, 'new')
+      setShowScoreBatch(false)
+      setScoreBatchMsg(res.message ?? `Scoring lancé pour ${res.total} offre(s)`)
+      // Polling pour rafraîchir la liste quand c'est fini
+      const poll = setInterval(async () => {
+        try {
+          const st = await getScoreBatchStatus()
+          if (!st.running) {
+            clearInterval(poll)
+            setScoreBatching(false)
+            setScoreBatchMsg(`✓ Score terminé : ${st.done}/${st.total} offres — résultats dans les Alertes`)
+            setTimeout(() => setScoreBatchMsg(null), 10000)
+            refetch()  // rafraîchir le tableau
+          }
+        } catch { clearInterval(poll); setScoreBatching(false) }
+      }, 4000)
+    } catch (err) {
+      console.error(err)
+      setScoreBatching(false)
+      setScoreBatchMsg(`Erreur : ${err.detail ?? err.message}`)
+      setTimeout(() => setScoreBatchMsg(null), 5000)
+    }
+  }
+
   return (
     <div className={styles.page}>
 
       {showReset && (
         <ResetModal onConfirm={handleReset} onCancel={() => setShowReset(false)} loading={resetting} />
+      )}
+      {showScoreBatch && (
+        <ScoreBatchModal
+          cvs={cvList ?? []}
+          onConfirm={handleScoreBatchConfirm}
+          onCancel={() => setShowScoreBatch(false)}
+          loading={scoreBatching}
+        />
       )}
 
       {/* En-tête */}
@@ -343,6 +440,12 @@ export default function JobsPage() {
       </div>
 
       {resetMsg  && <div className={styles.resetBanner}>{resetMsg}</div>}
+      {scoreBatchMsg && (
+        <div className={`${styles.resetBanner} ${scoreBatchMsg.startsWith('Erreur') ? styles.errorBanner : ''}`}>
+          {scoreBatching && <Loader size={11} style={{ animation: 'spin 0.8s linear infinite', marginRight: 6 }} strokeWidth={2} />}
+          {scoreBatchMsg}
+        </div>
+      )}
       {isOffline && <div className={styles.offlineBanner}>◎ Backend hors ligne — données de démonstration.</div>}
 
       {/* Filtres */}
@@ -358,6 +461,17 @@ export default function JobsPage() {
         <select className={styles.select} value={status} onChange={e => applyFilter(() => setStatus(e.target.value))}>
           {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
+        {/* Bouton Score en masse — entre le select statut et le champ score min */}
+        <button
+          className={styles.scoreBatchBtn}
+          onClick={() => setShowScoreBatch(true)}
+          disabled={scoreBatching}
+          title="Scorer plusieurs offres en masse avec votre CV">
+          {scoreBatching
+            ? <Loader size={12} className={styles.spin} strokeWidth={2} />
+            : <Brain size={12} strokeWidth={2} />}
+          Scorer avec mon CV
+        </button>
         <input className={styles.selectSmall} type="number" placeholder="Score min %"
           min={0} max={100} value={minScore} onChange={e => applyFilter(() => setMinScore(e.target.value))} />
         <label className={styles.toggleLabel}>
@@ -463,6 +577,15 @@ export default function JobsPage() {
                   </td>
                   <td className={`${styles.td} ${styles.thRight}`} onClick={e => e.stopPropagation()}>
                     <div className={styles.rowActions}>
+                      {/* Bouton résumé IA — visible seulement si ai_summary disponible */}
+                      {job.ai_summary && (
+                        <button
+                          className={`${styles.actionIcon} ${styles.actionSummary}`}
+                          title={job.ai_summary}
+                          onClick={e => { e.stopPropagation(); handleRowClick(job) }}>
+                          <Sparkles size={12} strokeWidth={2} />
+                        </button>
+                      )}
                       <button className={styles.actionIcon} title="Scorer avec mon CV"
                         onClick={() => handleScore(job)}>
                         <Brain size={12} strokeWidth={2} />

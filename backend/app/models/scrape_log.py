@@ -24,7 +24,8 @@ class ScrapeLog(Base):
     jobs_duplicate: Mapped[int] = mapped_column(Integer, default=0)
     duration_sec: Mapped[float | None] = mapped_column(Float, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    proxy_used: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    proxy_used: Mapped[str | None] = mapped_column(String(256), nullable=True)   # IP:PORT du proxy utilisé
+    proxies_tried: Mapped[str | None] = mapped_column(Text, nullable=True)         # JSON list des proxies tentés
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 

@@ -129,6 +129,44 @@
 .actionIcon { background: none; border: 1px solid var(--outline-variant); color: var(--outline); border-radius: var(--radius-sm); width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; text-decoration: none; transition: background 0.12s, color 0.12s; }
 .actionIcon:hover { background: var(--surface-container-high); color: var(--primary); border-color: var(--primary); }
 .actionDelete:hover { color: var(--error) !important; border-color: rgba(255,180,171,0.4) !important; }
+/* Résumé IA — icône teal quand disponible */
+.actionSummary { border-color: rgba(60,221,199,0.3); color: var(--tertiary); }
+.actionSummary:hover { background: rgba(60,221,199,0.10) !important; color: var(--tertiary) !important; border-color: var(--tertiary) !important; }
+
+/* Bouton Score en masse dans la barre de filtres */
+.scoreBatchBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(60,221,199,0.08);
+  border: 1px solid rgba(60,221,199,0.25);
+  color: var(--tertiary);
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  font-family: var(--font-body);
+  transition: background 0.12s, border-color 0.12s;
+}
+.scoreBatchBtn:hover:not(:disabled) { background: rgba(60,221,199,0.16); border-color: rgba(60,221,199,0.45); }
+.scoreBatchBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Bouton confirmer modal IA (teal) */
+.modalConfirmAI {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(60,221,199,0.15);
+  border: 1.5px solid var(--tertiary);
+  color: var(--tertiary);
+  border-radius: var(--radius-lg);
+  padding: 9px 20px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-body);
+}
+.modalConfirmAI:hover { background: rgba(60,221,199,0.25); }
+.modalConfirmAI:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Banner erreur (rouge) */
+.errorBanner { background: rgba(255,180,171,0.07) !important; border-color: rgba(255,180,171,0.25) !important; color: var(--error) !important; }
 
 /* ── Empty ── */
 .empty { background: var(--surface-container-low); border-radius: var(--radius-lg); padding: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; color: var(--outline); font-size: 13px; }

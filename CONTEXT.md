@@ -1,5 +1,5 @@
 # CONTEXT.md – Postulator
-> Dernière mise à jour : session du 7 avril 2026 (sessions 13-14 — scraping international, purge offres, CompanyLink, daysOld, bouton email Historique, import StoredCV→Intelligence, AlertsDrawer statut email)
+> Dernière mise à jour : session du 7 avril 2026 (session 20 — Résumé IA post-scraping, score en masse, icône ✨ résumé dans les offres, résultats dans AlertsDrawer)
 > À lire **en début de chaque session Claude** pour reprendre sans perte de temps.
 
 ---
@@ -374,7 +374,38 @@ L'AlertsDrawer affiche maintenant un bandeau statut email :
 
 ---
 
-## 20. Conventions
+## 21. CV ATS — architecture (session 15)
+
+**Endpoint génération** : `POST /api/cv-matching/generate-ats` → appel Ollama avec prompt renforcé, retourne `ATSResult` (non sauvegardé).
+
+**Endpoint sauvegarde** : `POST /api/cv-matching/save-ats` → reçoit l'ATSResult du frontend, sauvegarde en base sans appel Ollama supplémentaire.
+
+**Modèle `generated_cvs`** — 5 colonnes ATS (nullable) :
+```
+is_ats               BOOLEAN  — true si mode ATS
+ats_total            REAL     — score global 0-100
+ats_score_json       TEXT     — JSON ATSScore {score_keywords, score_experience, …}
+ats_keywords_json    TEXT     — JSON list[KeywordGap]
+ats_suggestions_json TEXT     — JSON list[str]
+```
+
+**Migration** : `python scripts/migrate_add_ats_fields.py`
+
+**Frontend** :
+- Bouton `CV ATS` (teal) → déclenche `/generate-ats`
+- `ATSPanel` avec 3 onglets : CV généré (diff), Score ATS (jauge + barres), Mots-clés (tableau présents/manquants)
+- Bouton `Sauvegarder` dans l'ATSPanel → appelle `saveATSCV()` → `/save-ats`
+- Sélection depuis l'historique d'un CV ATS → restaure l'`ATSPanel` via `atsResultFromFull()`
+- Badge `ATS 82` dans les cartes historique (couleur selon score)
+
+**Prompt ATS renforcé** :
+- Obligation absolue de reformuler chaque bullet point des expériences pertinentes
+- Keyword mirroring : utiliser EXACTEMENT les termes de l'offre
+- Exemples concrets de reformulation dans le prompt
+- `num_predict: 4000` (vs 2500 pour le standard)
+
+---
+
 
 - CSS Modules, `var(--tertiary)` = couleur IA uniquement
 - `write_file` pour réécrire un fichier entier (jamais d'édition partielle)

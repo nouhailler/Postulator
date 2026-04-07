@@ -10,7 +10,7 @@ class ScrapeRequest(BaseModel):
     keywords:           str
     location:           Optional[str] = None
     sources:            list[str]     = Field(default=["indeed"])
-    results_per_source: int           = Field(default=50, ge=5, le=200)
+    results_per_source: int           = Field(default=10, ge=5, le=200)
     hours_old:          Optional[int] = None
     remote_only:        bool          = False
     job_types:          list[str]     = Field(default=[])
@@ -38,9 +38,10 @@ class ScrapeLogRead(BaseModel):
     jobs_found:     int
     jobs_new:       int
     jobs_duplicate: int
-    duration_sec:   Optional[float]  = None
-    error_message:  Optional[str]    = None
-    proxy_used:     Optional[str]    = None
+    duration_sec:   Optional[float]    = None
+    error_message:  Optional[str]      = None
+    proxy_used:     Optional[str]      = None
+    proxies_tried:  Optional[str]      = None   # JSON list — toutes les IPs tentées
     started_at:     datetime
     finished_at:    Optional[datetime] = None
 

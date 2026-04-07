@@ -1,7 +1,5 @@
 """
 app/scrapers/base.py
-Classe abstraite pour tous les scrapers Postulator.
-Chaque scraper (JobSpy, Playwright custom…) hérite de BaseScraper.
 """
 import asyncio
 import random
@@ -21,30 +19,23 @@ settings = get_settings()
 @dataclass
 class RawJob:
     """Représentation intermédiaire d'une offre avant insertion en BDD."""
-    title: str
-    company: str
-    url: str
-    source: str
-    location: Optional[str] = None
-    job_type: Optional[str] = None
-    is_remote: bool = False
-    salary_min: Optional[float] = None
-    salary_max: Optional[float] = None
-    salary_currency: Optional[str] = None
-    description: Optional[str] = None
-    published_at: Optional[datetime] = None
-    extra: dict = field(default_factory=dict)
+    title:           str
+    company:         str
+    url:             str
+    source:          str
+    location:        Optional[str]   = None
+    company_url:     Optional[str]   = None   # ← site web de l'entreprise (depuis jobspy)
+    job_type:        Optional[str]   = None
+    is_remote:       bool            = False
+    salary_min:      Optional[float] = None
+    salary_max:      Optional[float] = None
+    salary_currency: Optional[str]   = None
+    description:     Optional[str]   = None
+    published_at:    Optional[datetime] = None
+    extra:           dict            = field(default_factory=dict)
 
 
 class BaseScraper(ABC):
-    """
-    Interface commune pour tous les scrapers.
-
-    Chaque sous-classe implémente `_fetch()` qui retourne une liste de RawJob.
-    `run()` gère les délais anti-blocage, la rotation de proxies et les retries.
-    """
-
-    #: Nom court du scraper, utilisé dans les logs et ScrapeLog
     source_name: str = "unknown"
 
     def __init__(self) -> None:
@@ -53,20 +44,15 @@ class BaseScraper(ABC):
     async def run(
         self,
         keywords: str,
-        location: Optional[str] = None,
-        results: int = 50,
-        hours_old: Optional[int] = None,
-        remote_only: bool = False,
+        location: Optional[str]    = None,
+        results:  int              = 50,
+        hours_old: Optional[int]   = None,
+        remote_only: bool          = False,
         job_types: Optional[list[str]] = None,
     ) -> list[RawJob]:
-        """
-        Point d'entrée public.
-        Ajoute délai aléatoire + gestion d'erreurs autour de _fetch().
-        """
         delay = random.uniform(settings.scraper_delay_min, settings.scraper_delay_max)
         logger.debug(f"[{self.source_name}] Délai anti-blocage : {delay:.1f}s")
         await asyncio.sleep(delay)
-
         try:
             jobs = await self._fetch(
                 keywords=keywords,
@@ -94,5 +80,4 @@ class BaseScraper(ABC):
         remote_only: bool,
         job_types: list[str],
     ) -> list[RawJob]:
-        """Implémentation spécifique à chaque source."""
         ...

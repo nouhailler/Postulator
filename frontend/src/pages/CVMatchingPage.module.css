@@ -24,6 +24,34 @@
 .errorBox { display: flex; align-items: flex-start; gap: 6px; background: rgba(255,180,171,0.08); border: 1px solid rgba(255,180,171,0.2); border-radius: var(--radius-md); padding: 8px 12px; font-size: 12px; color: var(--error); margin-top: 10px; }
 .timer { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--primary); font-family: var(--font-headline); margin-left: 6px; }
 
+/* ── Boutons génération côte à côte ── */
+.genBtns { display: flex; gap: 8px; margin-top: 6px; }
+.genBtns .btn-ghost { flex: 1; justify-content: center; display: flex; align-items: center; gap: 5px; font-size: 12px; }
+
+.btnATS {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(60,221,199,0.10);
+  border: 1px solid rgba(60,221,199,0.30);
+  color: var(--tertiary);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.btnATS:hover:not(:disabled) { background: rgba(60,221,199,0.18); border-color: rgba(60,221,199,0.5); }
+.btnATS:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.genBtnsHint {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-top: 8px;
+  font-size: 10px; color: var(--outline); line-height: 1.5;
+}
+.genBtnsHint strong { color: var(--on-surface-variant); }
+
 /* Historique */
 .historySection { padding: 16px 18px; flex: 1; }
 .histTitle { font-size: 13px; font-weight: 700; color: var(--on-surface); margin-bottom: 12px; }
@@ -37,6 +65,14 @@
 .genCardHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .genJobTitle { font-size: 12px; font-weight: 600; color: var(--on-surface); line-height: 1.3; }
 .genDate { font-size: 10px; color: var(--outline); flex-shrink: 0; }
+
+/* Badge score ATS dans les cartes historique */
+.atsScoreBadge {
+  font-size: 9px; font-weight: 800; font-family: var(--font-headline);
+  border: 1px solid; border-radius: 4px;
+  padding: 1px 5px; flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
 .genCardMeta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 10px; color: var(--outline); margin-bottom: 4px; }
 .genLang { font-size: 12px; }
 .genNotes { font-size: 10px; color: var(--on-surface-variant); font-style: italic; margin-top: 4px; border-left: 2px solid var(--outline-variant); padding-left: 6px; }
@@ -53,20 +89,62 @@
 /* État vide */
 .emptyView { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 48px 32px; text-align: center; }
 
-/* Chargement depuis l'historique */
+/* Chargement */
 .loadingView {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   flex: 1; gap: 14px;
   color: var(--outline); font-size: 13px;
 }
 
-/* Toolbar */
+/* Toolbar standard */
 .viewToolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); background: var(--surface-container-low); flex-shrink: 0; flex-wrap: wrap; }
 .viewTitle { font-family: var(--font-headline); font-size: 14px; font-weight: 700; color: var(--on-surface); margin-bottom: 3px; }
 .viewMeta  { font-size: 11px; color: var(--outline); }
 .exportBtns { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .deleteViewBtn { color: var(--error) !important; border-color: rgba(255,180,171,0.3) !important; }
 .deleteViewBtn:hover { background: rgba(255,180,171,0.08) !important; }
+
+/* ── Boutons Sauvegarder ATS ── */
+.btnSave {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(60,221,199,0.10);
+  border: 1px solid rgba(60,221,199,0.30);
+  color: var(--tertiary);
+  border-radius: var(--radius-md);
+  padding: 5px 11px;
+  font-size: 11px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.btnSave:hover:not(:disabled) { background: rgba(60,221,199,0.20); border-color: rgba(60,221,199,0.5); }
+.btnSave:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btnSaveDone {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  background: rgba(60,221,199,0.06);
+  border: 1px solid rgba(60,221,199,0.20);
+  color: rgba(60,221,199,0.6);
+  border-radius: var(--radius-md);
+  padding: 5px 11px;
+  font-size: 11px; font-weight: 700;
+  cursor: default;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+
+/* Badge "Sauvegardé" dans le titre du panel ATS */
+.atsSavedBadge {
+  font-size: 9px; font-weight: 700;
+  background: rgba(60,221,199,0.12);
+  border: 1px solid rgba(60,221,199,0.25);
+  color: var(--tertiary);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  letter-spacing: 0.03em;
+}
 
 /* ── Bouton Diff ON/OFF ── */
 .diffBtnActive {
@@ -128,3 +206,163 @@
 .mdLi { padding-left: 16px; position: relative; margin-bottom: 3px; }
 .mdLi::before { content: '▸'; position: absolute; left: 0; color: var(--primary); font-size: 10px; top: 2px; }
 .mdHr { border: none; border-top: 1px solid rgba(255,255,255,0.07); margin: 16px 0; }
+
+
+/* ════════════════════════════════════════════════
+   ATS PANEL
+════════════════════════════════════════════════ */
+
+.atsPanel {
+  display: flex; flex-direction: column; flex: 1; overflow: hidden;
+}
+
+/* Header du panel ATS */
+.atsPanelHeader {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface-container-low);
+  border-bottom: 1px solid rgba(60,221,199,0.15);
+  flex-shrink: 0; flex-wrap: wrap;
+}
+
+.atsPanelTitle {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--font-headline); font-size: 14px; font-weight: 800;
+  color: var(--tertiary); white-space: nowrap;
+}
+
+/* Onglets */
+.atsTabs { display: flex; gap: 4px; }
+.atsTab {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 5px 11px;
+  font-size: 11px; font-weight: 600;
+  color: var(--outline); cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  font-family: var(--font-body);
+}
+.atsTab:hover { background: var(--surface-container-high); color: var(--on-surface); }
+.atsTabActive {
+  background: rgba(60,221,199,0.10) !important;
+  border-color: rgba(60,221,199,0.30) !important;
+  color: var(--tertiary) !important;
+}
+
+/* Corps du panel ATS */
+.atsPanelBody {
+  flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+}
+.atsPanelBody::-webkit-scrollbar { width: 5px; }
+.atsPanelBody::-webkit-scrollbar-thumb { background: var(--surface-container-high); border-radius: 3px; }
+
+/* ── Onglet Score ── */
+.atsScorePanel {
+  padding: 28px 36px; display: flex; flex-direction: column; gap: 24px; max-width: 680px;
+}
+
+.atsScoreTop {
+  display: flex; align-items: center; gap: 32px; flex-wrap: wrap;
+}
+
+.atsGaugeWrap {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; flex-shrink: 0;
+}
+
+.atsLabel {
+  font-family: var(--font-headline); font-size: 13px; font-weight: 700;
+}
+
+.atsScoreLegend {
+  display: flex; flex-direction: column; gap: 5px;
+}
+.atsScoreLegendRow {
+  font-size: 11px; color: var(--on-surface-variant);
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* Barres de score */
+.atsScoreBars { display: flex; flex-direction: column; gap: 10px; }
+.scoreBarRow { display: flex; align-items: center; gap: 10px; }
+.scoreBarLabel { font-size: 12px; color: var(--on-surface-variant); width: 100px; flex-shrink: 0; }
+.scoreBarTrack { flex: 1; height: 8px; background: var(--surface-container-high); border-radius: 4px; overflow: hidden; }
+.scoreBarFill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.scoreBarValue { font-size: 11px; font-weight: 700; color: var(--on-surface); width: 40px; text-align: right; flex-shrink: 0; font-family: var(--font-headline); }
+
+/* Formule */
+.atsScoreFormula {
+  padding: 10px 14px;
+  background: var(--surface-container);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.atsScoreFormula code { font-size: 10px; color: var(--tertiary); font-family: var(--font-mono, monospace); }
+
+/* Suggestions */
+.atsSuggestions { display: flex; flex-direction: column; gap: 8px; }
+.atsSugTitle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700; color: var(--on-surface); margin-bottom: 4px;
+}
+.atsSugItem {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--on-surface-variant); line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(249,199,79,0.05);
+  border: 1px solid rgba(249,199,79,0.12);
+  border-radius: var(--radius-sm);
+}
+.atsSugBullet { color: #f9c74f; font-weight: 700; flex-shrink: 0; }
+
+/* ── Onglet Keywords ── */
+.atsKeywordsPanel { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.kwSummary {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--surface-container);
+  border-radius: var(--radius-md);
+}
+.kwSumItem {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700;
+}
+.kwSumHint {
+  font-size: 11px; color: var(--outline); flex: 1; line-height: 1.4;
+  min-width: 160px;
+}
+
+/* Tableau keywords */
+.kwTable { display: flex; flex-direction: column; gap: 2px; }
+.kwTableHeader {
+  display: grid; grid-template-columns: 1fr 90px 90px 50px;
+  gap: 8px; padding: 6px 12px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--outline);
+}
+.kwRow {
+  display: grid; grid-template-columns: 1fr 90px 90px 50px;
+  gap: 8px; align-items: center;
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  transition: background 0.1s;
+}
+.kwRow:hover { background: var(--surface-container-high); }
+.kwFound   { background: rgba(60,221,199,0.03); }
+.kwMissing { background: rgba(255,107,107,0.04); }
+.kwName { color: var(--on-surface); font-weight: 500; }
+.kwMissing .kwName { color: #ff9999; }
+.kwCategory { font-size: 10px; color: var(--outline); }
+.kwImportance { font-size: 10px; font-weight: 600; }
+.kwStatus { display: flex; align-items: center; }
+
+.kwShowMore {
+  background: none; border: 1px solid var(--outline-variant); color: var(--outline);
+  border-radius: var(--radius-sm); padding: 5px 12px; font-size: 11px;
+  cursor: pointer; display: flex; align-items: center; gap: 4px; margin-top: 4px;
+  transition: color 0.12s, border-color 0.12s; align-self: flex-start;
+  font-family: var(--font-body);
+}
+.kwShowMore:hover { color: var(--primary); border-color: var(--primary); }

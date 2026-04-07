@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     scraper_delay_min:       int = 3
     scraper_delay_max:       int = 10
 
+    # ── Adzuna API ─────────────────────────────────────────────────────────────
+    # Inscription gratuite : https://developer.adzuna.com/
+    # 10 000 requêtes/mois sur le plan gratuit
+    adzuna_app_id:  str = ""
+    adzuna_app_key: str = ""
+
     proxy_list: str = ""
 
     @property

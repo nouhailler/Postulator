@@ -99,10 +99,15 @@ class JobSpyScraper(BaseScraper):
         is_remote_bool: bool = bool(remote_only)
         proxy = self.proxy or None
 
-        # ── Préparer localisation Indeed ─────────────────────────────────────
+        # ── Préparer localisation Indeed + Google ─────────────────────────────
         if self.source_name == "indeed":
             country_indeed = _extract_country_from_location(location)
             location_clean = _strip_country_from_location(location)
+        elif self.source_name == "google":
+            # Google Jobs : ne pas passer le pays dans location, utiliser country_code
+            country_indeed = None
+            # Google veut juste la ville, pas "Ville, Pays"
+            location_clean = _strip_country_from_location(location) or location or ""
         else:
             country_indeed = None
             location_clean = location or ""
@@ -169,8 +174,18 @@ class JobSpyScraper(BaseScraper):
         if country_indeed:
             kwargs["country_indeed"] = country_indeed
         # hours_old : on ne l'applique que si <= 720h (30 jours max)
-        if hours_old is not None and hours_old <= 720:
+        # Google Jobs ne supporte pas hours_old — on l'exclut
+        if hours_old is not None and hours_old <= 720 and self.source_name != "google":
             kwargs["hours_old"] = hours_old
+
+        # Google Jobs : tenter d'abord avec google_search_engine (jobspy récent)
+        if self.source_name == "google":
+            try:
+                result = scrape_jobs(**{**kwargs, "google_search_engine": "google"})
+                if result is not None and not result.empty:
+                    return result
+            except TypeError:
+                pass  # paramètre non supporté — on continue sans
 
         try:
             return scrape_jobs(**kwargs)

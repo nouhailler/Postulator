@@ -13,6 +13,8 @@ export function fetchScrapeLogs({ source, limit = 50 } = {}) {
   return api.get(`/scrapers/logs${qs ? '?' + qs : ''}`)
 }
 
+export const fetchScrapeLogDetail = (id) => api.get(`/scrapers/logs/${id}`)
+
 /** POST /api/scrapers/run — scraping standard */
 export function runScraper(payload) {
   return api.post('/scrapers/run', payload)
