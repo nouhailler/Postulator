@@ -206,3 +206,117 @@
 .mdP    { margin-bottom: 4px; }
 .mdLi   { padding-left: 14px; position: relative; margin-bottom: 3px; }
 .mdLi::before { content: '–'; position: absolute; left: 0; color: var(--outline); }
+
+/* ── Section IA (score + résumé) ── */
+.aiSection {
+  margin-bottom: 16px;
+}
+
+/* ── Panneau score IA ── */
+.scorePanel {
+  background: var(--surface-container);
+  border: 1px solid rgba(60,221,199,0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scorePanelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.scorePanelIcon {
+  width: 26px; height: 26px;
+  background: rgba(60,221,199,0.1);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.scorePanelTitle {
+  flex: 1;
+  font-family: var(--font-headline);
+  font-size: 12px; font-weight: 700;
+  color: var(--on-surface);
+  letter-spacing: 0.01em;
+}
+.scorePanelValue {
+  font-family: var(--font-headline);
+  font-size: 18px; font-weight: 800;
+}
+.scorePanelSection { display: flex; flex-direction: column; gap: 6px; }
+.scorePanelSectionLabel {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--outline);
+}
+.scorePanelList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.scorePanelItem {
+  font-size: 12px; line-height: 1.5;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  position: relative;
+  padding-left: 18px;
+}
+.scorePanelItem::before {
+  content: '';
+  position: absolute; left: 7px; top: 10px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+}
+.scorePanelStrength {
+  background: rgba(60,221,199,0.08);
+  color: var(--on-surface-variant);
+}
+.scorePanelStrength::before { background: var(--tertiary); }
+.scorePanelGap {
+  background: rgba(249,199,79,0.07);
+  color: var(--on-surface-variant);
+}
+.scorePanelGap::before { background: #f9c74f; }
+.scorePanelReco {
+  display: flex; align-items: flex-start; gap: 6px;
+  background: rgba(123,208,255,0.06);
+  border: 1px solid rgba(123,208,255,0.12);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.scorePanelRecoText {
+  font-size: 12px; color: var(--on-surface-variant); line-height: 1.5; margin: 0;
+  font-style: italic;
+}
+
+/* ── Panneau résumé IA bullet points ── */
+.summaryPanel {
+  background: var(--surface-container);
+  border: 1px solid rgba(60,221,199,0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.summaryPanelHeader {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.summaryPanelTitle {
+  font-family: var(--font-headline);
+  font-size: 12px; font-weight: 700;
+  color: var(--on-surface);
+}
+.summaryList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.summaryItem {
+  font-size: 12px; color: var(--on-surface-variant);
+  line-height: 1.5;
+  padding: 5px 10px 5px 18px;
+  position: relative;
+  background: rgba(60,221,199,0.04);
+  border-radius: var(--radius-sm);
+}
+.summaryItem::before {
+  content: '';
+  position: absolute; left: 7px; top: 11px;
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--tertiary);
+}

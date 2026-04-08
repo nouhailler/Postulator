@@ -71,7 +71,7 @@ class JobschScraper(BaseScraper):
                     "term":     keywords,
                     "page":     page,
                     "per_page": per_page,
-                    "sort":     "-date",      # plus récent en premier
+                    "sort":     "date",       # plus récent en premier
                 }
                 if city:
                     params["location"] = city
@@ -103,7 +103,7 @@ class JobschScraper(BaseScraper):
                     logger.error(f"[jobsch] Erreur inattendue page {page} : {exc}")
                     break
 
-                # Jobs.ch : {"documents": [...], "total": N} ou {"jobs": [...]}
+                # Jobs.ch : {"documents": [...], "total_hits": N}
                 items = (
                     data.get("documents") or
                     data.get("jobs")      or
@@ -111,7 +111,7 @@ class JobschScraper(BaseScraper):
                     data.get("results")   or
                     []
                 )
-                total = data.get("total") or data.get("count") or 0
+                total = data.get("total_hits") or data.get("total") or data.get("count") or 0
                 logger.info(f"[jobsch] Page {page} : {len(items)} offres (total={total})")
 
                 if not items:
@@ -147,15 +147,18 @@ class JobschScraper(BaseScraper):
                 ""
             ).strip()
 
-            # URL
+            # URL — jobs.ch retourne _links.detail_fr.href
+            links  = item.get("_links", {})
             slug   = item.get("slug") or ""
-            job_id = item.get("id") or item.get("job_id") or ""
+            job_id = item.get("job_id") or item.get("id") or ""
             url = (
+                (links.get("detail_fr") or {}).get("href") or
+                (links.get("detail_en") or {}).get("href") or
+                (links.get("detail_de") or {}).get("href") or
                 item.get("url") or
                 item.get("apply_url") or
-                item.get("external_url") or
-                (f"{JOBSCH_BASE}/fr/offres-emploi/{slug}" if slug else "") or
-                (f"{JOBSCH_BASE}/fr/offres-emploi/{job_id}" if job_id else "")
+                (f"{JOBSCH_BASE}/fr/offres-emplois/detail/{job_id}/" if job_id else "") or
+                (f"{JOBSCH_BASE}/fr/offres-emplois/detail/{slug}/" if slug else "")
             )
             if not url or not url.startswith("http"):
                 return None

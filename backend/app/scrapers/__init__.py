@@ -21,7 +21,7 @@ SCRAPER_REGISTRY: dict[str, type] = {
     # ── Job boards suisses ────────────────────────────────────────────────────
     "jobup":         JobupScraper,       # jobup.ch — Michael Page, Adecco (CH)
     "jobsch":        JobschScraper,      # jobs.ch — Axel Springer (CH)
-    "jobteaser":     JobTeaserScraper,   # jobteaser.com — CH + FR + DE + BE
+    "jobteaser":     JobTeaserScraper,   # remoteok.com  — offres 100% remote (remplace JobTeaser, API inaccessible)
 }
 
 

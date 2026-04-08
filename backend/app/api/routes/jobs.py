@@ -36,6 +36,7 @@ async def list_jobs(
     q:          str | None   = Query(None),
     source:     str | None   = None,
     status:     str | None   = None,
+    location:   str | None   = None,
     is_remote:  bool | None  = None,
     min_score:  float | None = None,
     sort_by:    str          = Query("scraped_at", description="Colonne de tri"),
@@ -43,16 +44,10 @@ async def list_jobs(
     limit:      int          = Query(50, ge=1, le=200),
     offset:     int          = Query(0, ge=0),
 ) -> list[JobSummary]:
-    """
-    Liste les offres.
-    Tri par défaut : scraped_at DESC (les plus récemment scrapées en tête)
-    — garantit que les nouvelles offres après un scraping apparaissent en premier.
-    """
     col      = SORT_COLUMNS.get(sort_by, Job.scraped_at)
     order_fn = desc if sort_order == "desc" else asc
 
     if sort_by == "published_at":
-        # NULLs en dernier pour published_at
         stmt = select(Job).order_by(
             desc(Job.published_at.isnot(None)),
             order_fn(col),
@@ -66,6 +61,8 @@ async def list_jobs(
         stmt = stmt.where(Job.source == source)
     if status:
         stmt = stmt.where(Job.status == status)
+    if location:
+        stmt = stmt.where(Job.location.ilike(f"%{location}%"))
     if is_remote is not None:
         stmt = stmt.where(Job.is_remote == is_remote)
     if min_score is not None:

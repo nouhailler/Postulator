@@ -1,24 +1,24 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, Briefcase, Radio,
-  Brain, Sparkles, Kanban, History, HelpCircle, LogOut, Plus,
+  Brain, Sparkles, Kanban, History, Settings, Plus, MessageSquare,
 } from 'lucide-react'
 import styles from './SideBar.module.css'
 
 const NAV_ITEMS = [
-  { label: 'Overview',      path: '/dashboard',   icon: LayoutDashboard },
-  { label: 'CV',            path: '/cv',           icon: FileText,  highlight: true },
-  { label: 'Offres',        path: '/jobs',         icon: Briefcase },
-  { label: 'Scrapers',      path: '/scrapers',     icon: Radio },
-  { label: 'CV Intelligence', path: '/analysis',   icon: Brain },
-  { label: 'CV Matching',   path: '/cv-matching',  icon: Sparkles,  highlight: true },
-  { label: 'Pipeline',      path: '/board',        icon: Kanban },
-  { label: 'Historique',    path: '/history',      icon: History },
+  { label: 'Overview',           path: '/dashboard',          icon: LayoutDashboard },
+  { label: 'CV',                 path: '/cv',                 icon: FileText,   highlight: true },
+  { label: 'Offres',             path: '/jobs',               icon: Briefcase },
+  { label: 'Offres Intelligence',path: '/jobs-intelligence',  icon: MessageSquare },
+  { label: 'Scrapers',           path: '/scrapers',           icon: Radio },
+  { label: 'CV Intelligence',    path: '/analysis',           icon: Brain },
+  { label: 'CV Matching',        path: '/cv-matching',        icon: Sparkles,   highlight: true },
+  { label: 'Pipeline',           path: '/board',              icon: Kanban },
+  { label: 'Historique',         path: '/history',            icon: History },
 ]
 
 const BOTTOM_ITEMS = [
-  { label: 'Support',   path: '/support', icon: HelpCircle },
-  { label: 'Sign Out',  path: '/logout',  icon: LogOut },
+  { label: 'Paramètres', path: '/settings', icon: Settings },
 ]
 
 export default function SideBar() {
@@ -26,13 +26,14 @@ export default function SideBar() {
 
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.brand}>
-        <div className={styles.brandIcon}>
-          <span className={styles.brandIconInner}>⌘</span>
+      {/* Logo Postulator */}
+      <div className={styles.brand} onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+        <div className={styles.brandLogo}>
+          <span className={styles.brandLogoP}>P</span>
         </div>
         <div>
-          <p className={styles.brandLabel}>Command Center</p>
-          <p className={styles.brandTitle}>The Sovereign Architect</p>
+          <p className={styles.brandTitle}>Postulator</p>
+          <p className={styles.brandSub}>Job Intelligence Platform</p>
         </div>
       </div>
 

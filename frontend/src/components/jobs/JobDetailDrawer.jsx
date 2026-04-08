@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X, ExternalLink, Brain, MapPin, Building2, Clock, Loader } from 'lucide-react'
+import { X, ExternalLink, Brain, MapPin, Building2, Clock, Loader, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import styles from './JobDetailDrawer.module.css'
 
 const STATUS_LABELS = {
@@ -9,6 +9,114 @@ const STATUS_LABELS = {
 const STATUS_COLORS = {
   new: 'var(--outline)', to_apply: 'var(--primary)', applied: 'var(--tertiary)',
   interview: '#00af9d', rejected: 'var(--error)',
+}
+
+// ── Parser le JSON du score IA ────────────────────────────────────────────────
+function parseScoreData(raw) {
+  if (!raw) return null
+  // Le score peut être stocké comme string JSON ou comme objet
+  if (typeof raw === 'object') return raw
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+// ── Panneau score IA formaté ──────────────────────────────────────────────────
+function ScorePanel({ scoreData, score }) {
+  if (!scoreData && score == null) return null
+
+  const scoreColor = score == null ? 'var(--outline)'
+    : score >= 80 ? 'var(--tertiary)'
+    : score >= 60 ? 'var(--primary)'
+    : '#f9c74f'
+
+  const strengths    = scoreData?.strengths    ?? []
+  const gaps         = scoreData?.gaps         ?? []
+  const recommendation = scoreData?.recommendation ?? null
+
+  return (
+    <div className={styles.scorePanel}>
+      {/* Score global */}
+      <div className={styles.scorePanelHeader}>
+        <div className={styles.scorePanelIcon}>
+          <Brain size={14} strokeWidth={2} style={{ color: scoreColor }} />
+        </div>
+        <span className={styles.scorePanelTitle}>Analyse IA du match</span>
+        {score != null && (
+          <span className={styles.scorePanelValue} style={{ color: scoreColor }}>
+            {Math.round(score)}%
+          </span>
+        )}
+      </div>
+
+      {/* Points forts */}
+      {strengths.length > 0 && (
+        <div className={styles.scorePanelSection}>
+          <p className={styles.scorePanelSectionLabel}>
+            <TrendingUp size={11} strokeWidth={2} style={{ color: 'var(--tertiary)' }} />
+            Points forts
+          </p>
+          <ul className={styles.scorePanelList}>
+            {strengths.map((s, i) => (
+              <li key={i} className={`${styles.scorePanelItem} ${styles.scorePanelStrength}`}>
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Lacunes */}
+      {gaps.length > 0 && (
+        <div className={styles.scorePanelSection}>
+          <p className={styles.scorePanelSectionLabel}>
+            <TrendingDown size={11} strokeWidth={2} style={{ color: '#f9c74f' }} />
+            Points d'attention
+          </p>
+          <ul className={styles.scorePanelList}>
+            {gaps.map((g, i) => (
+              <li key={i} className={`${styles.scorePanelItem} ${styles.scorePanelGap}`}>
+                {g}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Recommandation */}
+      {recommendation && (
+        <div className={styles.scorePanelReco}>
+          <Minus size={10} strokeWidth={2} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: 2 }} />
+          <p className={styles.scorePanelRecoText}>{recommendation}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Panneau résumé IA (ai_summary) ────────────────────────────────────────────
+function SummaryPanel({ summary }) {
+  if (!summary) return null
+  const lines = summary.split('\n').filter(l => l.trim())
+  return (
+    <div className={styles.summaryPanel}>
+      <div className={styles.summaryPanelHeader}>
+        <Sparkles size={13} strokeWidth={2} style={{ color: 'var(--tertiary)' }} />
+        <span className={styles.summaryPanelTitle}>Résumé IA du poste</span>
+      </div>
+      <ul className={styles.summaryList}>
+        {lines.map((line, i) => {
+          const clean = line.replace(/^[•\-\*]\s*/, '').trim()
+          if (!clean) return null
+          return (
+            <li key={i} className={styles.summaryItem}>{clean}</li>
+          )
+        })}
+      </ul>
+    </div>
+  )
 }
 
 /** Rendu Markdown minimal sans dépendance */
@@ -58,27 +166,15 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-/**
- * Drawer latéral — détail complet d'une offre
- * @param {{
- *   job: object|null,
- *   loadingDescription: boolean,
- *   onClose: () => void,
- *   onScore: (job) => void,
- *   onStatusChange: (id, status) => void
- * }}
- */
 export default function JobDetailDrawer({ job, loadingDescription = false, onClose, onScore, onStatusChange }) {
   const drawerRef = useRef()
 
-  // Fermer avec Escape
   useEffect(() => {
     const handleKey = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  // Bloquer le scroll body
   useEffect(() => {
     document.body.style.overflow = job ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -88,14 +184,33 @@ export default function JobDetailDrawer({ job, loadingDescription = false, onClo
 
   const salary     = formatSalary(job.salary_min, job.salary_max, job.salary_currency)
   const score      = job.ai_score != null ? Math.round(job.ai_score) : null
-  const scoreColor = score == null        ? 'var(--outline)'
-                   : score >= 80          ? 'var(--tertiary)'
-                   : score >= 60          ? 'var(--primary)'
-                   :                        'var(--outline)'
+  const scoreColor = score == null   ? 'var(--outline)'
+                   : score >= 80     ? 'var(--tertiary)'
+                   : score >= 60     ? 'var(--primary)'
+                   :                   '#f9c74f'
 
   const initials = (job.company ?? '?')
     .split(/[\s\-&]+/).slice(0, 2)
     .map(w => w[0]?.toUpperCase() ?? '').join('')
+
+  // Parser le score détaillé — peut être dans ai_summary (JSON) ou ailleurs
+  // On essaie d'abord de parser ai_summary comme JSON de score
+  let scoreData = null
+  let summaryText = null
+
+  if (job.ai_summary) {
+    const parsed = parseScoreData(job.ai_summary)
+    if (parsed && (parsed.score != null || parsed.strengths || parsed.gaps)) {
+      // C'est un JSON de score
+      scoreData = parsed
+    } else {
+      // C'est du texte libre (résumé bullet points)
+      summaryText = job.ai_summary
+    }
+  }
+
+  const hasScoreInfo = scoreData || score != null
+  const hasAiContent = scoreData || summaryText
 
   return (
     <>
@@ -169,25 +284,34 @@ export default function JobDetailDrawer({ job, loadingDescription = false, onClo
             <Brain size={13} strokeWidth={2.5} />
             Scorer avec mon CV
           </button>
-
-          {/* Voir l'offre → ouvre un nouvel onglet */}
           <a
             href={job.url}
             target="_blank"
             rel="noreferrer"
             className="btn-ghost"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', textDecoration: 'none' }}
-            onClick={e => {
-              // S'assurer que l'URL est valide avant d'ouvrir
-              if (!job.url) { e.preventDefault(); alert('URL non disponible pour cette offre.') }
-            }}
+            onClick={e => { if (!job.url) { e.preventDefault(); alert('URL non disponible.') } }}
           >
             <ExternalLink size={13} strokeWidth={2} />
             Voir l'offre
           </a>
         </div>
 
-        {/* ── Description ── */}
+        {/* ── Panneau score IA (strengths / gaps / recommandation) ── */}
+        {scoreData && (
+          <div className={styles.aiSection}>
+            <ScorePanel scoreData={scoreData} score={score} />
+          </div>
+        )}
+
+        {/* ── Résumé IA bullet points ── */}
+        {summaryText && (
+          <div className={styles.aiSection}>
+            <SummaryPanel summary={summaryText} />
+          </div>
+        )}
+
+        {/* ── Description brute ── */}
         <div className={styles.descSection}>
           <div className={styles.descLabelRow}>
             <p className={styles.descLabel}>Description</p>

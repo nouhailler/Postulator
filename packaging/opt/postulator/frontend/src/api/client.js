@@ -19,8 +19,14 @@ export class ApiError extends Error {
 async function request(path, options = {}) {
   const url        = `${BASE_URL}${path}`
   const timeout    = options.timeout ?? TIMEOUT_DEFAULT
+  const externalSignal = options.signal  // signal externe (ex: AbortController de l'utilisateur)
   const controller = new AbortController()
   const timeoutId  = setTimeout(() => controller.abort(), timeout)
+
+  // Si un signal externe est fourni, le connecter au controller interne
+  if (externalSignal) {
+    externalSignal.addEventListener('abort', () => controller.abort())
+  }
 
   const isFormData = options.body instanceof FormData
   const headers = isFormData

@@ -258,6 +258,7 @@ export default function JobsPage() {
   const [q,          setQ]          = useState('')
   const [source,     setSource]     = useState('')
   const [status,     setStatus]     = useState('')
+  const [location,   setLocation]   = useState('')
   const [remoteOnly, setRemoteOnly] = useState(false)
   const [minScore,   setMinScore]   = useState('')
   const [page,       setPage]       = useState(0)
@@ -281,6 +282,7 @@ export default function JobsPage() {
     q:          q         || undefined,
     source:     source    || undefined,
     status:     status    || undefined,
+    location:   location  || undefined,
     is_remote:  remoteOnly || undefined,
     min_score:  minScore  || undefined,
     sort_by:    sortBy,
@@ -291,7 +293,7 @@ export default function JobsPage() {
 
   const { data: apiJobs, loading, error, refetch } = useAsync(
     () => fetchJobs(buildParams()),
-    [q, source, status, remoteOnly, minScore, sortBy, sortOrder, page],
+    [q, source, status, location, remoteOnly, minScore, sortBy, sortOrder, page],
     { fallback: null, refetchInterval: 10_000 }
   )
 
@@ -303,6 +305,7 @@ export default function JobsPage() {
           if (q         && ![j.title, j.company, j.location ?? ''].join(' ').toLowerCase().includes(q.toLowerCase())) return false
           if (source    && j.source !== source)  return false
           if (status    && j.status !== status)  return false
+          if (location  && !(j.location ?? '').toLowerCase().includes(location.toLowerCase())) return false
           if (remoteOnly && !j.is_remote)        return false
           if (minScore  && (j.ai_score ?? 0) < Number(minScore)) return false
           return true
@@ -458,6 +461,21 @@ export default function JobsPage() {
         <select className={styles.select} value={source} onChange={e => applyFilter(() => setSource(e.target.value))}>
           {SOURCES.map(s => <option key={s} value={s}>{s || 'Toutes sources'}</option>)}
         </select>
+        <div className={styles.locationWrap}>
+          <input
+            className={styles.locationInput}
+            type="text"
+            placeholder="📍 Lieu…"
+            value={location}
+            onChange={e => applyFilter(() => setLocation(e.target.value))}
+            title="Filtrer par ville ou pays (ex: Zürich, Switzerland, Paris…)"
+          />
+          {location && (
+            <button className={styles.locationClear} onClick={() => applyFilter(() => setLocation(''))} title="Effacer">
+              ×
+            </button>
+          )}
+        </div>
         <select className={styles.select} value={status} onChange={e => applyFilter(() => setStatus(e.target.value))}>
           {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
@@ -488,7 +506,7 @@ export default function JobsPage() {
         <div className={styles.empty}>
           <p>Aucune offre ne correspond aux critères.</p>
           <button className="btn-ghost" onClick={() => {
-            setQ(''); setSource(''); setStatus(''); setRemoteOnly(false); setMinScore('')
+            setQ(''); setSource(''); setStatus(''); setLocation(''); setRemoteOnly(false); setMinScore('')
           }}>Réinitialiser les filtres</button>
         </div>
       ) : (
@@ -581,7 +599,22 @@ export default function JobsPage() {
                       {job.ai_summary && (
                         <button
                           className={`${styles.actionIcon} ${styles.actionSummary}`}
-                          title={job.ai_summary}
+                          title={(() => {
+                            // Si c'est du JSON de score, afficher un résumé lisible
+                            try {
+                              const d = JSON.parse(job.ai_summary)
+                              if (d.score != null || d.strengths) {
+                                const parts = []
+                                if (d.score != null) parts.push(`Score : ${Math.round(d.score)}%`)
+                                if (d.strengths?.length) parts.push(`✓ ${d.strengths[0]}`)
+                                if (d.gaps?.length) parts.push(`⚠ ${d.gaps[0]}`)
+                                if (d.recommendation) parts.push(d.recommendation)
+                                return parts.join('\n')
+                              }
+                            } catch {}
+                            // Sinon c'est du texte libre — afficher les 3 premières lignes
+                            return job.ai_summary.split('\n').filter(l => l.trim()).slice(0, 3).join('\n')
+                          })()}
                           onClick={e => { e.stopPropagation(); handleRowClick(job) }}>
                           <Sparkles size={12} strokeWidth={2} />
                         </button>

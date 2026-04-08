@@ -22,10 +22,10 @@ const ALL_SOURCES = [
   { id: 'glassdoor',   label: 'Glassdoor',    group: 'international' },
   { id: 'ziprecruiter', label: 'ZipRecruiter', group: 'international' },
   { id: 'adzuna',      label: 'Adzuna',       group: 'international', apiRequired: true },
+  { id: 'jobteaser',   label: 'RemoteOK',     group: 'international' },
   // Suisse
   { id: 'jobup',       label: 'Jobup.ch',     group: 'swiss' },
   { id: 'jobsch',      label: 'Jobs.ch',      group: 'swiss' },
-  { id: 'jobteaser',   label: 'JobTeaser',    group: 'swiss' },
 ]
 
 const JOB_TYPES = [
@@ -208,19 +208,6 @@ function ESCOField({ value, onChange, onSelect }) {
             <span>ESCO — European Skills, Competences, Qualifications and Occupations</span>
           </div>
         </div>
-
-        {/* Indicateur résumé IA en cours / terminé */}
-        {(summarizing || summarizeMsg) && (
-          <div className={styles.summarizeBar}>
-            {summarizing && <Loader size={11} className={styles.spin} strokeWidth={2} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />}
-            {!summarizing && summarizeMsg && <Sparkles size={11} strokeWidth={2} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />}
-            <span style={{ fontSize: 11, color: 'var(--tertiary)' }}>
-              {summarizing
-                ? 'Ollama génère les résumés IA… (max 10 offres)'
-                : `✓ Résumés IA générés : ${summarizeMsg.done}/${summarizeMsg.total} offres${summarizeMsg.errors > 0 ? ` (${summarizeMsg.errors} échec${summarizeMsg.errors > 1 ? 's' : ''})` : ''} — visible dans le drawer offre`}
-            </span>
-          </div>
-        )}
       )}
       {error && (
         <p style={{ fontSize: 10, color: 'var(--error)', marginTop: 4 }}>

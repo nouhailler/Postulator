@@ -1,322 +1,234 @@
-<div align="center">
+# Postulator — Job Intelligence Platform
 
-# 💼 Postulator
+> Agrégateur de recherche d'emploi open source avec IA 100% locale via Ollama.  
+> Aucune donnée personnelle n'est envoyée sur internet.
 
-### Agrégateur de recherche d'emploi — Open Source · Self-Hosted · IA 100% locale
-
-[![Version](https://img.shields.io/badge/version-1.1.0-7bd0ff?style=for-the-badge&logo=github)](https://github.com/nouhailler/postulator/releases)
-[![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Licence](https://img.shields.io/badge/Licence-MIT-3cddc7?style=for-the-badge)](LICENSE)
+**Version 1.3.0** · [GitHub](https://github.com/nouhailler/postulator)
 
 ---
 
-**Postulator** collecte automatiquement des offres d'emploi depuis Indeed, LinkedIn, Glassdoor et plus,
-analyse leur correspondance avec votre CV via **Ollama** (IA 100% locale),
-et génère des CVs adaptés à chaque offre — **sans envoyer une seule donnée dans le cloud.**
+## Fonctionnalités
 
-[⚡ Installation rapide](#-installation-rapide) · [📦 Télécharger le .deb](https://github.com/nouhailler/postulator/releases/latest) · [📖 Documentation](#-démarrage-5-terminaux)
-
-</div>
-
----
-
-## ✨ Fonctionnalités
-
-<table>
-<tr>
-<td width="50%">
-
-### 🔍 Collecte intelligente
-- **5 sources simultanées** : Indeed, LinkedIn, Glassdoor, ZipRecruiter, Google Jobs
-- **Scraping international** : 24 pays avec sélecteur ville/pays
-- Déduplication automatique (SHA-256)
-- Rotation de proxies résidentiels
-- Scraping asynchrone via Celery + Redis
-
-</td>
-<td width="50%">
-
-### 🤖 IA 100% locale
-- Scoring CV ↔ offre (0-100) via **Ollama**
-- Extraction automatique des compétences
-- Génération de CVs adaptés à chaque offre
-- **Diff visuel** des mots ajoutés par l'IA (surlignage rouge)
-- Compatible `phi3.5:3.8b`, `qwen2.5:14b` et tous modèles Ollama
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-### 📋 Gestion des candidatures
-- Pipeline Kanban 5 colonnes (À voir → Rejeté)
-- **Lien web entreprise** direct (ou recherche Google auto)
-- Export CSV enrichi (numéro, date scraping, URL entreprise)
-- **Purge intelligente** des offres (conserve les offres sélectionnées)
-- Historique complet de toutes les analyses
-- Alertes email auto + bouton d'envoi manuel par analyse
-
-</td>
-<td width="50%">
-
-### 🛡️ Privacy-first
-- **Zéro donnée envoyée dans le cloud**
-- Tout tourne en local sur votre machine
-- Base de données SQLite locale
-- Open source, auditable, auto-hébergeable
-
-</td>
-</tr>
-</table>
+| Page | Description |
+|------|-------------|
+| **Overview** | Tableau de bord : KPIs temps réel, graphique d'ingestion 7 jours, top matches IA |
+| **CV** | Gestion de vos CVs par sections, import PDF via Ollama |
+| **Offres** | Liste filtrée des offres scrapées (lieu, source, score, statut, remote…) |
+| **Offres Intelligence** | Chat IA avec Ollama sur n'importe quelle offre — fetch URL automatique si pas de description |
+| **Scrapers** | Collecte automatique depuis 8 sources (4 internationales + 4 suisses), proxies résidentiels, résumé IA |
+| **CV Intelligence** | Scoring CV ↔ offre avec Ollama, extraction de compétences, score en masse |
+| **CV Matching** | Génération d'un CV adapté à une offre, diff visuel, export .txt/.md/.docx, mode ATS |
+| **Pipeline** | Kanban de suivi des candidatures (drag & drop) |
+| **Historique** | Résultats d'analyses sauvegardés, filtres date/score |
+| **Paramètres** | Configuration SMTP, modèle Ollama, Adzuna API |
 
 ---
 
-## 🏗️ Architecture
+## Stack technique
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                      POSTULATOR                          │
-│                                                         │
-│  ┌──────────┐    ┌──────────────┐    ┌───────────────┐  │
-│  │ React 18 │◄──►│  FastAPI     │◄──►│  Ollama (IA)  │  │
-│  │  + Vite  │    │  + SQLAlch.  │    │  Local LLM    │  │
-│  └──────────┘    └──────┬───────┘    └───────────────┘  │
-│                         │                               │
-│                  ┌──────▼───────┐    ┌───────────────┐  │
-│                  │   SQLite     │    │  Celery+Redis  │  │
-│                  │   (local)    │    │  (async jobs)  │  │
-│                  └──────────────┘    └───────────────┘  │
-└─────────────────────────────────────────────────────────┘
-```
-
-| Couche | Technologies |
-|--------|-------------|
-| **Frontend** | React 18 · Vite · CSS Modules · Recharts · Lucide Icons |
-| **Backend** | FastAPI · SQLAlchemy async · Alembic · Pydantic v2 |
-| **IA** | Ollama (local) — phi3.5:3.8b ou qwen2.5:14b |
-| **Scraping** | python-jobspy · BeautifulSoup4 · Proxies résidentiels |
-| **Async** | Celery 5 · Redis |
-| **Stockage** | SQLite (dev) · PostgreSQL-ready (prod) |
+**Backend** : FastAPI · SQLAlchemy async · SQLite · Celery + Redis · Ollama  
+**Frontend** : React 18 · Vite · CSS Modules  
+**IA** : Ollama (100% local — aucune donnée envoyée sur internet)
 
 ---
 
-## 📦 Installation rapide
+## Sources de scraping
 
-### Option A — Package Debian (recommandé)
+### Internationales
+| Source | Type | Couverture |
+|--------|------|------------|
+| Indeed | jobspy | Mondial — meilleure couverture |
+| LinkedIn | jobspy | Mondial |
+| Glassdoor | jobspy | US/EU |
+| ZipRecruiter | jobspy | US |
+| Adzuna | API officielle | GB, US, DE, FR, AU, CA, NL, AT, BE, IT, PL, SG |
+
+### Suisses
+| Source | Type | Notes |
+|--------|------|-------|
+| Jobup.ch | HTML BeautifulSoup | JobCloud (Ringier/TX Group) |
+| Jobs.ch | API JSON interne | Axel Springer |
+| JobTeaser | RemoteOK | Offres 100% remote |
+
+> **Note** : Adzuna ne supporte pas la Suisse. Pour CH, utilisez Indeed + Jobup.ch + Jobs.ch.
+
+---
+
+## Prérequis
+
+- Python 3.11+
+- Node.js 18+
+- Redis
+- [Ollama](https://ollama.com/) avec au moins un modèle installé
 
 ```bash
-# Télécharger la dernière release
-wget https://github.com/nouhailler/postulator/releases/latest/download/postulator_1.0.0_all.deb
-
-# Installer
-sudo dpkg -i postulator_1.0.0_all.deb
-sudo apt-get install -f   # résoudre les dépendances si besoin
-
-# Lancer
-postulator
+# Modèles recommandés (16GB VRAM)
+ollama pull phi4-mini        # ~120 t/s — scroring rapide
+ollama pull qwen2.5:14b      # ~45 t/s  — analyse qualitative
+ollama pull deepseek-r1:32b  # ~20 t/s  — raisonnement avancé
 ```
-
-> Le script `postinst` installe automatiquement les dépendances Python et Node.js.
 
 ---
 
-### Option B — Installation manuelle
-
-#### Prérequis
-
-| Outil | Version | Installation |
-|-------|---------|-------------|
-| Python | 3.13+ | `sudo apt install python3.13 python3.13-venv` |
-| Node.js | 18+ | `sudo apt install nodejs npm` |
-| Redis | — | `sudo apt install redis-server` |
-| Ollama | latest | [ollama.ai](https://ollama.ai) |
-| pandoc | — | `sudo apt install pandoc` *(optionnel, pour export .docx)* |
-
-#### Backend
+## Installation
 
 ```bash
+git clone https://github.com/nouhailler/postulator
+cd postulator
+
+# Backend
 cd backend
-
-# Environnement virtuel
 python3 -m venv .venv
 source .venv/bin/activate
-
-# greenlet doit être installé en premier (Python 3.13)
-pip install "greenlet>=3.1.0"
 pip install -r requirements.txt
+cp .env.example .env   # puis éditez les variables
 
-# Configuration
-cp .env.example .env
-# Éditer .env : choisir le modèle Ollama, configurer Redis
-```
-
-#### Frontend
-
-```bash
-cd frontend
+# Frontend
+cd ../frontend
 npm install
 ```
 
 ---
 
-## 🚀 Démarrage (5 terminaux)
+## Configuration (`backend/.env`)
+
+```env
+# Ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=phi4-mini
+
+# Base de données
+DATABASE_URL=sqlite+aiosqlite:///./postulator.db
+
+# Redis / Celery
+REDIS_URL=redis://localhost:6379/0
+
+# Alertes email (optionnel)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=votre@email.com
+SMTP_PASSWORD=mot_de_passe_application
+ALERT_EMAIL_TO=alertes@email.com
+ALERT_SCORE_THRESHOLD=80
+
+# Adzuna API (optionnel — inscription gratuite sur developer.adzuna.com)
+ADZUNA_APP_ID=
+ADZUNA_APP_KEY=
+```
+
+> Pour Gmail : créez un **mot de passe d'application** dans votre compte Google (Sécurité → Validation en deux étapes → Mots de passe d'application).
+
+---
+
+## Lancement
 
 ```bash
 # Terminal 1 — Redis
 sudo systemctl start redis-server
-redis-cli ping                    # → PONG
 
-# Terminal 2 — Préchauffer Ollama (évite le timeout à la 1ère requête)
-ollama pull phi3.5:3.8b           # si pas encore téléchargé
-curl -s http://localhost:11434/api/generate \
-  -d '{"model":"phi3.5:3.8b","keep_alive":600,"prompt":""}' \
-  -o /dev/null && echo "✓ Modèle en VRAM"
-
-# Terminal 3 — API FastAPI
+# Terminal 2 — Backend FastAPI
 cd backend && source .venv/bin/activate
 uvicorn app.main:app --reload --port 8000
-# → http://localhost:8000/docs
 
-# Terminal 4 — Worker Celery
+# Terminal 3 — Worker Celery (requis pour le scraping)
 cd backend && source .venv/bin/activate
 celery -A app.workers.celery_app.celery_app worker --loglevel=info
 
-# Terminal 5 — Frontend
+# Terminal 4 — Frontend
 cd frontend && npm run dev
 # → http://localhost:5173
 ```
 
 ---
 
-## ⚙️ Configuration `.env`
+## Flux de travail recommandé
 
-```ini
-# Modèle Ollama (phi3.5:3.8b = rapide, qwen2.5:14b = meilleure qualité)
-OLLAMA_MODEL=phi3.5:3.8b
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_TIMEOUT=300
-
-DATABASE_URL=sqlite+aiosqlite:///./postulator.db
-REDIS_URL=redis://localhost:6379/0
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-DEBUG=true
-
-# Email alerts (optionnel)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=votre@email.com
-SMTP_PASSWORD=votre_mot_de_passe
-ALERT_EMAIL_TO=votre@email.com
-ALERT_SCORE_THRESHOLD=80
-
-# Proxies résidentiels statiques (optionnel)
-PROXY_LIST=
+```
+1. Scrapers          → Lancer une recherche par mots-clés et sources
+2. Offres            → Parcourir, filtrer par lieu/score, mettre à jour les statuts
+3. Offres Intel.     → Interroger Ollama sur les offres intéressantes
+4. CV                → Créer ou importer votre CV (import PDF via Ollama)
+5. CV Intelligence   → Scorer les offres retenues contre votre CV
+6. CV Matching       → Générer un CV adapté + analyse ATS
+7. Pipeline          → Suivre vos candidatures en cours
+8. Historique        → Retrouver et comparer vos analyses
 ```
 
 ---
 
-## 🔄 Flux de travail recommandé
+## Offres Intelligence — fonctionnement
 
-```
-1. 🔍 Scrapers       → Choisir pays + ville, lancer le scraping (Indeed + LinkedIn…)
-        ↓
-2. 💼 Offres         → Parcourir (tri date scraping), consulter le lien entreprise,
-                        changer le statut pipeline, purger les offres obsolètes
-        ↓
-3. 📄 CV             → Créer ou importer votre CV (PDF → parsing Ollama)
-        ↓
-4. 🧠 CV Intelligence → Importer votre CV, scorer les offres prometteuses (0-100)
-        ↓
-5. ✨ CV Matching    → Générer un CV adapté, activer le diff visuel, exporter en .docx
-        ↓
-6. 📊 Historique     → Retrouver toutes vos analyses, envoyer des alertes email
-```
+La page `/jobs-intelligence` permet d'interroger Ollama en langage naturel sur n'importe quelle offre scrapée.
+
+**Stratégie de récupération du contenu :**
+1. **Description en BDD** — utilisée en priorité si disponible (nettoyage HTML automatique)
+2. **Fetch de la page web** — si pas de description, le backend récupère automatiquement le contenu de l'URL de l'offre (httpx + BeautifulSoup)
+3. **Titre seul** — en dernier recours, Ollama est explicitement informé de la limitation
+
+Chaque réponse indique la source utilisée (🔗 contenu récupéré depuis le site · ⚠️ pas de description).
+
+**20 questions suggérées** couvrent : compétences techniques, responsabilités, culture d'entreprise, préparation entretien, mots-clés pour la candidature, salaire, remote…
 
 ---
 
-## 🌍 Scraping international
-
-La page **Scrapers** propose un sélecteur de **24 pays** (avec drapeaux) et un champ ville avec suggestions automatiques :
-
-| Pays favoris | Autres pays disponibles |
-|---|---|
-| 🇫🇷 France · 🇨🇭 Suisse | 🇩🇪 🇧🇪 🇪🇸 🇳🇱 🇮🇹 🇵🇹 🇸🇪 🇩🇰 🇳🇴 🇫🇮 🇦🇹 🇵🇱 🇨🇿 🇮🇪 🇬🇧 🇱🇺 🇺🇸 🇨🇦 🇦🇺 🇸🇬 🇯🇵 🇦🇪 |
-
-Le backend envoie automatiquement le bon paramètre `country_indeed` à jobspy selon le pays sélectionné (ex: `ch.indeed.com` pour la Suisse, `fr.indeed.com` pour la France).
-
----
-
-## 🛡️ Scraping avec proxies résidentiels
-
-Dans la page **Scrapers**, cliquez sur **"Lancer le scraping avec Proxy"** pour utiliser des proxies résidentiels.
-
-Format des proxies : `IP:PORT:USERNAME:PASSWORD` (une ligne par proxy)
+## Architecture
 
 ```
-31.59.20.176:6754:username:password
-45.12.34.56:8080:user2:pass2
-```
-
-La rotation est automatique en **round-robin** — chaque source utilise un proxy différent, avec retrait automatique des proxies défaillants.
-
----
-
-## 📱 Pages de l'interface
-
-| Page | Description | Raccourci |
-|------|-------------|-----------|
-| 📊 **Overview** | KPIs, velocity, dernières activités | `/dashboard` |
-| 📄 **CV** | Gestion CVs nommés/datés, import PDF | `/cv` |
-| 💼 **Offres** | Table filtrée, lien entreprise, export CSV, purge | `/jobs` |
-| 🔍 **Scrapers** | Scraping international (24 pays), proxies, historique | `/scrapers` |
-| 🧠 **CV Intelligence** | Scoring CV ↔ offre, extraction skills, import CV | `/analysis` |
-| ✨ **CV Matching** | Générer CVs adaptés, diff visuel, export .docx | `/cv-matching` |
-| 📋 **Pipeline** | Kanban 5 colonnes, suivi candidatures | `/board` |
-| 📜 **Historique** | Archive analyses, alertes email par ligne | `/history` |
-
-> **Tip :** Appuyez sur `?` sur n'importe quelle page pour afficher l'aide contextuelle.
-
----
-
-## 🐳 Docker (alternative)
-
-```bash
-# Démarrer toute la stack en une commande
-docker-compose up -d
-
-# Services lancés :
-# → Redis        : localhost:6379
-# → API FastAPI  : localhost:8000
-# → Worker Celery : (background)
-# → Frontend     : localhost:5173
+postulator/
+├── backend/
+│   ├── app/
+│   │   ├── api/routes/       # FastAPI routes (10 modules)
+│   │   │   └── jobs_intelligence.py  # Chat IA + fetch URL
+│   │   ├── models/           # SQLAlchemy models
+│   │   ├── scrapers/         # 8 scrapers sources
+│   │   ├── services/         # Business logic (CV, email, Ollama)
+│   │   └── workers/          # Celery tasks
+│   ├── scripts/              # Migrations SQLite
+│   └── .env                  # Configuration locale
+└── frontend/
+    └── src/
+        ├── pages/            # 10 pages React
+        ├── components/       # Composants réutilisables
+        ├── api/              # Clients API + AbortController
+        └── data/             # Dictionnaire ESCO offline, helpContent
 ```
 
 ---
 
-## 🤝 Contribution
+## Changelog
 
-Les contributions sont les bienvenues ! Pour contribuer :
+### v1.3.0 (avril 2026)
+- **Nouvelle page : Offres Intelligence** — chat IA sur les offres, fetch URL automatique, 20 questions suggérées, minuterie, bouton Annuler (AbortController)
+- **Filtre Lieu** dans la page Offres (ILIKE côté backend)
+- **Filtres date et score** dans la page Historique
+- **Page Paramètres** — configuration SMTP, Ollama, Adzuna (accessible depuis le menu latéral)
+- **Logo Postulator** — remplacement du label "Command Center · The Sovereign Architect"
+- **Suppression** des entrées Support et Sign Out du menu
+- **Panneau détail offre amélioré** — ScorePanel structuré (strengths/gaps/reco) + SummaryPanel bullets
+- **Tooltip score en masse** — affichage lisible (plus de JSON brut)
 
-1. Forkez le dépôt
-2. Créez une branche : `git checkout -b feature/ma-fonctionnalite`
-3. Committez vos changements : `git commit -m "feat: ajouter X"`
-4. Poussez : `git push origin feature/ma-fonctionnalite`
-5. Ouvrez une Pull Request
+### v1.2.0
+- Score en masse (Celery) avec polling et résultats dans AlertsDrawer
+- Résumé IA bullet points (toggle ScrapersPage)
+- Scrapers suisses : Jobup.ch (HTML BeautifulSoup), Jobs.ch (API JSON), RemoteOK
+- Adzuna API officielle (10 000 req/mois gratuit)
+
+### v1.1.0
+- CV ATS avec score, mots-clés manquants, suggestions
+- Diff visuel CV généré vs source (mots nouveaux en rouge)
+- Alertes email SMTP automatiques (seuil configurable)
+- Proxies résidentiels avec rotation round-robin
+- CompanyLink (site web entreprise ou Google Search)
+
+### v1.0.0
+- Scraping Indeed / LinkedIn / Glassdoor / ZipRecruiter (24 pays)
+- CV Intelligence : extraction compétences + scoring Ollama
+- CV Matching : génération CV adapté + export
+- Pipeline Kanban
+- Historique des analyses
 
 ---
 
-## 📄 Licence
+## Licence
 
-**MIT** — Patrick Nouhailler — 2025-2026
-
----
-
-<div align="center">
-
-Fait avec ❤️ pour les chercheurs d'emploi qui veulent garder le contrôle de leurs données.
-
-[⬆ Retour en haut](#-postulator)
-
-</div>
+MIT — Open Source

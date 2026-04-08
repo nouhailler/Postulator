@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, ExternalLink, ChevronDown, ChevronUp, RefreshCw, Mail, Loader, CheckCircle } from 'lucide-react'
+import { Trash2, ExternalLink, ChevronDown, ChevronUp, RefreshCw, Mail, Loader, CheckCircle, Search, X } from 'lucide-react'
 import { useAsync }   from '../hooks/useAsync.js'
 import { fetchHistory, deleteMatch } from '../api/history.js'
 import { sendMatchAlert } from '../api/alerts.js'
@@ -88,7 +88,6 @@ function HistoryRow({ entry, onDelete }) {
         {/* Actions */}
         <td className={`${styles.td} ${styles.tdRight}`} onClick={e => e.stopPropagation()}>
           <div className={styles.rowActions}>
-            {/* Bouton alerte email */}
             <button
               className={`${styles.actionIcon} ${mailSent ? styles.actionSent : ''}`}
               onClick={handleSendAlert}
@@ -102,7 +101,6 @@ function HistoryRow({ entry, onDelete }) {
                   : <Mail size={12} strokeWidth={2} />
               }
             </button>
-
             {entry.job_url && (
               <a href={entry.job_url} target="_blank" rel="noreferrer"
                 className={styles.actionIcon} title="Voir l'offre originale">
@@ -117,27 +115,21 @@ function HistoryRow({ entry, onDelete }) {
               {expanded ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
             </span>
           </div>
-
-          {/* Message erreur email (inline sous les boutons) */}
-          {mailError && (
-            <p className={styles.mailError}>{mailError}</p>
-          )}
+          {mailError && <p className={styles.mailError}>{mailError}</p>}
         </td>
       </tr>
 
-      {/* ── Détail expandable ── */}
+      {/* Détail expandable */}
       {expanded && (
         <tr className={styles.detailRow}>
           <td colSpan={5} className={styles.detailCell}>
             <div className={styles.detailGrid}>
-
               {entry.recommendation && (
                 <div className={styles.detailFull}>
                   <p className={styles.detailLabel}>Synthèse Ollama</p>
                   <p className={styles.detailRec}>{entry.recommendation}</p>
                 </div>
               )}
-
               {strengths.length > 0 && (
                 <div>
                   <p className={styles.detailLabel} style={{ color: 'var(--tertiary)' }}>✦ Points forts</p>
@@ -146,7 +138,6 @@ function HistoryRow({ entry, onDelete }) {
                   </ul>
                 </div>
               )}
-
               {gaps.length > 0 && (
                 <div>
                   <p className={styles.detailLabel} style={{ color: 'var(--primary)' }}>◎ Points de développement</p>
@@ -155,7 +146,6 @@ function HistoryRow({ entry, onDelete }) {
                   </ul>
                 </div>
               )}
-
               <div className={styles.detailMeta}>
                 {entry.ollama_model && <span className={styles.metaChip}>🤖 {entry.ollama_model}</span>}
                 {entry.job_source   && <span className={styles.metaChip}>📡 {entry.job_source}</span>}
@@ -176,15 +166,52 @@ function HistoryRow({ entry, onDelete }) {
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function HistoryPage() {
-  const { data: history, loading, error, refetch } = useAsync(fetchHistory, [], { fallback: [] })
+
+  // Filtres
+  const [minScore, setMinScore] = useState('')
+  const [maxScore, setMaxScore] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo,   setDateTo]   = useState('')
+  const [search,   setSearch]   = useState('')
+
+  const hasActiveFilters = !!(minScore || maxScore || dateFrom || dateTo || search)
+
+  const resetFilters = () => {
+    setMinScore(''); setMaxScore('')
+    setDateFrom(''); setDateTo('')
+    setSearch('')
+  }
+
+  const { data: rawHistory, loading, error, refetch } = useAsync(
+    () => fetchHistory({
+      minScore: minScore ? Number(minScore) : undefined,
+      maxScore: maxScore ? Number(maxScore) : undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo:   dateTo   || undefined,
+    }),
+    [minScore, maxScore, dateFrom, dateTo],
+    { fallback: [] }
+  )
+
+  // Filtre texte côté client (CV, titre, entreprise)
+  const history = (rawHistory ?? []).filter(e => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      (e.cv_name     ?? '').toLowerCase().includes(q) ||
+      (e.job_title   ?? '').toLowerCase().includes(q) ||
+      (e.job_company ?? '').toLowerCase().includes(q)
+    )
+  })
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Supprimer cette entrée de l\'historique ?')) return
+    if (!window.confirm("Supprimer cette entrée de l'historique ?")) return
     try { await deleteMatch(id); refetch() }
     catch (err) { console.error(err) }
   }
 
-  const totalMatches = history?.length ?? 0
+  const totalMatches = history.length
+  const rawTotal     = rawHistory?.length ?? 0
   const avgScore = totalMatches
     ? Math.round(history.reduce((sum, e) => sum + e.score, 0) / totalMatches)
     : 0
@@ -203,15 +230,98 @@ export default function HistoryPage() {
           </p>
         </div>
         <button className="btn-ghost" onClick={refetch} disabled={loading}>
-          <RefreshCw size={13} strokeWidth={2} />
+          <RefreshCw size={13} strokeWidth={2} className={loading ? styles.spin : ''} />
         </button>
       </div>
 
+      {/* ── Barre de filtres ── */}
+      <div className={styles.filtersBar}>
+
+        {/* Recherche texte */}
+        <div className={styles.searchWrap}>
+          <Search size={13} className={styles.searchIcon} strokeWidth={2} />
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="CV, offre, entreprise…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className={styles.searchClear} onClick={() => setSearch('')}>
+              <X size={11} strokeWidth={2} />
+            </button>
+          )}
+        </div>
+
+        {/* Plage de dates */}
+        <div className={styles.dateWrap}>
+          <label className={styles.filterLabel}>Du</label>
+          <input
+            className={styles.dateInput}
+            type="date"
+            value={dateFrom}
+            onChange={e => setDateFrom(e.target.value)}
+            max={dateTo || undefined}
+          />
+        </div>
+
+        <div className={styles.dateWrap}>
+          <label className={styles.filterLabel}>Au</label>
+          <input
+            className={styles.dateInput}
+            type="date"
+            value={dateTo}
+            onChange={e => setDateTo(e.target.value)}
+            min={dateFrom || undefined}
+          />
+        </div>
+
+        {/* Plage de score */}
+        <div className={styles.scoreWrap}>
+          <label className={styles.filterLabel}>Score</label>
+          <input
+            className={styles.scoreInput}
+            type="number"
+            placeholder="min"
+            min={0} max={100}
+            value={minScore}
+            onChange={e => setMinScore(e.target.value)}
+          />
+          <span className={styles.scoreSep}>–</span>
+          <input
+            className={styles.scoreInput}
+            type="number"
+            placeholder="max"
+            min={0} max={100}
+            value={maxScore}
+            onChange={e => setMaxScore(e.target.value)}
+          />
+          <span className={styles.filterLabel}>%</span>
+        </div>
+
+        {/* Reset */}
+        {hasActiveFilters && (
+          <button className={styles.resetBtn} onClick={resetFilters} title="Réinitialiser les filtres">
+            <X size={12} strokeWidth={2} /> Réinitialiser
+          </button>
+        )}
+      </div>
+
+      {/* Compteur filtré */}
+      {hasActiveFilters && (
+        <p className={styles.filterCount}>
+          {totalMatches} résultat{totalMatches !== 1 ? 's' : ''}
+          {search && rawTotal !== totalMatches ? ` sur ${rawTotal} chargés` : ''}
+        </p>
+      )}
+
+      {/* Stats */}
       {totalMatches > 0 && (
         <div className={styles.statsRow}>
           <div className={styles.statCard}>
             <p className={styles.statValue}>{totalMatches}</p>
-            <p className={styles.statLabel}>Analyses sauvegardées</p>
+            <p className={styles.statLabel}>Analyses{hasActiveFilters ? ' filtrées' : ' sauvegardées'}</p>
           </div>
           <div className={styles.statCard}>
             <p className={styles.statValue} style={{
@@ -242,12 +352,24 @@ export default function HistoryPage() {
 
       {!loading && totalMatches === 0 && !error ? (
         <div className={styles.empty}>
-          <p style={{ fontSize: 28, marginBottom: 8 }}>📋</p>
-          <p>Aucune analyse sauvegardée pour l'instant.</p>
-          <p style={{ fontSize: 12, color: 'var(--outline)', marginTop: 4 }}>
-            Analysez un CV contre une offre dans <strong>CV Intelligence</strong>,
-            puis cliquez sur "Sauvegarder dans l'historique".
-          </p>
+          {hasActiveFilters ? (
+            <>
+              <p style={{ fontSize: 28, marginBottom: 8 }}>🔍</p>
+              <p>Aucun résultat pour ces filtres.</p>
+              <button className="btn-ghost" style={{ marginTop: 12 }} onClick={resetFilters}>
+                Réinitialiser les filtres
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: 28, marginBottom: 8 }}>📋</p>
+              <p>Aucune analyse sauvegardée pour l'instant.</p>
+              <p style={{ fontSize: 12, color: 'var(--outline)', marginTop: 4 }}>
+                Analysez un CV contre une offre dans <strong>CV Intelligence</strong>,
+                puis cliquez sur "Sauvegarder dans l'historique".
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className={styles.tableWrap}>
@@ -262,7 +384,7 @@ export default function HistoryPage() {
               </tr>
             </thead>
             <tbody>
-              {(history ?? []).map(entry => (
+              {history.map(entry => (
                 <HistoryRow key={entry.id} entry={entry} onDelete={handleDelete} />
               ))}
             </tbody>

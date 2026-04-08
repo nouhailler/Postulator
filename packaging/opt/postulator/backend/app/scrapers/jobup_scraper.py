@@ -1,40 +1,46 @@
 """
 app/scrapers/jobup_scraper.py
-Scraper pour Jobup.ch — principal job board suisse (Michael Page, Adecco, etc.)
+Scraper pour Jobup.ch — principal job board suisse (JobCloud / Ringier / TX Group)
 
-Stratégie : API JSON interne utilisée par le site jobup.ch
-URL : https://www.jobup.ch/fr/emplois/?term={keywords}&location={location}
-L'endpoint JSON interne : https://www.jobup.ch/api/v1/jobs/search/
+Stratégie : scraping HTML de la page de résultats SSR (server-side rendered).
+URL : https://www.jobup.ch/fr/emplois/?term={keywords}&location={city}&page={page}
 
-Jobup.ch est opéré par JobCloud (groupe Ringier / TX Group).
+Chaque page retourne 20 offres rendues côté serveur dans des éléments
+[data-cy="serp-item"]. Pas d'API JSON publique accessible.
 """
 import asyncio
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
-from urllib.parse import quote_plus
 
 from loguru import logger
 
 from app.scrapers.base import BaseScraper, RawJob
 
 JOBUP_BASE    = "https://www.jobup.ch"
-JOBUP_API     = "https://www.jobup.ch/api/v1/jobs/search/"
+JOBUP_SEARCH  = "https://www.jobup.ch/fr/emplois/"
 JOBUP_HEADERS = {
-    "User-Agent":      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
-    "Accept":          "application/json, text/javascript, */*; q=0.01",
+    "User-Agent":      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+    "Accept":          "text/html,application/xhtml+xml,*/*;q=0.9",
     "Accept-Language": "fr-CH,fr;q=0.9,en;q=0.8",
     "Referer":         "https://www.jobup.ch/fr/emplois/",
-    "X-Requested-With": "XMLHttpRequest",
 }
-TIMEOUT = 20.0
+TIMEOUT      = 25.0
+JOBS_PER_PAGE = 20
+
+# Labels connus à ignorer lors du parsing du texte de carte
+_KNOWN_LABELS = frozenset({
+    "lieu de travail", "taux d'activité", "type de contrat",
+    "offre pertinente ?", "candidature simplifiée", "new", ":",
+    "quick apply", "lieu", "activité", "contrat",
+})
 
 
 class JobupScraper(BaseScraper):
     """
-    Scraper Jobup.ch via l'API JSON interne.
-    Fonctionne sans clé API — utilise les mêmes endpoints que le navigateur.
-    Spécifique à la Suisse : jobup.ch ne couvre que CH.
+    Scraper Jobup.ch par parsing HTML SSR.
+    La page de résultats est rendue côté serveur — les 20 premières offres
+    sont présentes dans le HTML brut, pas besoin de JavaScript.
     """
 
     def __init__(self, source: str = "jobup") -> None:
@@ -49,18 +55,20 @@ class JobupScraper(BaseScraper):
         )
 
     def _sync_fetch(self, keywords, location, results, hours_old, remote_only, job_types) -> list[RawJob]:
+        try:
+            from bs4 import BeautifulSoup
+        except ImportError:
+            logger.error("[jobup] beautifulsoup4 manquant — pip install beautifulsoup4")
+            return []
+
         import httpx
 
-        # Extraire la ville depuis "Ville, Pays"
         city = _extract_city(location)
-
-        # Proxy si disponible
         proxy_url = getattr(self, "proxy", None)
         proxies   = {"http://": proxy_url, "https://": proxy_url} if proxy_url else None
 
         all_jobs: list[RawJob] = []
-        page     = 1
-        per_page = min(results, 20)  # Jobup retourne max ~20 par page
+        page = 1
 
         with httpx.Client(
             timeout=TIMEOUT,
@@ -70,31 +78,23 @@ class JobupScraper(BaseScraper):
         ) as client:
 
             while len(all_jobs) < results:
-                params = {
-                    "term":          keywords,
-                    "publication_date": _days_to_jobup_filter(hours_old),
-                    "page":          page,
-                    "sort":          "date",
-                }
+                params: dict = {"term": keywords, "page": page}
                 if city:
                     params["location"] = city
+                if hours_old:
+                    params["publication_date"] = _days_to_jobup_filter(hours_old)
+                if remote_only:
+                    params["home_office"] = "full_time"
 
                 try:
-                    resp = client.get(JOBUP_API, params=params)
+                    resp = client.get(JOBUP_SEARCH, params=params)
                     logger.info(f"[jobup] GET {resp.url} → HTTP {resp.status_code}")
-
-                    if resp.status_code == 403:
-                        logger.warning("[jobup] 403 — essai sans proxy")
-                        # Retry sans proxy
-                        resp = httpx.get(JOBUP_API, params=params, headers=JOBUP_HEADERS,
-                                         timeout=TIMEOUT, follow_redirects=True)
-                        logger.info(f"[jobup] Retry sans proxy → HTTP {resp.status_code}")
 
                     if not resp.is_success:
                         logger.warning(f"[jobup] HTTP {resp.status_code} — arrêt.")
                         break
 
-                    data = resp.json()
+                    soup = BeautifulSoup(resp.text, "html.parser")
 
                 except httpx.RequestError as exc:
                     logger.error(f"[jobup] Erreur réseau page {page} : {exc}")
@@ -103,101 +103,140 @@ class JobupScraper(BaseScraper):
                     logger.error(f"[jobup] Erreur inattendue page {page} : {exc}")
                     break
 
-                # Jobup peut retourner {"documents": [...]} ou {"jobs": [...]}
-                items = (
-                    data.get("documents") or
-                    data.get("jobs")      or
-                    data.get("results")   or
-                    []
-                )
-                total = data.get("total") or data.get("count") or 0
-                logger.info(f"[jobup] Page {page} : {len(items)} offres (total={total})")
+                # Les cartes sont dans [data-cy="serp-item"]
+                cards = soup.find_all(attrs={"data-cy": "serp-item"})
+                logger.info(f"[jobup] Page {page} : {len(cards)} cartes trouvées")
 
-                if not items:
+                if not cards:
                     break
 
-                for item in items:
-                    job = self._parse_item(item)
+                for card in cards:
+                    job = self._parse_card(card)
                     if job:
                         all_jobs.append(job)
                     if len(all_jobs) >= results:
                         break
 
-                # Pagination
-                if len(all_jobs) >= results or len(items) < per_page or len(all_jobs) >= total:
+                if len(all_jobs) >= results or len(cards) < JOBS_PER_PAGE:
                     break
                 page += 1
 
         logger.info(f"[jobup] Total : {len(all_jobs)} offres.")
         return all_jobs
 
-    def _parse_item(self, item: dict) -> Optional[RawJob]:
+    def _parse_card(self, card) -> Optional[RawJob]:
         try:
-            # Jobup peut avoir différentes structures selon la version de l'API
-            title   = (item.get("title") or item.get("job_title") or "").strip()
-            company = (
-                item.get("company_name") or
-                (item.get("company") or {}).get("name") or
-                item.get("employer_name") or
-                ""
-            ).strip()
-
-            # URL de l'offre
-            slug    = item.get("slug") or item.get("id") or item.get("job_id") or ""
-            job_id  = item.get("id") or item.get("job_id") or ""
-            url = (
-                item.get("url") or
-                item.get("apply_url") or
-                (f"{JOBUP_BASE}/fr/emplois/detail/{slug}/" if slug else "") or
-                (f"{JOBUP_BASE}/fr/emplois/detail/{job_id}/" if job_id else "")
-            )
-            if not url or not url.startswith("http"):
+            # URL — depuis le premier lien /fr/emplois/detail/{uuid}/
+            link = card.find("a", href=re.compile(r"/fr/emplois/detail/"))
+            if not link:
+                return None
+            href = link.get("href", "")
+            url  = href if href.startswith("http") else f"{JOBUP_BASE}{href}"
+            if not url.startswith("http"):
                 return None
 
-            # Localisation
-            loc = (
-                item.get("location") or
-                item.get("place") or
-                item.get("city") or
-                ""
-            )
-            if isinstance(loc, dict):
-                loc = loc.get("name") or loc.get("city") or ""
-            if loc:
+            # Texte brut du card, séparé par "|" pour faciliter le parsing
+            parts = [p.strip() for p in card.get_text(separator="|", strip=True).split("|") if p.strip()]
+
+            # Le 1er élément est la date relative, le 2ème est le titre
+            date_str = parts[0] if parts else ""
+            title    = parts[1] if len(parts) > 1 else ""
+
+            # Extraire localisation, contrat, entreprise depuis les parties
+            location_str = _extract_after_label(parts, "lieu de travail")
+            contract     = _extract_after_label(parts, "type de contrat")
+            # L'entreprise est le dernier élément qui ne soit pas un label connu
+            company = _extract_company(parts)
+
+            pub = _parse_relative_date(date_str)
+
+            if loc := location_str:
                 loc = f"{loc}, Switzerland"
 
-            # Date
-            pub = None
-            for date_key in ("publication_date", "published_at", "created_at", "date"):
-                d = item.get(date_key)
-                if d:
-                    try:
-                        pub = datetime.fromisoformat(str(d).replace("Z", "+00:00"))
-                        break
-                    except (ValueError, TypeError):
-                        pass
-
-            # Contrat
-            contract = item.get("workload") or item.get("contract_type") or item.get("employment_type") or ""
-            if isinstance(contract, list):
-                contract = ", ".join(str(c) for c in contract)
-
-            description = item.get("description") or item.get("summary") or ""
-
             return RawJob(
-                title        = title or "—",
-                company      = company,
-                url          = url,
-                source       = self.source_name,
-                location     = loc or "Switzerland",
-                description  = description or None,
-                job_type     = str(contract) if contract else None,
+                title           = title or "—",
+                company         = company or "",
+                url             = url,
+                source          = self.source_name,
+                location        = loc or "Switzerland",
+                description     = None,
+                job_type        = contract or None,
                 salary_currency = "CHF",
-                published_at = pub,
+                published_at    = pub,
             )
         except Exception as exc:
-            logger.warning(f"[jobup] Parsing échoué : {exc} | item keys: {list(item.keys())[:8]}")
+            logger.warning(f"[jobup] Parsing carte échoué : {exc}")
             return None
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _extract_after_label(parts: list[str], label: str) -> Optional[str]:
+    """Retourne la première partie non-label après 'label'."""
+    label_lower = label.lower()
+    for i, p in enumerate(parts):
+        if p.lower() == label_lower:
+            # chercher la prochaine valeur non-label, non-":"
+            for j in range(i + 1, min(i + 4, len(parts))):
+                v = parts[j].strip()
+                if v and v != ":" and v.lower() not in _KNOWN_LABELS:
+                    return v
+    return None
+
+
+def _extract_company(parts: list[str]) -> Optional[str]:
+    """L'entreprise est le dernier élément non-label significatif."""
+    known = _KNOWN_LABELS | {
+        "new", "sponsored", "annonce sponsorisée",
+        "quick apply", "candidature en 1 clic",
+    }
+    # On ignore aussi les pourcentages (workload) et les labels de contrat connus
+    candidates = []
+    skip_next = False
+    for p in parts:
+        pl = p.lower()
+        if pl in ("lieu de travail", "taux d'activité", "type de contrat"):
+            skip_next = True
+            continue
+        if skip_next:
+            skip_next = False
+            continue
+        if pl in known or pl == ":":
+            continue
+        if re.match(r"^\d+\s*[–-]\s*\d+\s*%$", p) or re.match(r"^\d+\s*%$", p):
+            continue  # workload
+        candidates.append(p)
+
+    # Les 2 premiers sont date + titre
+    if len(candidates) > 2:
+        return candidates[-1]
+    return None
+
+
+def _parse_relative_date(text: str) -> Optional[datetime]:
+    """Convertit une date relative française en datetime UTC."""
+    now = datetime.now(timezone.utc)
+    t = text.lower().strip()
+    if not t or "date" in t:
+        return None
+    if "aujourd" in t:
+        return now
+    if "avant-hier" in t:
+        return now - timedelta(days=2)
+    if "hier" in t:
+        return now - timedelta(days=1)
+    if "semaine dernière" in t or ("la semaine" in t and "dernière" in t):
+        return now - timedelta(weeks=1)
+    m = re.search(r"(\d+)\s*jour", t)
+    if m:
+        return now - timedelta(days=int(m.group(1)))
+    m = re.search(r"(\d+)\s*semaine", t)
+    if m:
+        return now - timedelta(weeks=int(m.group(1)))
+    m = re.search(r"(\d+)\s*mois", t)
+    if m:
+        return now - timedelta(days=int(m.group(1)) * 30)
+    return None
 
 
 def _extract_city(location: Optional[str]) -> Optional[str]:
@@ -205,20 +244,19 @@ def _extract_city(location: Optional[str]) -> Optional[str]:
         return None
     parts = [p.strip() for p in location.split(",")]
     city = parts[0] if parts else None
-    # Filtrer si c'est le nom du pays seul
     if city and city.lower() in ("switzerland", "suisse", "schweiz"):
         return None
     return city
 
 
 def _days_to_jobup_filter(hours_old: Optional[int]) -> str:
-    """Convertit hours_old en filtre Jobup (publication_date)."""
+    """Convertit hours_old en valeur du filtre publication_date jobup."""
     if not hours_old:
         return ""
     days = hours_old // 24
-    if days <= 1:   return "1"
-    if days <= 3:   return "3"
-    if days <= 7:   return "7"
-    if days <= 14:  return "14"
-    if days <= 30:  return "30"
-    return ""  # Pas de filtre si > 30 jours
+    if days <= 1:  return "1"
+    if days <= 3:  return "3"
+    if days <= 7:  return "7"
+    if days <= 14: return "14"
+    if days <= 30: return "30"
+    return ""

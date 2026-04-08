@@ -90,6 +90,8 @@ class ScraperService:
             if proxy_url:
                 logger.info(f"[{source}] Proxy attribué : {_proxy_display(proxy_url)}")
 
+        flush_lock = asyncio.Lock()
+
         async def _scrape_one(source: str) -> None:
             nonlocal total_new, total_dup
             proxy_url     = source_proxies[source]
@@ -103,8 +105,9 @@ class ScraperService:
                 started_at=datetime.utcnow(),
                 proxy_used=proxy_display,
             )
-            self.db.add(log)
-            await self.db.flush()
+            async with flush_lock:
+                self.db.add(log)
+                await self.db.flush()
 
             t0 = datetime.utcnow()
             try:

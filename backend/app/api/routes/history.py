@@ -27,17 +27,35 @@ settings = get_settings()
 
 @router.get("", response_model=list[MatchHistoryRead])
 async def list_history(
-    db:        DBSession,
-    cv_id:     int | None   = None,
-    job_id:    int | None   = None,
-    min_score: float | None = None,
-    limit:     int          = Query(50, ge=1, le=200),
-    offset:    int          = Query(0, ge=0),
+    db:         DBSession,
+    cv_id:      int | None   = None,
+    job_id:     int | None   = None,
+    min_score:  float | None = None,
+    max_score:  float | None = None,
+    date_from:  str | None   = None,   # ISO date : "2025-01-01"
+    date_to:    str | None   = None,   # ISO date : "2025-12-31"
+    limit:      int          = Query(200, ge=1, le=500),
+    offset:     int          = Query(0, ge=0),
 ) -> list[MatchHistoryRead]:
     stmt = select(MatchHistory).order_by(MatchHistory.analyzed_at.desc())
-    if cv_id     is not None: stmt = stmt.where(MatchHistory.cv_id    == cv_id)
-    if job_id    is not None: stmt = stmt.where(MatchHistory.job_id   == job_id)
-    if min_score is not None: stmt = stmt.where(MatchHistory.score    >= min_score)
+    if cv_id     is not None: stmt = stmt.where(MatchHistory.cv_id  == cv_id)
+    if job_id    is not None: stmt = stmt.where(MatchHistory.job_id == job_id)
+    if min_score is not None: stmt = stmt.where(MatchHistory.score  >= min_score)
+    if max_score is not None: stmt = stmt.where(MatchHistory.score  <= max_score)
+    if date_from is not None:
+        from datetime import datetime
+        try:
+            dt = datetime.fromisoformat(date_from)
+            stmt = stmt.where(MatchHistory.analyzed_at >= dt)
+        except ValueError:
+            pass
+    if date_to is not None:
+        from datetime import datetime
+        try:
+            dt = datetime.fromisoformat(date_to + "T23:59:59")
+            stmt = stmt.where(MatchHistory.analyzed_at <= dt)
+        except ValueError:
+            pass
     stmt = stmt.limit(limit).offset(offset)
     result = await db.execute(stmt)
     return result.scalars().all()

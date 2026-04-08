@@ -1,5 +1,5 @@
 Package: postulator
-Version: 1.2.0
+Version: 1.3.0
 Architecture: all
 Maintainer: Patrick Nouhailler <patrick@nouhailler.fr>
 Installed-Size: 1348
@@ -15,14 +15,14 @@ Description: Agregateur de recherche d'emploi open source avec IA locale
  correspondance avec votre CV via Ollama (IA 100% locale) et genere des
  CVs adaptes a chaque offre — sans envoyer de donnees dans le cloud.
  .
- Fonctionnalites v1.2.0 :
-  - 4 nouveaux scrapers : Adzuna (API), Jobup.ch, Jobs.ch, JobTeaser
-  - CV ATS : generation optimisee Applicant Tracking System avec scoring detaille
-  - Scoring en masse : scorer toutes les offres en 1 clic vs votre CV
-  - Resume IA post-scraping : icone sparkle sur chaque offre resumee
-  - ESCO : recherche de metiers et competences europeens (proxy CORS)
-  - Scraping international 24 pays avec detection country_indeed automatique
-  - Scoring CV <-> offre (0-100) via Ollama local
-  - Generation de CVs adaptes par IA avec diff visuel
-  - Pipeline Kanban pour le suivi des candidatures
-  - Alertes email automatiques et manuelles
+ Fonctionnalites v1.3.0 :
+  - Offres Intelligence : chat IA sur vos offres, fetch URL auto, 20 questions
+  - Page Parametres : SMTP, Ollama, Adzuna configures depuis l'interface
+  - Filtre Lieu (ILIKE) dans la page Offres
+  - Filtres score min/max et date dans l'Historique
+  - Logo Postulator (P degrade teal/bleu) + suppression Support/SignOut
+  - ScorePanel et SummaryPanel structures dans le panneau detail offre
+  - 8 sources de scraping dont 4 suisses (Jobup, Jobs.ch, JobTeaser, Adzuna)
+  - CV ATS avec scoring et analyse mots-cles manquants
+  - Scoring CV <-> offre (0-100) et score en masse via Ollama local
+  - Generation CVs adaptes par IA avec diff visuel et export .docx
