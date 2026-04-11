@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useOllamaStatus } from '../contexts/OllamaStatusContext.jsx'
 import {
   Sparkles, Trash2, Download, FileText, Loader,
   AlertCircle, Clock, ExternalLink, StickyNote, CheckCheck,
@@ -10,6 +11,7 @@ import { fetchCVList } from '../api/cvStore.js'
 import { fetchJobs }   from '../api/jobs.js'
 import {
   fetchGenerated, fetchGeneratedOne, generateMatchingCV, generateATSCV,
+  generateATSCloudCV, fetchCloudStatus,
   saveATSCV, deleteGenerated, updateNotes, exportDocx,
 } from '../api/cvMatching.js'
 import styles from './CVMatchingPage.module.css'
@@ -439,6 +441,7 @@ function atsResultFromFull(full) {
 
 // ── Page principale ───────────────────────────────────────────────────────────
 export default function CVMatchingPage() {
+  const { setOllamaStatus, clearOllamaStatus } = useOllamaStatus()
   const { data: cvList } = useAsync(fetchCVList, [], { fallback: [] })
   const { data: jobs }   = useAsync(
     () => fetchJobs({ limit: 200, sort_by: 'scraped_at', sort_order: 'desc' }),
@@ -467,10 +470,20 @@ export default function CVMatchingPage() {
   const [docxMsg, setDocxMsg] = useState(null)
 
   // Génération ATS
-  const [generatingATS, setGeneratingATS] = useState(false)
-  const [atsError,      setAtsError]      = useState(null)
-  const [atsResult,     setAtsResult]     = useState(null)
-  const [atsSavedId,    setAtsSavedId]    = useState(null)   // id en base si sauvegardé
+  const [generatingATS,      setGeneratingATS]      = useState(false)
+  const [atsError,           setAtsError]           = useState(null)
+  const [atsResult,          setAtsResult]          = useState(null)
+  const [atsSavedId,         setAtsSavedId]         = useState(null)
+
+  // Génération ATS Cloud
+  const [generatingATSCloud, setGeneratingATSCloud] = useState(false)
+  const [atsCloudError,      setAtsCloudError]      = useState(null)
+  const [cloudStatus,        setCloudStatus]        = useState(null)  // { provider, model, configured }
+
+  // Charger le statut Cloud au montage
+  useEffect(() => {
+    fetchCloudStatus().then(setCloudStatus).catch(() => setCloudStatus({ configured: false }))
+  }, [])
 
   // Helpers export standard
   function download(blob, filename) {
@@ -506,6 +519,7 @@ export default function CVMatchingPage() {
   const handleGenerate = async () => {
     if (!selCvId || !selJobId) return
     setGenerating(true); setGenError(null); setActiveMode('standard')
+    setOllamaStatus('CV Matching')
     try {
       const gen = await generateMatchingCV(parseInt(selCvId), parseInt(selJobId), language)
       await refetchGen()
@@ -513,20 +527,35 @@ export default function CVMatchingPage() {
       setDiffMode(true)
     } catch (err) {
       setGenError(err.detail ?? err.message ?? 'Erreur Ollama')
-    } finally { setGenerating(false) }
+    } finally { setGenerating(false); clearOllamaStatus() }
   }
 
-  // Génération ATS
+  // Génération ATS local (Ollama)
   const handleGenerateATS = async () => {
     if (!selCvId || !selJobId) return
     setGeneratingATS(true); setAtsError(null); setActiveMode('ats')
     setAtsResult(null); setAtsSavedId(null)
+    setOllamaStatus('CV Matching ATS')
     try {
       const result = await generateATSCV(parseInt(selCvId), parseInt(selJobId), language)
       setAtsResult(result)
     } catch (err) {
       setAtsError(err.detail ?? err.message ?? 'Erreur Ollama ATS')
-    } finally { setGeneratingATS(false) }
+    } finally { setGeneratingATS(false); clearOllamaStatus() }
+  }
+
+  // Génération ATS Cloud (Claude / OpenAI)
+  const handleGenerateATSCloud = async () => {
+    if (!selCvId || !selJobId) return
+    setGeneratingATSCloud(true); setAtsCloudError(null); setActiveMode('ats')
+    setAtsResult(null); setAtsSavedId(null)
+    setOllamaStatus('CV Matching ATS Cloud')
+    try {
+      const result = await generateATSCloudCV(parseInt(selCvId), parseInt(selJobId), language)
+      setAtsResult(result)
+    } catch (err) {
+      setAtsCloudError(err.detail ?? err.message ?? 'Erreur Cloud ATS')
+    } finally { setGeneratingATSCloud(false); clearOllamaStatus() }
   }
 
   // Callback après sauvegarde ATS réussie
@@ -645,7 +674,7 @@ export default function CVMatchingPage() {
             <div className={styles.genBtns}>
               <button className="btn-ghost"
                 onClick={handleGenerate}
-                disabled={!selCvId || !selJobId || generating || generatingATS}
+                disabled={!selCvId || !selJobId || generating || generatingATS || generatingATSCloud}
                 style={{ flex: 1, justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}>
                 {generating
                   ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Génération… <ElapsedTimer running={generating} /></>
@@ -654,25 +683,47 @@ export default function CVMatchingPage() {
               </button>
               <button className={styles.btnATS}
                 onClick={handleGenerateATS}
-                disabled={!selCvId || !selJobId || generating || generatingATS}
-                title="Génère un CV optimisé ATS avec score et analyse des mots-clés">
+                disabled={!selCvId || !selJobId || generating || generatingATS || generatingATSCloud}
+                title="Génère un CV optimisé ATS avec score et analyse des mots-clés (Ollama local)">
                 {generatingATS
-                  ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> ATS… <ElapsedTimer running={generatingATS} /></>
-                  : <><Target size={13} strokeWidth={2} /> CV ATS</>
+                  ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> ATS Local… <ElapsedTimer running={generatingATS} /></>
+                  : <><Target size={13} strokeWidth={2} /> CV ATS LOCAL</>
+                }
+              </button>
+              <button className={styles.btnATSCloud}
+                onClick={handleGenerateATSCloud}
+                disabled={!selCvId || !selJobId || generating || generatingATS || generatingATSCloud || !cloudStatus?.configured}
+                title={cloudStatus?.configured
+                  ? `Génère via ${cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'OpenAI' : 'Mistral AI'} (${cloudStatus.model})`
+                  : 'Configurez ANTHROPIC_API_KEY, OPENAI_API_KEY ou MISTRAL_API_KEY dans backend/.env'
+                }>
+                {generatingATSCloud
+                  ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Cloud… <ElapsedTimer running={generatingATSCloud} /></>
+                  : cloudStatus?.configured
+                    ? <><Target size={13} strokeWidth={2} /> CV ATS CLOUD <span style={{fontSize:10, opacity:0.75}}>({cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'GPT' : 'Mistral'})</span></>
+                    : <><Target size={13} strokeWidth={2} /> CV ATS CLOUD <span style={{fontSize:10, opacity:0.5}}>(non configuré)</span></>
                 }
               </button>
             </div>
 
             <div className={styles.genBtnsHint}>
               <span><strong>Générer</strong> — CV adapté, sauvegardé automatiquement</span>
-              <span><strong>CV ATS</strong> — CV optimisé ATS + score + mots-clés (à sauvegarder manuellement)</span>
+              <span><strong>CV ATS LOCAL</strong> — Ollama local + score + mots-clés (GPU requis)</span>
+              <span><strong>CV ATS CLOUD</strong> — {cloudStatus?.configured
+                ? `${cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'OpenAI' : 'Mistral AI 🇫🇷'} (${cloudStatus.model}) — fonctionne sans GPU`
+                : 'configurez ANTHROPIC_API_KEY, OPENAI_API_KEY ou MISTRAL_API_KEY dans .env'
+              }</span>
             </div>
 
-            {(generating || generatingATS) && (
+            {(generating || generatingATS || generatingATSCloud) && (
               <div className={styles.progressBar}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg,var(--primary),var(--tertiary))', borderRadius: 2, marginBottom: 6 }} />
                 <p style={{ fontSize: 11, color: 'var(--outline)', fontStyle: 'italic' }}>
-                  Ollama {generatingATS ? 'analyse et optimise le CV ATS' : 'adapte le CV à l\'offre'}… (1-5 min)
+                  {generatingATSCloud
+                    ? `${cloudStatus?.provider === 'anthropic' ? 'Claude' : cloudStatus?.provider === 'openai' ? 'OpenAI' : 'Mistral AI'} analyse et optimise le CV ATS… (10-30s)`
+                    : generatingATS ? 'Ollama analyse et optimise le CV ATS… (1-5 min)'
+                    : "Ollama adapte le CV à l'offre… (1-5 min)"
+                  }
                 </p>
               </div>
             )}
@@ -684,7 +735,12 @@ export default function CVMatchingPage() {
             )}
             {atsError && (
               <div className={styles.errorBox}>
-                <AlertCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} /> ATS : {atsError}
+                <AlertCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} /> ATS Local : {atsError}
+              </div>
+            )}
+            {atsCloudError && (
+              <div className={styles.errorBox}>
+                <AlertCircle size={12} strokeWidth={2} style={{ flexShrink: 0 }} /> ATS Cloud : {atsCloudError}
               </div>
             )}
           </div>
@@ -735,8 +791,8 @@ export default function CVMatchingPage() {
             </div>
           )}
 
-          {/* Spinner ATS en cours */}
-          {generatingATS && !atsResult && (
+          {/* Spinner ATS en cours (local ou cloud) */}
+          {(generatingATS || generatingATSCloud) && !atsResult && (
             <div className={styles.loadingView}>
               <Target size={28} strokeWidth={1.5} style={{ color: 'var(--tertiary)' }} />
               <Loader size={22} className={styles.spin} strokeWidth={1.5} style={{ color: 'var(--tertiary)' }} />

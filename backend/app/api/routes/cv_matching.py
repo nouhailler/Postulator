@@ -8,6 +8,8 @@ Routes :
   POST   /api/cv-matching/generate-ats     → génère un CV ATS-optimisé + score + keywords (pas sauvegardé)
   POST   /api/cv-matching/save-ats         → sauvegarde un résultat ATS déjà calculé en base
   GET    /api/cv-matching/{id}             → détail d'un CV généré (avec source_cv_text)
+  POST   /api/cv-matching/generate-ats-cloud → génère un CV ATS-optimisé via API Cloud (Claude/OpenAI)
+  GET    /api/cv-matching/cloud-status       → retourne le provider Cloud disponible
   GET    /api/cv-matching/{id}/export/docx → export DOCX via pandoc
   PATCH  /api/cv-matching/{id}/notes       → ajouter une note
   DELETE /api/cv-matching/{id}             → suppression
@@ -237,6 +239,64 @@ async def save_ats_cv(
     await db.commit()
     await db.refresh(gen)
     return gen
+
+
+@router.post("/generate-ats-cloud", response_model=ATSResult, status_code=201)
+async def generate_ats_cv_cloud(
+    payload:  GenerateCVRequest,
+    db:       DBSession,
+    settings: AppSettings,
+) -> ATSResult:
+    """
+    Génère un CV optimisé ATS via un modèle Cloud (Anthropic Claude ou OpenAI).
+    Provider sélectionné automatiquement selon ANTHROPIC_API_KEY / OPENAI_API_KEY dans .env.
+    Ne sauvegarde PAS en base — utiliser /save-ats pour persister.
+    """
+    provider = settings.cloud_ai_provider
+    if not provider:
+        raise HTTPException(
+            status_code=503,
+            detail="Aucune clé API Cloud configurée. Ajoutez ANTHROPIC_API_KEY ou OPENAI_API_KEY dans backend/.env.",
+        )
+
+    source_cv = await db.get(StoredCV, payload.source_cv_id)
+    if not source_cv:
+        raise HTTPException(status_code=404, detail=f"CV source {payload.source_cv_id} introuvable.")
+
+    job = await db.get(Job, payload.job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
+
+    source_cv_text = _build_source_text(source_cv)
+
+    if provider == "anthropic":
+        return await _generate_ats_with_claude(
+            source_cv, job, settings.anthropic_api_key, payload.language or "fr", source_cv_text
+        )
+    elif provider == "openai":
+        return await _generate_ats_with_openai(
+            source_cv, job, settings.openai_api_key, payload.language or "fr", source_cv_text
+        )
+    else:
+        return await _generate_ats_with_mistral(
+            source_cv, job, settings.mistral_api_key, payload.language or "fr", source_cv_text
+        )
+
+
+@router.get("/cloud-status")
+async def cloud_ai_status(settings: AppSettings):
+    """Retourne le provider Cloud disponible et le modèle utilisé."""
+    provider = settings.cloud_ai_provider
+    models = {
+        "anthropic": "claude-haiku-4-5-20251001",
+        "openai":    "gpt-4o-mini",
+        "mistral":   "mistral-small-latest",
+    }
+    return {
+        "provider": provider,
+        "model":    models.get(provider) if provider else None,
+        "configured": provider is not None,
+    }
 
 
 @router.get("/{gen_id}", response_model=GeneratedCVFull)
@@ -602,7 +662,7 @@ CONTRAINTES JSON STRICTES :
 
     client = ol.AsyncClient(
         host=base_url,
-        timeout=httpx.Timeout(connect=10, read=480, write=10, pool=5),
+        timeout=httpx.Timeout(connect=10, read=900, write=10, pool=5),
     )
 
     try:
@@ -611,7 +671,7 @@ CONTRAINTES JSON STRICTES :
             prompt=prompt,
             stream=False,
             format="json",
-            options={"temperature": 0.2, "num_predict": 4000},
+            options={"temperature": 0.2, "num_predict": 3000},
         )
         raw = response["response"].strip()
 
@@ -687,3 +747,274 @@ def _cleanup_background(path: Path):
         try: path.unlink(missing_ok=True)
         except Exception: pass
     return BackgroundTask(_delete)
+
+
+# ── Génération Cloud : prompt commun ────────────────────────────────────────────────────────────────────
+
+def _build_ats_cloud_prompt(cv: StoredCV, job: Job, lang: str) -> str:
+    """Prompt partagé entre Claude et OpenAI — identique au prompt Ollama ATS mais sans le format=json trick."""
+    ctx       = _build_cv_context(cv)
+    desc_clean = _clean_html(job.description or "")[:3000]   # Cloud : plus de contexte
+    lang_label = "français" if lang == "fr" else "English"
+
+    return f"""Tu es un expert ATS optimizer, senior recruiter et HR data scientist.
+Ta mission : produire le CV qui obtiendra le SCORE MAXIMUM dans un Applicant Tracking System (ATS)
+ET qui sera le plus convaincant possible pour un recruteur humain.
+
+=== OFFRE D'EMPLOI CIBLE ===
+Poste : {job.title}
+Entreprise : {job.company}
+Description complète :
+{desc_clean}
+
+=== CV SOURCE DU CANDIDAT ===
+{_section("IDENTITÉ", ctx["identity"])}
+{_section("RÉSUMÉ PROFESSIONNEL", ctx["summary"])}
+{_section("EXPÉRIENCES PROFESSIONNELLES", ctx["experiences"])}
+{_section("COMPÉTENCES TECHNIQUES", ctx["skills"])}
+{_section("FORMATION", ctx["education"])}
+{_section("LANGUES", ctx["languages"])}
+{_section("CERTIFICATIONS", ctx["certifications"])}
+{_section("PROJETS", ctx["projects"])}
+
+=== INSTRUCTIONS ===
+ÉTAPE 1 — Extraire les mots-clés critiques de l'offre :
+  - Compétences obligatoires (poids 10), outils demandés (poids 7), soft skills (poids 3)
+  - Titre exact du poste, synonymes acceptés, niveau d'expérience attendu
+
+ÉTAPE 2 — Analyser le CV source :
+  - Identifier quels mots-clés sont déjà présents (ou leurs synonymes)
+  - Identifier les gaps (mots-clés manquants que le candidat POSSÈDE peut-être mais n'a pas mentionnés)
+
+ÉTAPE 3 — Générer le CV optimisé ATS en {lang_label} :
+  - Titre aligné EXACTEMENT sur le poste : "{job.title}"
+  - SUMMARY : 3-4 phrases, contient le titre du poste + 4-5 mots-clés de l'offre
+  - CORE SKILLS : mots-clés de l'offre EN PREMIER, keyword mirroring strict
+  - PROFESSIONAL EXPERIENCE : reformuler OBLIGATOIREMENT chaque bullet des expériences
+    pertinentes avec le vocabulaire de l'offre (pas de copier-coller du CV source)
+  - FORMAT TEXTE PUR ATS (pas de tableau, pas d'icône, sections avec ##, bullets avec -)
+
+ÉTAPE 4 — Calculer le score ATS simulé :
+  score_keywords (0-35) · score_experience (0-25) · score_skills (0-20) · score_education (0-10) · score_format (0-10)
+
+ÉTAPE 5 — Lister 3-5 suggestions concrètes pour améliorer encore le score.
+
+=== FORMAT DE RÉPONSE : JSON UNIQUEMENT ===
+Réponds UNIQUEMENT avec ce JSON valide, sans backtick, sans commentaire :
+
+{{"cv_markdown": "# NOM\\n**{job.title}** | Ville | email\\n\\n---\\n## SUMMARY\\n...\\n\\n---\\n## CORE SKILLS\\n- Mot-clé 1\\n\\n---\\n## PROFESSIONAL EXPERIENCE\\n### Titre · Entreprise *(dates)*\\n- Bullet reformulé\\n\\n---\\n## EDUCATION\\n...", "keyword_gaps": [{{"keyword": "exemple", "found": true, "importance": "high", "category": "skill"}}], "ats_score": {{"score_keywords": 25, "score_experience": 20, "score_skills": 15, "score_education": 8, "score_format": 9}}, "suggestions": ["Suggestion 1", "Suggestion 2"]}}
+
+CONTRAINTES :
+- keyword_gaps : TOUS les mots-clés importants de l'offre, minimum 8 entrées
+- importance : "high" (obligatoire) | "medium" (outil) | "low" (soft skill)
+- category : skill | tool | soft_skill | title | certification
+- found : true si présent dans le CV source OU dans le CV optimisé généré
+- scores : entiers, plafonds stricts (keywords≤35, experience≤25, skills≤20, education≤10, format≤10)
+- NE PAS inventer de compétences/expériences absentes du CV source
+"""
+
+
+def _parse_ats_cloud_response(raw: str, source_cv_text: str) -> ATSResult:
+    """Parse la réponse JSON d'un LLM Cloud et construit un ATSResult."""
+    clean = raw.strip()
+    # Retirer les backticks markdown si le modèle en a ajouté malgré les instructions
+    if clean.startswith("```"):
+        lines = clean.split("\n")
+        # Supprimer première ligne (```json ou ```) et dernière (```)
+        if lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        clean = "\n".join(lines).strip()
+
+    try:
+        data = json.loads(clean)
+    except json.JSONDecodeError:
+        match = re.search(r'\{.*\}', clean, re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+        else:
+            raise RuntimeError(f"Réponse JSON invalide du modèle Cloud. Début : {clean[:200]}")
+
+    cv_markdown = data.get("cv_markdown", "")
+    if cv_markdown:
+        md_start = cv_markdown.find("#")
+        if md_start > 0:
+            cv_markdown = cv_markdown[md_start:]
+
+    keyword_gaps = [
+        KeywordGap(
+            keyword=k.get("keyword", ""),
+            found=bool(k.get("found", False)),
+            importance=k.get("importance", "medium"),
+            category=k.get("category", "skill"),
+        )
+        for k in data.get("keyword_gaps", [])
+    ]
+
+    raw_score = data.get("ats_score", {})
+    sk  = min(float(raw_score.get("score_keywords",   0)), 35)
+    se  = min(float(raw_score.get("score_experience", 0)), 25)
+    ssl = min(float(raw_score.get("score_skills",     0)), 20)
+    sed = min(float(raw_score.get("score_education",  0)), 10)
+    sf  = min(float(raw_score.get("score_format",     0)), 10)
+    total = min(round(sk + se + ssl + sed + sf, 1), 100.0)
+
+    ats_score = ATSScore(
+        score_keywords=round(sk, 1),
+        score_experience=round(se, 1),
+        score_skills=round(ssl, 1),
+        score_education=round(sed, 1),
+        score_format=round(sf, 1),
+        total=total,
+        label=_ats_label(total),
+    )
+
+    suggestions = data.get("suggestions", [])
+    if not isinstance(suggestions, list):
+        suggestions = []
+
+    found_count   = sum(1 for k in keyword_gaps if k.found)
+    missing_count = sum(1 for k in keyword_gaps if not k.found)
+
+    return ATSResult(
+        cv_markdown=cv_markdown,
+        source_cv_text=source_cv_text,
+        ats_score=ats_score,
+        keyword_gaps=keyword_gaps,
+        missing_count=missing_count,
+        found_count=found_count,
+        suggestions=suggestions,
+    )
+
+
+# ── Génération via Anthropic Claude ────────────────────────────────────────────────────────────────────
+
+async def _generate_ats_with_claude(
+    cv: StoredCV, job: Job, api_key: str, lang: str, source_cv_text: str
+) -> ATSResult:
+    import httpx
+
+    prompt = _build_ats_cloud_prompt(cv, job, lang)
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=10, read=300, write=10, pool=5)) as client:
+        response = await client.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key":         api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type":      "application/json",
+            },
+            json={
+                "model":      "claude-haiku-4-5-20251001",
+                "max_tokens": 4096,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+        )
+
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[Claude] status={response.status_code} body_len={len(response.content)}")
+    if response.status_code != 200:
+        try:
+            body = response.json()
+            err = body.get('error', {}).get('message') or str(body)
+        except Exception:
+            err = response.text[:300] or f"HTTP {response.status_code}"
+        raise RuntimeError(f"Anthropic API error {response.status_code}: {err}")
+
+    try:
+        data = response.json()
+    except Exception:
+        raise RuntimeError(f"Anthropic: réponse non-JSON — début: {response.text[:200]}")
+
+    raw = data["content"][0]["text"]
+    return _parse_ats_cloud_response(raw, source_cv_text)
+
+
+# ── Génération via OpenAI ────────────────────────────────────────────────────────────────────────────
+
+async def _generate_ats_with_openai(
+    cv: StoredCV, job: Job, api_key: str, lang: str, source_cv_text: str
+) -> ATSResult:
+    import httpx
+
+    prompt = _build_ats_cloud_prompt(cv, job, lang)
+
+    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=10, read=300, write=10, pool=5)) as client:
+        response = await client.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type":  "application/json",
+            },
+            json={
+                "model":       "gpt-4o-mini",
+                "max_tokens":  4096,
+                "temperature": 0.2,
+                "response_format": {"type": "json_object"},
+                "messages": [{"role": "user", "content": prompt}],
+            },
+        )
+
+    if response.status_code != 200:
+        try:
+            body = response.json()
+            err = body.get('error', {}).get('message') or str(body)
+        except Exception:
+            err = response.text[:300] or f"HTTP {response.status_code}"
+        raise RuntimeError(f"OpenAI API error {response.status_code}: {err}")
+
+    try:
+        data = response.json()
+    except Exception:
+        raise RuntimeError(f"OpenAI: réponse non-JSON — début: {response.text[:200]}")
+
+    raw = data["choices"][0]["message"]["content"]
+    return _parse_ats_cloud_response(raw, source_cv_text)
+
+
+# ── Génération via Mistral AI ───────────────────────────────────────────────────────────────────────────
+
+async def _generate_ats_with_mistral(
+    cv: StoredCV, job: Job, api_key: str, lang: str, source_cv_text: str
+) -> ATSResult:
+    import httpx
+    import logging
+    logger = logging.getLogger(__name__)
+
+    prompt = _build_ats_cloud_prompt(cv, job, lang)
+    logger.info(f"[Mistral] prompt_len={len(prompt)} chars, api_key_prefix={api_key[:8]}...")
+
+    # Mistral supporte json_object comme OpenAI
+    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=10, read=300, write=10, pool=5)) as client:
+        response = await client.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type":  "application/json",
+            },
+            json={
+                "model":           "mistral-small-latest",
+                "max_tokens":      4096,
+                "temperature":     0.2,
+                "response_format": {"type": "json_object"},
+                "messages": [{"role": "user", "content": prompt}],
+            },
+        )
+
+    if response.status_code != 200:
+        try:
+            body = response.json()
+            err = body.get("message") or body.get("error", {}).get("message") or str(body)
+        except Exception:
+            err = response.text[:300] or f"HTTP {response.status_code}"
+        raise RuntimeError(f"Mistral API error {response.status_code}: {err}")
+
+    try:
+        data = response.json()
+    except Exception:
+        raise RuntimeError(f"Mistral: réponse non-JSON — status={response.status_code} début: {response.text[:300]}")
+
+    raw = data["choices"][0]["message"]["content"]
+    return _parse_ats_cloud_response(raw, source_cv_text)

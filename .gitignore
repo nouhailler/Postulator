@@ -61,3 +61,8 @@ stitch_export/
 
 # Packaging Debian — garder les sources, exclure le build
 dist/*.deb
+
+# release 1.51
+automation_config.json
+backend/.env
+backend/postulator.db

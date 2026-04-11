@@ -113,13 +113,25 @@ export const HELP_CONTENT = {
     ],
   },
 
+  '/automation': {
+    title: 'Automatisation — Recherche quotidienne',
+    intro: 'Recherche automatique quotidienne sur Indeed + LinkedIn avec scoring IA intégré. Paramétrez une fois, Postulator travaille pour vous.',
+    sections: [
+      { title: 'Mots-clés et opérateurs', icon: '🔍', content: 'AND : les deux termes présents — ex : Python AND senior. OR : l\'un ou l\'autre — ex : DevOps OR SRE. Parenthèses : groupement prioritaire — ex : (Python OR Java) AND senior. Évaluation : parenthèses en premier, puis AND, puis OR.' },
+      { title: 'Paramètres fixes', icon: '🔒', content: 'Sources = Indeed + LinkedIn uniquement. Offres publiées dans les 24h. 10 résultats par source. Max 20 offres scorées par run. Ces valeurs sont fixées en dur pour maximiser la fiabilité.' },
+      { title: 'Redémarrage auto', icon: '🔄', content: 'À chaque redémarrage d\'uvicorn, Postulator lit automation_config.json et replanifie le job automatiquement. Aucune intervention manuelle nécessaire. Vérifiez les logs : [Automation] Reprise planification.' },
+      { title: 'Proxies', icon: '🛡️', content: 'Fortement recommandé pour l\'automatisation longue durée. Les proxies sont sauvegardés avec la config et réutilisés à chaque run quotidien. Format : IP:PORT:USERNAME:PASSWORD, un par ligne.' },
+      { title: 'Annulation', icon: '⏹️', content: 'Cliquez "Annuler" dans la barre de progression pour stopper un run en cours. Le scraping Celery et le scoring s\'arrêtent proprement.' },
+    ],
+  },
+
 }
 
 export const DEFAULT_HELP = {
   title: 'Aide Postulator',
   intro: 'Postulator est un agrégateur de recherche d\'emploi open source avec IA locale (Ollama).',
   sections: [
-    { title: 'Flux recommandé', icon: '🧭', content: 'Scrapers → Offres → Offres Intelligence → CV → CV Intelligence → CV Matching → Pipeline → Historique.' },
+    { title: 'Flux recommandé', icon: '🧭', content: 'Scrapers → Offres → Offres Intelligence → CV → CV Intelligence → CV Matching → Pipeline → Historique. Ou Automatisation pour un run quotidien complet.' },
     { title: 'IA locale', icon: '🤖', content: 'Toutes les fonctions IA utilisent Ollama sur votre machine. Aucune donnée n\'est envoyée sur internet.' },
     { title: 'Raccourci aide', icon: '?', content: 'Appuyez sur la touche "?" depuis n\'importe quelle page pour ouvrir l\'aide contextuelle.' },
   ],

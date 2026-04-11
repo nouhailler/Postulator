@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Mail, CheckCircle, XCircle, Loader, Bell, Settings, Shield, Brain, ExternalLink, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Mail, CheckCircle, XCircle, Loader, Bell, Settings, Shield, Brain, ExternalLink, AlertTriangle, Cloud } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchAlertStatus, testSmtp } from '../api/alerts.js'
 import styles from './SettingsPage.module.css'
@@ -53,6 +53,16 @@ export default function SettingsPage() {
   }
 
   const emailOk = alertStatus?.email_configured
+
+  // Statut Cloud AI (chargé via l'endpoint backend)
+  const [cloudStatus, setCloudStatus] = useState(null)
+  const [loadingCloud, setLoadingCloud] = useState(true)
+  useEffect(() => {
+    fetch('/api/cv-matching/cloud-status')
+      .then(r => r.json()).then(setCloudStatus)
+      .catch(() => setCloudStatus({ configured: false }))
+      .finally(() => setLoadingCloud(false))
+  }, [])
 
   return (
     <div className={styles.page}>
@@ -163,6 +173,75 @@ ALERT_SCORE_THRESHOLD=80`}</pre>
             ))}
           </div>
           <pre className={styles.envPre}>{`OLLAMA_MODEL=phi4-mini`}</pre>
+        </div>
+      </Section>
+
+      {/* ── CLOUD AI ── */}
+      <Section
+        icon={<Cloud size={16} strokeWidth={2} style={{ color: cloudStatus?.configured ? '#a78bfa' : 'var(--outline)' }} />}
+        title="Cloud AI (CV ATS CLOUD)"
+        subtitle="Utilisez Claude ou ChatGPT pour générer des CVs ATS sans GPU — idéal sur PC sans carte graphique.">
+
+        {/* Statut */}
+        <div className={`${styles.statusBanner} ${cloudStatus?.configured ? styles.statusBannerOk : styles.statusBannerWarn}`}
+          style={cloudStatus?.configured ? { borderColor: 'rgba(167,139,250,0.3)', background: 'rgba(167,139,250,0.06)', color: '#a78bfa' } : {}}>
+          {loadingCloud
+            ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Vérification…</>
+            : cloudStatus?.configured
+              ? <><CheckCircle size={14} strokeWidth={2} /> Provider actif : <strong>{cloudStatus.provider === 'anthropic' ? 'Anthropic Claude' : 'OpenAI GPT'}</strong> — modèle {cloudStatus.model}</>
+              : <><AlertTriangle size={14} strokeWidth={2} /> Aucune clé API Cloud configurée — le bouton CV ATS CLOUD est désactivé.</>
+          }
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <p className={styles.fieldGroupLabel}>Configuration (lecture seule — modifiable dans <code>backend/.env</code>)</p>
+          <ConfigField
+            label="ANTHROPIC_API_KEY"
+            value={cloudStatus?.provider === 'anthropic' ? '(configuré)' : ''}
+            masked
+            hint="Claude Haiku 4.5 — rapide, économique (~$0.001/appel)"
+          />
+          <ConfigField
+            label="OPENAI_API_KEY"
+            value={cloudStatus?.provider === 'openai' ? '(configuré)' : ''}
+            masked
+            hint="GPT-4o-mini — rapide, économique (~$0.001/appel)"
+          />
+          <ConfigField
+            label="MISTRAL_API_KEY"
+            value={cloudStatus?.provider === 'mistral' ? '(configuré)' : ''}
+            masked
+            hint="mistral-small-latest — modèle français, rapide, économique"
+          />
+        </div>
+
+        <div className={styles.envBlock}>
+          <p className={styles.envBlockTitle}>Comment configurer ?</p>
+          <p className={styles.envBlockText}>Ajoutez l'une des clés suivantes dans <code>backend/.env</code> :</p>
+          <pre className={styles.envPre}>{`# Option 1 : Anthropic Claude (priorité 1)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Option 2 : OpenAI (priorité 2)
+OPENAI_API_KEY=sk-...
+
+# Option 3 : Mistral AI (priorité 3, modèle français)
+MISTRAL_API_KEY=...`}</pre>
+          <p className={styles.envBlockNote}>
+            💡 Priorité : <strong>Anthropic</strong> &gt; <strong>OpenAI</strong> &gt; <strong>Mistral</strong> si plusieurs clés sont renseignées.
+            Redémarrez uvicorn après modification.<br />
+            Obtenir une clé :{' '}
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className={styles.link}>
+              Anthropic <ExternalLink size={11} strokeWidth={2} />
+            </a>
+            {' · '}
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className={styles.link}>
+              OpenAI <ExternalLink size={11} strokeWidth={2} />
+            </a>
+            {' · '}
+            <a href="https://console.mistral.ai/home" target="_blank" rel="noreferrer" className={styles.link}>
+              Mistral AI 🇫🇷 <ExternalLink size={11} strokeWidth={2} />
+            </a>
+          </p>
         </div>
       </Section>
 

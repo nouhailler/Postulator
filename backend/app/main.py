@@ -37,6 +37,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"📡 CORS : {settings.cors_origins_list}")
     logger.info(f"🤖 Ollama : {settings.ollama_base_url}  modèle : {settings.ollama_model}")
 
+    # Initialiser le scheduler d'automatisation (lit automation_config.json)
+    from app.api.routes.automation import init_automation_scheduler
+    init_automation_scheduler()
+
     # Préchargement du modèle Ollama en VRAM (évite le timeout sur la 1ère requête)
     # Exécuté en tâche de fond pour ne pas bloquer le démarrage de l'API
     import asyncio

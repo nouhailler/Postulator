@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout              from './components/layout/AppLayout.jsx'
+import AutomationPage         from './pages/AutomationPage.jsx'
 import DashboardPage          from './pages/DashboardPage.jsx'
 import CVPage                 from './pages/CVPage.jsx'
 import JobsPage               from './pages/JobsPage.jsx'
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="cv-matching"        element={<CVMatchingPage />} />
         <Route path="board"              element={<BoardPage />} />
         <Route path="history"            element={<HistoryPage />} />
+        <Route path="automation"         element={<AutomationPage />} />
         <Route path="settings"           element={<SettingsPage />} />
       </Route>
     </Routes>

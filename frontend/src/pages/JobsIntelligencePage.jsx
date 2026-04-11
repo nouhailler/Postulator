@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { MessageSquare, Search, Loader, Clock, X, Send, ChevronDown, Sparkles, AlertCircle, FileText } from 'lucide-react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { MessageSquare, Search, Loader, Clock, X, Send, ChevronDown, Sparkles, AlertCircle, FileText, History, ChevronRight } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchJobs } from '../api/jobs.js'
+import { fetchJobQuestions } from '../api/jobsIntelligence.js'
 import { api } from '../api/client.js'
+import { useOllamaStatus } from '../contexts/OllamaStatusContext.jsx'
 import styles from './JobsIntelligencePage.module.css'
 
 // ── Suggestions de questions ──────────────────────────────────────────────────
@@ -81,6 +83,54 @@ function MessageBubble({ msg }) {
   return null
 }
 
+// ── Panneau historique des questions ─────────────────────────────────────────
+function PastQuestionsPanel({ questions, onReplay }) {
+  const [expanded, setExpanded] = useState(false)
+
+  if (!questions || questions.length === 0) return null
+
+  return (
+    <div className={styles.pastPanel}>
+      <button
+        className={styles.pastToggle}
+        onClick={() => setExpanded(v => !v)}
+        title={expanded ? 'Masquer l\'historique' : 'Voir les questions déjà posées'}
+      >
+        <History size={12} strokeWidth={2} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />
+        <span className={styles.pastToggleLabel}>
+          {questions.length} question{questions.length > 1 ? 's' : ''} déjà posée{questions.length > 1 ? 's' : ''}
+        </span>
+        <ChevronRight
+          size={12}
+          strokeWidth={2}
+          className={styles.pastChevron}
+          style={{ transform: expanded ? 'rotate(90deg)' : 'none' }}
+        />
+      </button>
+
+      {expanded && (
+        <div className={styles.pastList}>
+          {questions.map((q, i) => (
+            <button
+              key={q.id ?? i}
+              className={styles.pastItem}
+              onClick={() => onReplay(q.question)}
+              title="Reposer cette question"
+            >
+              <span className={styles.pastItemQ}>{q.question}</span>
+              <span className={styles.pastItemMeta}>
+                <Clock size={9} strokeWidth={2} />
+                {q.duration_ms ? `${(q.duration_ms / 1000).toFixed(1)}s` : ''}
+                {q.asked_at && ` · ${new Date(q.asked_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}`}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Rendu Markdown minimal ────────────────────────────────────────────────────
 function SimpleMarkdown({ text }) {
   if (!text) return null
@@ -126,18 +176,22 @@ function stripHtml(html) {
 
 // ── Page principale ───────────────────────────────────────────────────────────
 export default function JobsIntelligencePage() {
+  const { setOllamaStatus, clearOllamaStatus } = useOllamaStatus()
+
   const [selectedJobId, setSelectedJobId] = useState('')
   const [selectedJob,   setSelectedJob]   = useState(null)
   const [jobSearch,     setJobSearch]     = useState('')
   const [showDropdown,  setShowDropdown]  = useState(false)
-  // Texte affiché dans le champ — séparé de jobSearch pour distinguer
-  // "en train de taper" vs "offre sélectionnée"
   const [inputText,     setInputText]     = useState('')
 
-  const [question,  setQuestion]  = useState('')
-  const [messages,  setMessages]  = useState([])
-  const [thinking,  setThinking]  = useState(false)
-  const [elapsed,   setElapsed]   = useState(0)
+  const [question,      setQuestion]      = useState('')
+  const [messages,      setMessages]      = useState([])
+  const [thinking,      setThinking]      = useState(false)
+  const [elapsed,       setElapsed]       = useState(0)
+
+  // Historique des questions sauvegardées pour l'offre courante
+  const [pastQuestions,    setPastQuestions]    = useState([])
+  const [loadingPast,      setLoadingPast]      = useState(false)
 
   const abortRef    = useRef(null)
   const timerRef    = useRef(null)
@@ -152,12 +206,9 @@ export default function JobsIntelligencePage() {
     { fallback: [] }
   )
 
-  // Offres filtrées — quand une offre est déjà sélectionnée et qu'on clique
-  // sur la flèche, on affiche TOUT (pas de filtre sur inputText)
   const [browsingAll, setBrowsingAll] = useState(false)
 
   const filteredJobs = (allJobs ?? []).filter(j => {
-    // Si on browse (clic flèche avec offre déjà sélectionnée) → tout afficher
     if (browsingAll) return true
     if (!inputText) return true
     const q = inputText.toLowerCase()
@@ -173,7 +224,6 @@ export default function JobsIntelligencePage() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false)
         setBrowsingAll(false)
-        // Restaurer le texte de l'offre sélectionnée si on a tapé sans choisir
         if (selectedJob) setInputText(`${selectedJob.title} — ${selectedJob.company}`)
       }
     }
@@ -195,6 +245,19 @@ export default function JobsIntelligencePage() {
     return () => clearInterval(timerRef.current)
   }, [thinking])
 
+  // Charger les questions passées quand on sélectionne une offre
+  const loadPastQuestions = useCallback(async (jobId) => {
+    setLoadingPast(true)
+    try {
+      const data = await fetchJobQuestions(jobId)
+      setPastQuestions(data ?? [])
+    } catch {
+      setPastQuestions([])
+    } finally {
+      setLoadingPast(false)
+    }
+  }, [])
+
   const selectJob = (job) => {
     setSelectedJobId(job.id)
     setSelectedJob(job)
@@ -203,10 +266,11 @@ export default function JobsIntelligencePage() {
     setBrowsingAll(false)
     setShowDropdown(false)
     setMessages([])
+    setPastQuestions([])
+    loadPastQuestions(job.id)
     inputRef.current?.focus()
   }
 
-  // Clic sur la flèche chevron → ouvrir/fermer en affichant tout
   const handleChevronClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
@@ -227,7 +291,6 @@ export default function JobsIntelligencePage() {
   }
 
   const handleInputFocus = () => {
-    // Si une offre est sélectionnée, vider le champ pour faciliter la nouvelle recherche
     if (selectedJob && inputText === `${selectedJob.title} — ${selectedJob.company}`) {
       setInputText('')
       setJobSearch('')
@@ -235,9 +298,7 @@ export default function JobsIntelligencePage() {
     setShowDropdown(true)
   }
 
-  const handleInputBlur = () => {
-    // Ne rien faire ici — le clic extérieur gère la fermeture
-  }
+  const handleInputBlur = () => {}
 
   const handleAsk = async (q) => {
     const text = (q ?? question).trim()
@@ -246,6 +307,7 @@ export default function JobsIntelligencePage() {
     setMessages(prev => [...prev, { role: 'user', content: text }])
     setQuestion('')
     setThinking(true)
+    setOllamaStatus('Offres Intelligence')
 
     abortRef.current = new AbortController()
 
@@ -255,12 +317,27 @@ export default function JobsIntelligencePage() {
         question: text,
       }, { signal: abortRef.current.signal })
 
-      setMessages(prev => [...prev, {
+      const newMsg = {
         role:        'assistant',
         content:     res.answer,
         duration_ms: res.duration_ms,
         desc_source: res.desc_source,
-      }])
+      }
+      setMessages(prev => [...prev, newMsg])
+
+      // Rafraîchir la liste des questions passées (ajouter la nouvelle)
+      setPastQuestions(prev => [
+        ...prev,
+        {
+          id:          Date.now(),
+          question:    text,
+          answer:      res.answer,
+          model:       res.model,
+          desc_source: res.desc_source,
+          duration_ms: res.duration_ms,
+          asked_at:    new Date().toISOString(),
+        },
+      ])
     } catch (err) {
       if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
         setMessages(prev => [...prev, { role: 'error', content: 'Requête annulée.' }])
@@ -272,6 +349,7 @@ export default function JobsIntelligencePage() {
       }
     } finally {
       setThinking(false)
+      clearOllamaStatus()
       abortRef.current = null
     }
   }
@@ -280,6 +358,7 @@ export default function JobsIntelligencePage() {
     abortRef.current?.abort()
     clearInterval(timerRef.current)
     setThinking(false)
+    clearOllamaStatus()
   }
 
   const handleKeyDown = (e) => {
@@ -289,11 +368,14 @@ export default function JobsIntelligencePage() {
     }
   }
 
-  // Description nettoyée de l'offre sélectionnée
+  // Rejouer une question de l'historique
+  const handleReplay = (questionText) => {
+    setQuestion(questionText)
+    inputRef.current?.focus()
+  }
+
   const cleanDescription = selectedJob ? stripHtml(selectedJob.description) : ''
   const descPreview = cleanDescription.slice(0, 300)
-
-  // Aucune offre dans le dropdown ne correspond (vraiment aucune)
   const noResults = filteredJobs.length === 0 && inputText && !browsingAll
 
   return (
@@ -407,7 +489,6 @@ export default function JobsIntelligencePage() {
                   )}
                 </div>
 
-                {/* Description — toujours affichée si disponible */}
                 {cleanDescription ? (
                   <div className={styles.jobCardDescWrap}>
                     <div className={styles.jobCardDescHeader}>
@@ -433,6 +514,19 @@ export default function JobsIntelligencePage() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Historique des questions posées pour cette offre */}
+            {selectedJob && !loadingPast && (
+              <PastQuestionsPanel
+                questions={pastQuestions}
+                onReplay={handleReplay}
+              />
+            )}
+            {selectedJob && loadingPast && (
+              <p className={styles.pastLoading}>
+                <Loader size={11} strokeWidth={2} className={styles.spin} /> Chargement de l'historique…
+              </p>
             )}
 
             {/* Suggestions */}
@@ -475,6 +569,12 @@ export default function JobsIntelligencePage() {
                         ? 'La description complète de l\'offre a été transmise à Ollama.'
                         : 'Attention : cette offre n\'a pas de description — les réponses seront limitées.'}
                     </p>
+                    {pastQuestions.length > 0 && (
+                      <p className={styles.chatWelcomeHistory}>
+                        <History size={12} strokeWidth={2} style={{ color: 'var(--tertiary)' }} />
+                        {pastQuestions.length} question{pastQuestions.length > 1 ? 's' : ''} déjà posée{pastQuestions.length > 1 ? 's' : ''} sur cette offre
+                      </p>
+                    )}
                   </div>
                 )}
 

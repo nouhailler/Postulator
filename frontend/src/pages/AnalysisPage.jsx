@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useOllamaStatus } from '../contexts/OllamaStatusContext.jsx'
 import {
   Upload, Star, Trash2, Brain, CheckCircle, ChevronDown,
   Loader, AlertCircle, Clock, Save, CheckCheck,
@@ -155,6 +156,7 @@ function ScoreResult({ result, onSave, saving, saved }) {
 export default function AnalysisPage() {
   const [searchParams] = useSearchParams()
   const jobIdFromUrl   = searchParams.get('job_id')
+  const { setOllamaStatus, clearOllamaStatus } = useOllamaStatus()
 
   const { data: cvs, refetch: refetchCVs } = useAsync(fetchCVs, [], { fallback: [] })
   const { data: storedCVs } = useAsync(fetchCVList, [], { fallback: [] })
@@ -231,9 +233,10 @@ export default function AnalysisPage() {
 
   const handleAnalyze = useCallback(async (id) => {
     setAnalyzing(id); setAnalyzeError(null)
+    setOllamaStatus('CV Intelligence — Extraction')
     try { await analyzeCV(id); await refetchCVs() }
     catch (err) { setAnalyzeError({ id, message: err.detail ?? err.message ?? "Erreur Ollama" }) }
-    finally { setAnalyzing(null) }
+    finally { setAnalyzing(null); clearOllamaStatus() }
   }, [refetchCVs])
 
   // ── Scoring ───────────────────────────────────────────────────────────────
@@ -242,12 +245,13 @@ export default function AnalysisPage() {
   const handleScore = useCallback(async () => {
     if (!defaultCV || !selectedJob) return
     setScoring(true); setScoreResult(null); setScoreError(null); setSaved(false)
+    setOllamaStatus('CV Intelligence — Scoring')
     try {
       const result = await scoreJobSync(defaultCV.id, parseInt(selectedJob, 10))
       setScoreResult(result)
     } catch (err) {
       setScoreError(err.detail ?? err.message ?? 'Erreur scoring Ollama')
-    } finally { setScoring(false) }
+    } finally { setScoring(false); clearOllamaStatus() }
   }, [defaultCV, selectedJob])
 
   const handleSave = useCallback(async () => {
