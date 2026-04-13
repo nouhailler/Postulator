@@ -3,6 +3,7 @@ app/scrapers/base.py
 """
 import asyncio
 import random
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -14,6 +15,90 @@ from app.core.config import get_settings
 from app.scrapers.proxy_manager import proxy_manager
 
 settings = get_settings()
+
+
+# ── Moteur de filtrage booléen post-scraping ──────────────────────────────────
+# Appliqué APRÈS le scraping pour garantir la cohérence sur toutes les sources,
+# notamment celles qui ignorent les opérateurs (RemoteOK, jobs.ch, jobup.ch…).
+#
+# Syntaxe supportée :
+#   AND   — les deux termes obligatoires       : Python AND senior
+#   OR    — l'un ou l'autre                   : DevOps OR SRE
+#   NOT   — exclure le terme                  : Python NOT junior
+#   ( )   — groupement                        : (Python OR Java) AND NOT stage
+#   " "   — phrase exacte                     : "machine learning" AND Python
+
+def _tokenize_query(query: str) -> list[str]:
+    """Découpe la requête en tokens : phrases entre guillemets, opérateurs, parenthèses, mots."""
+    return re.findall(r'"[^"]*"|\bAND\b|\bOR\b|\bNOT\b|[()]|\S+', query, re.IGNORECASE)
+
+
+def _parse_or(tokens: list[str], pos: int, text: str) -> tuple[bool, int]:
+    left, pos = _parse_and(tokens, pos, text)
+    while pos < len(tokens) and tokens[pos].upper() == "OR":
+        pos += 1
+        right, pos = _parse_and(tokens, pos, text)
+        left = left or right
+    return left, pos
+
+
+def _parse_and(tokens: list[str], pos: int, text: str) -> tuple[bool, int]:
+    left, pos = _parse_not(tokens, pos, text)
+    while pos < len(tokens) and tokens[pos].upper() == "AND":
+        pos += 1
+        right, pos = _parse_not(tokens, pos, text)
+        left = left and right
+    return left, pos
+
+
+def _parse_not(tokens: list[str], pos: int, text: str) -> tuple[bool, int]:
+    if pos < len(tokens) and tokens[pos].upper() == "NOT":
+        pos += 1
+        val, pos = _parse_primary(tokens, pos, text)
+        return not val, pos
+    return _parse_primary(tokens, pos, text)
+
+
+def _parse_primary(tokens: list[str], pos: int, text: str) -> tuple[bool, int]:
+    if pos >= len(tokens):
+        return True, pos
+    tok = tokens[pos]
+    if tok == "(":
+        pos += 1
+        val, pos = _parse_or(tokens, pos, text)
+        if pos < len(tokens) and tokens[pos] == ")":
+            pos += 1
+        return val, pos
+    # Phrase entre guillemets → correspondance exacte
+    if tok.startswith('"') and tok.endswith('"'):
+        phrase = tok[1:-1].lower()
+        return (phrase in text), pos + 1
+    # Opérateur orphelin ou parenthèse fermante non consommée → ne filtre pas
+    if tok.upper() in ("AND", "OR", "NOT", ")"):
+        return True, pos
+    # Mot simple → présence dans le texte (insensible à la casse)
+    return (tok.lower() in text), pos + 1
+
+
+def _match_keyword_query(query: str, text: str) -> bool:
+    """Évalue une requête booléenne contre un texte. Retourne True si l'offre correspond."""
+    text = text.lower()
+    tokens = _tokenize_query(query)
+    if not tokens:
+        return True
+    try:
+        result, _ = _parse_or(tokens, 0, text)
+        return result
+    except Exception:
+        return True  # En cas d'erreur de parsing → ne pas filtrer
+
+
+def _keyword_matches(keywords: str, job: "RawJob") -> bool:
+    """Applique le filtre booléen sur le titre + la description d'une offre."""
+    if not keywords or not keywords.strip():
+        return True
+    text = f"{job.title or ''} {job.description or ''}"
+    return _match_keyword_query(keywords, text)
 
 
 @dataclass
@@ -63,6 +148,15 @@ class BaseScraper(ABC):
                 job_types=job_types or [],
             )
             logger.info(f"[{self.source_name}] {len(jobs)} offres récupérées.")
+            # Filtre booléen post-scraping (cohérence sur toutes les sources)
+            if keywords and keywords.strip():
+                before = len(jobs)
+                jobs = [j for j in jobs if _keyword_matches(keywords, j)]
+                if len(jobs) < before:
+                    logger.info(
+                        f"[{self.source_name}] Filtre booléen : {before} → {len(jobs)} offres "
+                        f"(requête : {keywords!r})"
+                    )
             return jobs
         except Exception as exc:
             logger.error(f"[{self.source_name}] Erreur scraping : {exc}")

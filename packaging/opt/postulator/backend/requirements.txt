@@ -33,6 +33,9 @@ python-multipart==0.0.12
 celery>=5.4.1
 redis==5.1.1
 
+# ── Automatisation planifiée ─────────────────────────────────
+apscheduler==3.11.2
+
 # ── Utilitaires ──────────────────────────────────────────────
 python-dotenv==1.0.1
 tenacity==9.0.0

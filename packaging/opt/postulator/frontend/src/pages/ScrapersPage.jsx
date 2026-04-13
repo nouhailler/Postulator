@@ -87,16 +87,7 @@ const STATUS_META = {
   error:   { color: 'var(--error)',   label: 'Erreur' },
 }
 
-const DEFAULT_PROXIES = `31.59.20.176:6754:nbnzyhqa:xmqbrwxlh5ov
-23.95.150.145:6114:nbnzyhqa:xmqbrwxlh5ov
-198.23.239.134:6540:nbnzyhqa:xmqbrwxlh5ov
-45.38.107.97:6014:nbnzyhqa:xmqbrwxlh5ov
-107.172.163.27:6543:nbnzyhqa:xmqbrwxlh5ov
-198.105.121.200:6462:nbnzyhqa:xmqbrwxlh5ov
-216.10.27.159:6837:nbnzyhqa:xmqbrwxlh5ov
-142.111.67.146:5611:nbnzyhqa:xmqbrwxlh5ov
-191.96.254.138:6185:nbnzyhqa:xmqbrwxlh5ov
-31.58.9.4:6077:nbnzyhqa:xmqbrwxlh5ov`
+const DEFAULT_PROXIES = ``
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

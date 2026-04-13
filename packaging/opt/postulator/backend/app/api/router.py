@@ -2,6 +2,7 @@
 from fastapi import APIRouter
 from app.api.routes.alerts             import router as alerts_router
 from app.api.routes.analysis           import router as analysis_router
+from app.api.routes.automation         import router as automation_router
 from app.api.routes.cv_matching        import router as cv_matching_router
 from app.api.routes.cv_store           import router as cv_store_router
 from app.api.routes.cvs                import router as cvs_router
@@ -26,3 +27,4 @@ api_router.include_router(cv_store_router)
 api_router.include_router(cv_matching_router)
 api_router.include_router(alerts_router)
 api_router.include_router(esco_router)
+api_router.include_router(automation_router)

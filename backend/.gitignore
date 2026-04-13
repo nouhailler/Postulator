@@ -8,3 +8,4 @@ postulator.db
 uploads/
 logs/
 celerybeat-schedule
+automation_config.json

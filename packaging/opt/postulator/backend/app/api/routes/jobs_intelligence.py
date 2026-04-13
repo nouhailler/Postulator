@@ -3,7 +3,8 @@ app/api/routes/jobs_intelligence.py
 Chat IA sur une offre — Offres Intelligence.
 
 Routes :
-  POST /api/jobs-intelligence/chat   → pose une question à Ollama sur une offre
+  POST /api/jobs-intelligence/chat              → pose une question à Ollama sur une offre
+  GET  /api/jobs-intelligence/questions/{job_id} → historique Q&A d'une offre
 
 Stratégie pour les offres sans description en BDD :
   Si job.description est vide, on tente de récupérer le contenu de l'URL de l'offre
@@ -12,9 +13,11 @@ Stratégie pour les offres sans description en BDD :
 """
 import re
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from sqlalchemy import select
 
 from app.api.deps import AppSettings, DBSession
 
@@ -44,6 +47,19 @@ class ChatResponse(BaseModel):
     desc_length:   int   # nb de caractères transmis à Ollama
 
 
+class QuestionRecord(BaseModel):
+    id:          int
+    question:    str
+    answer:      str
+    model:       Optional[str]
+    desc_source: Optional[str]
+    duration_ms: Optional[int]
+    asked_at:    datetime
+
+    class Config:
+        from_attributes = True
+
+
 # ── Helpers d'extraction de texte ────────────────────────────────────────────
 
 def _clean_html(html: str) -> str:
@@ -51,13 +67,11 @@ def _clean_html(html: str) -> str:
     try:
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(html, "html.parser")
-        # Supprimer les éléments inutiles
         for tag in soup(["script", "style", "nav", "header", "footer",
                           "noscript", "meta", "link", "img", "svg"]):
             tag.decompose()
         text = soup.get_text(separator="\n")
     except ImportError:
-        # Fallback regex si bs4 non installé
         text = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)
         text = re.sub(r'<style[^>]*>.*?</style>',  '', text,  flags=re.DOTALL)
         text = re.sub(r'<[^>]+>', ' ', text)
@@ -67,19 +81,15 @@ def _clean_html(html: str) -> str:
         text = re.sub(r'&nbsp;', ' ',  text)
         text = re.sub(r'&#\d+;', ' ',  text)
 
-    # Nettoyer les espaces/lignes vides multiples
     lines = [l.strip() for l in text.splitlines()]
-    lines = [l for l in lines if len(l) > 2]          # ignorer lignes trop courtes
+    lines = [l for l in lines if len(l) > 2]
     text  = "\n".join(lines)
     text  = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
 
 async def _fetch_job_page(url: str) -> Optional[str]:
-    """
-    Récupère le contenu textuel d'une page d'offre d'emploi.
-    Retourne le texte nettoyé ou None si échec.
-    """
+    """Récupère le contenu textuel d'une page d'offre d'emploi."""
     import httpx
     try:
         async with httpx.AsyncClient(
@@ -112,12 +122,27 @@ def _strip_db_description(desc: str) -> str:
     return text.strip()
 
 
-# ── Endpoint principal ────────────────────────────────────────────────────────
+# ── GET historique Q&A ────────────────────────────────────────────────────────
+
+@router.get("/questions/{job_id}", response_model=List[QuestionRecord])
+async def get_job_questions(job_id: int, db: DBSession) -> list:
+    """Retourne les questions/réponses déjà posées pour une offre, ordre chronologique."""
+    from app.models.job_question import JobQuestion
+    result = await db.execute(
+        select(JobQuestion)
+        .where(JobQuestion.job_id == job_id)
+        .order_by(JobQuestion.asked_at.asc())
+    )
+    return result.scalars().all()
+
+
+# ── POST chat ─────────────────────────────────────────────────────────────────
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat_about_job(payload: ChatRequest, db: DBSession, settings: AppSettings) -> ChatResponse:
     """
     Répond à une question sur une offre d'emploi via Ollama.
+    Sauvegarde la question et la réponse en BDD.
 
     Stratégie pour la description :
     1. Utiliser job.description de la BDD si disponible (nettoyé du HTML)
@@ -126,6 +151,7 @@ async def chat_about_job(payload: ChatRequest, db: DBSession, settings: AppSetti
     """
     import time
     from app.models.job import Job
+    from app.models.job_question import JobQuestion
 
     job = await db.get(Job, payload.job_id)
     if not job:
@@ -140,12 +166,10 @@ async def chat_about_job(payload: ChatRequest, db: DBSession, settings: AppSetti
     desc_source  = "none"
     description  = ""
 
-    # Tentative 1 : description en BDD
     if job.description and len(job.description.strip()) > 50:
         description = _strip_db_description(job.description)[:MAX_CONTEXT]
         desc_source = "database"
 
-    # Tentative 2 : fetch de l'URL si pas de description en BDD
     if not description and job.url and job.url.startswith("http"):
         fetched = await _fetch_job_page(job.url)
         if fetched and len(fetched) > 100:
@@ -205,6 +229,19 @@ Question : {payload.question}"""
         duration_ms = int((time.monotonic() - t0) * 1000)
 
         answer = response["message"]["content"].strip()
+
+        # ── 4. Sauvegarder en BDD ─────────────────────────────────────────────
+        record = JobQuestion(
+            job_id=payload.job_id,
+            question=payload.question.strip(),
+            answer=answer,
+            model=model,
+            desc_source=desc_source,
+            duration_ms=duration_ms,
+        )
+        db.add(record)
+        await db.flush()
+
         return ChatResponse(
             answer=answer,
             duration_ms=duration_ms,

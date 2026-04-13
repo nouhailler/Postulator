@@ -51,7 +51,7 @@ class Settings(BaseSettings):
             return []
         return [p.strip() for p in self.proxy_list.split(",") if p.strip()]
 
-    # ── Email / Alertes ───────────────────────────────────────────────────────
+    # ── Email / Alertes ───────────────────────────────────────────────────
     smtp_host:     str = ""
     smtp_port:     int = 587
     smtp_user:     str = ""
@@ -63,6 +63,23 @@ class Settings(BaseSettings):
     def email_configured(self) -> bool:
         """True si la configuration SMTP est complète."""
         return bool(self.smtp_host and self.smtp_user and self.alert_email_to)
+
+    # ── Cloud AI ──────────────────────────────────────────────────────
+    anthropic_api_key: str = ""
+    openai_api_key:    str = ""
+    mistral_api_key:   str = ""
+
+    @property
+    def cloud_ai_provider(self) -> str | None:
+        """Retourne le provider Cloud disponible ('anthropic' | 'openai' | 'mistral' | None).
+        Priorité : Anthropic > OpenAI > Mistral."""
+        if self.anthropic_api_key:
+            return "anthropic"
+        if self.openai_api_key:
+            return "openai"
+        if self.mistral_api_key:
+            return "mistral"
+        return None
 
 
 @lru_cache

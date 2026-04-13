@@ -29,6 +29,20 @@ export function generateATSCV(sourceCvId, jobId, language = 'fr', model = null) 
   })
 }
 
+/** POST /api/cv-matching/generate-ats-cloud — génère CV ATS via Claude ou OpenAI (NON sauvegardé) */
+export function generateATSCloudCV(sourceCvId, jobId, language = 'fr') {
+  return api.postAI('/cv-matching/generate-ats-cloud', {
+    source_cv_id: sourceCvId,
+    job_id:       jobId,
+    language,
+  })
+}
+
+/** GET /api/cv-matching/cloud-status — vérifie si un provider Cloud est configuré */
+export function fetchCloudStatus() {
+  return api.get('/cv-matching/cloud-status')
+}
+
 /**
  * POST /api/cv-matching/save-ats
  * Sauvegarde en base un résultat ATS déjà calculé (aucun appel Ollama supplémentaire).

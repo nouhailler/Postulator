@@ -54,8 +54,12 @@ class JobTeaserScraper(BaseScraper):
         proxy_url = getattr(self, "proxy", None)
         proxies   = {"http://": proxy_url, "https://": proxy_url} if proxy_url else None
 
-        # RemoteOK supporte un seul tag à la fois ; prendre le premier mot-clé
-        tag = keywords.split()[0] if keywords else "dev"
+        # RemoteOK supporte un seul tag à la fois.
+        # On extrait le premier mot significatif (hors opérateurs AND/OR/NOT et parenthèses).
+        # Le filtre booléen complet est appliqué côté Postulator après récupération.
+        import re as _re
+        tag_match = _re.search(r'\b(?!AND\b|OR\b|NOT\b)\w+', keywords or "", _re.IGNORECASE)
+        tag = tag_match.group(0) if tag_match else (keywords.split()[0] if keywords else "dev")
 
         try:
             with httpx.Client(

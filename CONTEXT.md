@@ -409,8 +409,12 @@ pip install apscheduler --break-system-packages
 **Opérateurs mots-clés supportés** :
 - `AND` : les deux termes obligatoires — `Python AND senior`
 - `OR` : l'un ou l'autre — `DevOps OR SRE`
-- `( )` : groupement prioritaire — `(Python OR Java) AND senior`
-- Ordre d'évaluation : parenthèses > AND > OR
+- `NOT` : exclure un terme — `Python NOT junior`
+- `" "` : phrase exacte — `"machine learning" AND Python`
+- `( )` : groupement prioritaire — `(Python OR Java) AND NOT stage`
+- Ordre d'évaluation : parenthèses > NOT > AND > OR
+- **Filtre post-scraping** (v1.5.2) : Postulator évalue lui-même la requête booléenne sur title+description après chaque scraping → cohérence garantie sur toutes les sources, y compris celles qui ignorent les opérateurs (RemoteOK, jobs.ch, jobup.ch)
+- RemoteOK : envoie le premier mot significatif comme tag, le filtre Postulator s'occupe du reste
 
 **Endpoints** :
 ```

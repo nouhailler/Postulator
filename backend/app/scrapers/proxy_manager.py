@@ -6,7 +6,7 @@ Deux classes :
 - ProxyManager      : proxies statiques configurés dans .env (format HTTP URL)
 - ResidentialProxyManager : proxies résidentiels saisis dynamiquement en UI
   Format attendu par ligne : IP:PORT:USERNAME:PASSWORD
-  ex: 31.59.20.176:6754:nbnzyhqa:xmqbrwxlh5ov
+  ex: 203.0.113.1:6754:username:password
 """
 import random
 import threading
@@ -70,7 +70,7 @@ class ResidentialProxyManager:
 
     Format d'entrée (une ligne par proxy) :
         IP:PORT:USERNAME:PASSWORD
-        ex: 31.59.20.176:6754:nbnzyhqa:xmqbrwxlh5ov
+        ex: 203.0.113.1:6754:username:password
 
     Construit automatiquement les URLs HTTP authentifiées :
         http://USERNAME:PASSWORD@IP:PORT

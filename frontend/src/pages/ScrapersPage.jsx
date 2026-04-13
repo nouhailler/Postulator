@@ -87,16 +87,7 @@ const STATUS_META = {
   error:   { color: 'var(--error)',   label: 'Erreur' },
 }
 
-const DEFAULT_PROXIES = `31.59.20.176:6754:nbnzyhqa:xmqbrwxlh5ov
-23.95.150.145:6114:nbnzyhqa:xmqbrwxlh5ov
-198.23.239.134:6540:nbnzyhqa:xmqbrwxlh5ov
-45.38.107.97:6014:nbnzyhqa:xmqbrwxlh5ov
-107.172.163.27:6543:nbnzyhqa:xmqbrwxlh5ov
-198.105.121.200:6462:nbnzyhqa:xmqbrwxlh5ov
-216.10.27.159:6837:nbnzyhqa:xmqbrwxlh5ov
-142.111.67.146:5611:nbnzyhqa:xmqbrwxlh5ov
-191.96.254.138:6185:nbnzyhqa:xmqbrwxlh5ov
-31.58.9.4:6077:nbnzyhqa:xmqbrwxlh5ov`
+const DEFAULT_PROXIES = ``
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -476,6 +467,7 @@ export default function ScrapersPage() {
   // Mode de saisie des mots-clés : 'free' | 'esco'
   const [kwMode,     setKwMode]     = useState('free')
   const [escoItem,   setEscoItem]   = useState(null)  // item ESCO sélectionné
+  const [opsOpen,    setOpsOpen]    = useState(false) // panneau opérateurs booléens
 
   // Proxy
   const [proxyOpen, setProxyOpen] = useState(true)
@@ -604,10 +596,102 @@ export default function ScrapersPage() {
           </div>
 
           {kwMode === 'free' ? (
-            <input className={styles.input} type="text"
-              placeholder="Ex : développeur Python senior, supply chain manager…"
-              value={keywords} onChange={e => setKeywords(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && canLaunchProxy && handleLaunchWithProxies()} />
+            <>
+              <input className={styles.input} type="text"
+                placeholder="Ex : développeur Python senior, supply chain manager…"
+                value={keywords} onChange={e => setKeywords(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && canLaunchProxy && handleLaunchWithProxies()} />
+              {/* Panneau opérateurs booléens collapsible */}
+              <button className={styles.opsToggle} onClick={() => setOpsOpen(o => !o)} type="button">
+                <Info size={10} strokeWidth={2} />
+                Opérateurs booléens disponibles
+                {opsOpen
+                  ? <ChevronUp  size={10} strokeWidth={2} style={{ marginLeft: 'auto' }} />
+                  : <ChevronDown size={10} strokeWidth={2} style={{ marginLeft: 'auto' }} />
+                }
+              </button>
+              {opsOpen && (
+                <div className={styles.opsPanel}>
+                  {/* Opérateurs */}
+                  <div className={styles.opsGrid}>
+                    <div className={styles.opsRow}><code>AND</code><span>Les deux termes obligatoires · <em>Python AND senior</em></span></div>
+                    <div className={styles.opsRow}><code>OR</code><span>L'un ou l'autre · <em>DevOps OR SRE</em></span></div>
+                    <div className={styles.opsRow}><code>NOT</code><span>Exclure un terme · <em>Python NOT junior</em></span></div>
+                    <div className={styles.opsRow}><code>" "</code><span>Phrase exacte · <em>"data engineer"</em></span></div>
+                    <div className={styles.opsRow}><code>( )</code><span>Groupement · <em>(Python OR Java) AND NOT stage</em></span></div>
+                  </div>
+                  {/* Tableau compatibilité */}
+                  <div className={styles.opsCompatTable}>
+                    <div className={styles.opsCompatHeader}>
+                      <span>Source</span>
+                      <span>AND / OR</span>
+                      <span>NOT</span>
+                      <span>" "</span>
+                      <span>( )</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Indeed</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>LinkedIn</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Glassdoor</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>ZipRecruiter</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsNone}>✗</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Adzuna</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Jobs.ch</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNone}>✗</span>
+                      <span className={styles.opsNone}>✗</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Jobup.ch</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNone}>✗</span>
+                      <span className={styles.opsNone}>✗</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>RemoteOK</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                    </div>
+                  </div>
+                  <p className={styles.opsNote}>
+                    <strong>✓ natif</strong> = traité par la plateforme · <strong>⚠ partiel</strong> = traité approximativement · <strong>↓ Postulator</strong> = filtré sur les résultats reçus · <strong>✗</strong> = non supporté (Postulator filtre à la place)
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <ESCOField
