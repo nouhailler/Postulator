@@ -1,5 +1,5 @@
 Package: postulator
-Version: 1.5.1
+Version: 1.5.3
 Architecture: all
 Maintainer: Patrick Nouhailler <patrick@nouhailler.fr>
 Installed-Size: 1348
@@ -15,15 +15,12 @@ Description: Agregateur de recherche d'emploi open source avec IA locale
  correspondance avec votre CV via Ollama (IA 100% locale) et genere des
  CVs adaptes a chaque offre — sans envoyer de donnees dans le cloud.
  .
- Fonctionnalites v1.5.1 :
-  - Automatisation quotidienne : recherche planifiee Indeed+LinkedIn (APScheduler)
-  - Scoring IA automatique, operateurs AND/OR/parentheses, proxies sauvegardes
-  - Rapport de resultats, annulation mid-run, reprise auto au demarrage
-  - CV ATS Cloud : support Mistral AI (mistral-small-latest) comme 3eme provider
-  - Cloud AI : Anthropic Claude, OpenAI GPT, Mistral AI dans backend/.env
-  - Page Parametres : section Cloud AI avec statut provider actif
-  - Robustesse parsing JSON providers Cloud (backticks, body vide HTTP)
-  - Offres Intelligence : chat IA sur vos offres, fetch URL auto, 20 questions
-  - 8 sources de scraping dont 4 suisses (Jobup, Jobs.ch, JobTeaser, Adzuna)
-  - CV ATS avec scoring et analyse mots-cles manquants
-  - Scoring CV <-> offre (0-100) et score en masse via Ollama local
+ Fonctionnalites v1.5.3 :
+  - Import PDF : extraction par blocs PyMuPDF, suppression des bullets,
+    jonction des lignes fragmentees, ecran de validation avant import
+  - Themes : sombre (defaut) / clair / couleur personnalisee dans Parametres
+  - Scrapers : 7 jours par defaut, mode date precise (depuis une date),
+    toggle "Exclure les stages" (filtre post-scraping)
+  - Offres : suppression en masse par criteres (score, date, source)
+    avec simulation avant suppression
+  - Operateurs booleens AND/OR/NOT/parentheses/guillemets sur 8 sources
