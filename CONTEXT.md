@@ -1,5 +1,5 @@
 # CONTEXT.md – Postulator
-> Dernière mise à jour : session du 11 avril 2026 — **v1.5.1**
+> Dernière mise à jour : session du 21 avril 2026 — **v1.5.3**
 > À lire **en début de chaque session Claude** pour reprendre sans perte de temps.
 
 ---
@@ -12,7 +12,7 @@
 - Logo : carré dégradé teal/bleu avec "P" — "Postulator · Job Intelligence Platform"
 - Chemin : `/home/patrick/Documents/Claude/Projects/Postulator/`
 - Repo : `https://github.com/nouhailler/postulator`
-- Version courante : **1.5.1**
+- Version courante : **1.5.3**
 
 ---
 
@@ -73,28 +73,41 @@ app/
 │   ├── match_history.py · user_profile.py · search_profiles.py
 ├── api/routes/
 │   ├── jobs.py                ← GET filtres: q, source, status, location (ILIKE), is_remote, min_score
-│   │                            DELETE purge (keep_recent + keep_selected)
+│   │                            DELETE /api/jobs (keep_recent + keep_selected)
+│   │                            DELETE /api/jobs/by-criteria (max_score, before_date, source, dry_run) ← v1.5.3
+│   ├── cvs.py                 ← POST /api/cvs/preview-pdf (extraction sans sauvegarde) ← v1.5.3
 │   ├── jobs_intelligence.py   ← POST /chat + GET /questions/{job_id} — sauvegarde Q&A en BDD
 │   ├── scrapers.py            ← run + run-with-proxies + logs/{id} (détail proxy)
+│   │                            payload + exclude_internships ← v1.5.3
 │   ├── analysis.py            ← score-sync + summarize-jobs + score-batch + score-batch/status
 │   ├── automation.py          ← config JSON + APScheduler + scraping→scoring auto (v1.5.1)
-│   ├── cv_store.py · cv_matching.py · cvs.py · history.py · alerts.py · esco.py
+│   ├── cv_store.py · cv_matching.py · history.py · alerts.py · esco.py
+├── schemas/
+│   └── scraper.py             ← ScrapeRequest + exclude_internships: bool = False ← v1.5.3
 ├── scrapers/
+│   ├── base.py                ← _match_keyword_query (AND/OR/NOT/""/()) + _is_internship() ← v1.5.3
+│   │                            BaseScraper.run() + exclude_internships param
 │   ├── jobspy_scraper.py      ← INDEED_COUNTRY_MAP (24 pays), company_url, country_indeed
 │   ├── adzuna_scraper.py      ← API officielle (ADZUNA_APP_ID/KEY)
 │   ├── jobup_scraper.py       ← HTML SSR BeautifulSoup (jobup.ch)
 │   ├── jobsch_scraper.py      ← API JSON jobs.ch/api/v1/public/search
 │   └── jobteaser_scraper.py   ← RemoteOK (JobTeaser inaccessible publiquement)
 ├── services/
-│   ├── scraper_service.py · ollama_service.py · email_service.py
+│   ├── cv_service.py          ← _clean_pdf_block(), _extract_pdf() → (text, warnings) ← v1.5.3
+│   │                            PyMuPDF blocs, suppression bullets, jonction lignes fragmentées
+│   │                            4 types d'avertissements (isolés, courts, garbled, trop court)
+│   ├── scraper_service.py     ← run_search() + exclude_internships ← v1.5.3
+│   ├── ollama_service.py · email_service.py
 └── workers/
-    └── celery_app.py · scrape_task.py
+    └── celery_app.py · scrape_task.py  ← run_scrape + exclude_internships ← v1.5.3
 ```
 
 ### Frontend
 ```
 src/
-├── App.jsx                    ← 11 routes (+ /automation)
+├── App.jsx                    ← 11 routes + init thème depuis localStorage au démarrage ← v1.5.3
+├── styles/
+│   └── design-system.css      ← :root (dark) + [data-theme="light"] complet ← v1.5.3
 ├── contexts/
 │   └── OllamaStatusContext.jsx ← Context global statut Ollama (v1.4.0)
 ├── data/
@@ -102,10 +115,10 @@ src/
 │   └── esco_dictionary.json   ← 265 métiers + 212 compétences (offline)
 ├── api/
 │   ├── client.js              ← postAI timeout 10min + support signal AbortController externe
-│   ├── automation.js          ← fetchConfig/saveConfig/deleteConfig/status/runNow/cancel (v1.5.1)
-│   ├── jobsIntelligence.js    ← fetchJobQuestions(jobId) (v1.4.0)
-│   ├── jobs.js · history.js · alerts.js · analysis.js · scrapers.js
-│   ├── cvs.js · cvStore.js · cvMatching.js · profile.js
+│   ├── cvs.js                 ← +previewCVPdf(file) → POST /api/cvs/preview-pdf ← v1.5.3
+│   ├── jobs.js                ← +purgeJobsByCriteria({maxScore, beforeDate, source, dryRun}) ← v1.5.3
+│   ├── automation.js · jobsIntelligence.js · history.js · alerts.js
+│   ├── analysis.js · scrapers.js · cvStore.js · cvMatching.js · profile.js
 ├── components/
 │   ├── layout/
 │   │   ├── SideBar.jsx        ← 11 items nav dont Automatisation (Zap) (v1.5.1)
@@ -121,10 +134,13 @@ src/
     ├── AutomationPage         ← config quotidienne, opérateurs AND/OR, proxies, rapport run (v1.5.1)
     ├── JobsPage               ← filtres: texte, source, lieu (ILIKE), statut, score, remote
     │                            score en masse, icône ✨ si ai_summary, pagination
+    │                            ResetModal 2 onglets : "Garder N récentes" / "Supprimer par critères" ← v1.5.3
     ├── JobsIntelligencePage   ← combobox offres, chat Ollama, historique Q&A accordion (v1.4.0)
-    │                            fetch URL si pas de desc BDD, badge desc_source, minuterie, Annuler
     ├── ScrapersPage           ← 8 sources groupées, 24 pays, toggle Résumé IA, proxies
-    ├── AnalysisPage · CVMatchingPage · HistoryPage · SettingsPage
+    │                            défaut 7 jours, mode date précise, toggle Exclure les stages ← v1.5.3
+    ├── AnalysisPage           ← modal preview PDF avant import (avertissements + aperçu texte) ← v1.5.3
+    ├── SettingsPage           ← +section Apparence : Dark/Light/Custom + color picker ← v1.5.3
+    ├── CVMatchingPage · HistoryPage
 ```
 
 ---
@@ -160,10 +176,13 @@ python scripts/migrate_add_job_questions.py   # v1.4.0 — à lancer une fois
 |-------|-------------|
 | GET `/api/jobs` | Filtres: q, source, status, **location** (ILIKE), is_remote, min_score, sort_by, sort_order |
 | DELETE `/api/jobs` | Purge (keep_recent + keep_selected) |
+| DELETE `/api/jobs/by-criteria` | Suppression par critères : max_score, before_date, source, dry_run ← v1.5.3 |
+| POST `/api/cvs/upload` | Upload + parsing CV |
+| POST `/api/cvs/preview-pdf` | Extraction texte PDF sans sauvegarde → {text, warnings, char_count, line_count} ← v1.5.3 |
 | POST `/api/jobs-intelligence/chat` | Chat Ollama sur une offre — cascade BDD→fetch URL→titre |
 | GET `/api/jobs-intelligence/questions/{job_id}` | Historique Q&A sauvegardées pour une offre (v1.4.0) |
-| POST `/api/scrapers/run` | Scraping Celery async |
-| POST `/api/scrapers/run-with-proxies` | Scraping avec proxies résidentiels |
+| POST `/api/scrapers/run` | Scraping Celery async (+exclude_internships) ← v1.5.3 |
+| POST `/api/scrapers/run-with-proxies` | Scraping avec proxies résidentiels (+exclude_internships) ← v1.5.3 |
 | GET `/api/scrapers/logs/{id}` | Détail log (proxy IP, proxies tentés…) |
 | POST `/api/analysis/score-sync` | Scoring CV↔offre |
 | POST `/api/analysis/summarize-jobs` | Résumé IA bullet points (toggle ScrapersPage) |
@@ -179,7 +198,41 @@ python scripts/migrate_add_job_questions.py   # v1.4.0 — à lancer une fois
 
 ---
 
-## 7. Page Offres Intelligence — fonctionnement
+## 7. Import PDF — CV Intelligence (v1.5.3)
+
+**Service** : `app/services/cv_service.py`
+
+**Extraction** via PyMuPDF (`fitz`) en mode blocs :
+```python
+blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, block_no, block_type)
+text_blocks.sort(key=lambda b: (round(b[1] / 12) * 12, b[0]))  # lecture naturelle
+```
+
+**Nettoyage** par `_clean_pdf_block(block_raw)` :
+1. Supprime les puces/bullets en début de ligne (`•▪○◆‣→►▸·◦–—▶✓✗✘` et `- `, `* `, `+ `)
+2. Joint les lignes fragmentées : si la ligne ne finit pas par `.!?:;` **et** que la suivante commence par une minuscule → continuation de phrase
+3. Gère les tirets de coupure de mot (`-` en fin de ligne → coller sans espace)
+
+**Avertissements détectés** (4 types) :
+1. > 3 caractères isolés (puces résiduelles)
+2. > 5 lignes très courtes (< 5 chars)
+3. Taux de caractères inhabituels > 0.5%
+4. Texte total < 200 caractères
+
+**Endpoint preview** : `POST /api/cvs/preview-pdf`
+- Reçoit `file: UploadFile`
+- Écrit dans un fichier temporaire (tempfile), extrait, supprime
+- Retourne `{text, warnings, char_count, line_count}` sans sauvegarder en BDD
+
+**Flow frontend** (`AnalysisPage.jsx`) :
+1. Fichier PDF sélectionné → `previewCVPdf(file)` appelé
+2. Si `warnings.length > 0` → modal de validation (texte extrait 2000 chars + liste warnings + Confirmer/Annuler)
+3. Si aucun avertissement → upload direct sans modal
+4. Fichiers non-PDF → upload direct (comportement inchangé)
+
+---
+
+## 8. Page Offres Intelligence — fonctionnement
 
 **Route** : `/jobs-intelligence` | **Composant** : `JobsIntelligencePage.jsx`
 
@@ -203,26 +256,18 @@ python scripts/migrate_add_job_questions.py   # v1.4.0 — à lancer une fois
 
 **Chat** :
 - Bulles user/assistant, rendu Markdown
-- Badge 🔗 "Contenu récupéré depuis le site" si `desc_source=fetched`
-- Badge ⚠️ si `desc_source=none`
-- Minuterie temps réel (0s, 1s, 2s…) pendant réflexion Ollama
-- Bouton "Annuler" → `AbortController` connecté au signal externe du `api.client.js`
-- 20 questions suggérées en 4 catégories (compétences, responsabilités, entreprise, candidature)
-- **Sauvegarde Q&A en BDD** (v1.4.0) : chaque question/réponse persistée dans `job_questions`
-- **Panneau historique** (v1.4.0) : sous la fiche offre, accordion avec questions déjà posées, clic pour rejouer dans le chat
+- Minuterie temps réel + bouton Annuler → AbortController
+- 20 questions suggérées en 4 catégories
+- Sauvegarde Q&A en BDD (`job_questions`)
+- Panneau historique : accordion avec questions déjà posées (v1.4.0)
 
 ---
 
-## 8. Indicateur Ollama global (v1.4.0)
+## 9. Indicateur Ollama global (v1.4.0)
 
-**Context React** : `src/contexts/OllamaStatusContext.jsx` — `OllamaStatusProvider` wrappé dans `AppLayout`.
+**Context React** : `src/contexts/OllamaStatusContext.jsx`
+**Composant** : `OllamaBanner.jsx` — barre teal fine sticky sous le TopBar
 
-**Composant** : `OllamaBanner.jsx` — barre teal fine sticky sous le TopBar.
-- Affiche : icône ✨ + **nom de la tâche** + points d'animation + compteur de secondes
-- Animation `slideDown` à l'apparition, disparaît instantanément quand Ollama termine
-- Pages instrumentalisées : Offres Intelligence, CV Intelligence (extraction + scoring), CV Matching (standard + ATS)
-
-**Usage dans une page** :
 ```js
 const { setOllamaStatus, clearOllamaStatus } = useOllamaStatus()
 setOllamaStatus('Nom de la tâche')  // avant appel Ollama
@@ -230,49 +275,57 @@ clearOllamaStatus()                  // dans finally
 ```
 
 **Labels utilisés** :
-- `'Offres Intelligence'` — JobsIntelligencePage
-- `'CV Intelligence — Extraction'` — AnalysisPage / handleAnalyze
-- `'CV Intelligence — Scoring'` — AnalysisPage / handleScore
-- `'CV Matching'` — CVMatchingPage / handleGenerate
-- `'CV Matching ATS'` — CVMatchingPage / handleGenerateATS (Ollama local)
-- `'CV Matching ATS Cloud'` — CVMatchingPage / handleGenerateATSCloud (Claude/OpenAI)
+- `'Offres Intelligence'` | `'CV Intelligence — Extraction'` | `'CV Intelligence — Scoring'`
+- `'CV Matching'` | `'CV Matching ATS'` | `'CV Matching ATS Cloud'`
 
 ---
 
-## 9. Page Offres — filtres v1.3.0
+## 10. Page Offres — v1.5.3
 
-Barre de filtres : **texte** · **source** · **lieu** (ILIKE côté backend) · **statut** · **Score min %** · **Remote**
+Barre de filtres : **texte** · **source** · **lieu** (ILIKE) · **statut** · **Score min %** · **Remote**
 
-Filtre lieu : champ texte libre, s'élargit au focus (140px→170px), bouton ✕ pour effacer.
-Exemples : "Zürich", "Switzerland", "Paris".
+**Modal de nettoyage** (2 onglets) :
+- **Onglet "Garder N récentes"** : conserve les N plus récentes parmi les `status='new'`
+- **Onglet "Supprimer par critères"** :
+  - Score IA inférieur à X% (supprime les scorées en dessous du seuil)
+  - Scrapées avant une date (YYYY-MM-DD)
+  - Source spécifique
+  - Bouton **Simuler** (`dry_run=true`) avant suppression effective
+  - Les offres sélectionnées (`status != 'new'`) toujours protégées
 
 Score en masse : modal (sélection CV + nb offres), polling toutes les 4s, résultats dans AlertsDrawer.
 
 ---
 
-## 10. Page Historique — filtres v1.3.0
+## 11. Page Historique — filtres v1.3.0
 
 Barre de filtres : **texte** (client-side: CV/offre/entreprise) · **Du/Au** (date_from/date_to, backend) · **Score min–max %** (backend)
 
 Bouton ✕ "Réinitialiser" visible uniquement si filtre actif.
-Compteur de résultats affiché quand filtres actifs.
-Vide filtré : message "Aucun résultat" + bouton reset (différent de "Aucune analyse").
 
 ---
 
-## 11. Page Paramètres — v1.3.0
+## 12. Page Paramètres — v1.5.3
 
-**Route** : `/settings` — accessible depuis menu latéral (bas) et bouton "Configurer" de l'AlertsDrawer.
+5 sections :
+1. **Alertes email** : statut SMTP, instructions `.env`, bouton "Tester"
+2. **IA (Ollama)** : OLLAMA_BASE_URL + OLLAMA_MODEL, tableau 3 modèles recommandés
+3. **Cloud AI** : Anthropic / OpenAI / Mistral — statut provider actif
+4. **Scrapers & Sources** : liste 8 sources, config Adzuna
+5. **Proxies** : explique que la config est dans l'interface Scrapers
+6. **Apparence** ← v1.5.3 : 3 cartes de thème + color picker
 
-4 sections :
-1. **Alertes email** : statut SMTP actuel (BDD), instructions `.env`, bouton "Tester" (désactivé si SMTP non configuré)
-2. **IA (Ollama)** : OLLAMA_BASE_URL + OLLAMA_MODEL, tableau 3 modèles recommandés pour 16GB VRAM
-3. **Scrapers & Sources** : liste 8 sources, config Adzuna
-4. **Proxies** : explique que la config est dans l'interface Scrapers
+**Thèmes** (`design-system.css` + `App.jsx`) :
+- **Sombre** (défaut) : fond `#0b1326`
+- **Clair** : `[data-theme="light"]` — palette complète inversée (fond `#f0f4ff`, textes sombres)
+- **Personnalisé** : color picker → `--surface` surchargé via `style.setProperty`
+- Persistance : `localStorage.postulator_theme` + `localStorage.postulator_custom_color`
+- Application au démarrage : `App.jsx` `useEffect` lit localStorage et appelle `applyTheme()`
+- `applyTheme()` dupliquée dans `SettingsPage.jsx` (changement en temps réel) et `App.jsx` (init)
 
 ---
 
-## 12. Scrapers suisses
+## 13. Scrapers — v1.5.3
 
 | Source | Méthode | État |
 |--------|---------|------|
@@ -281,9 +334,22 @@ Vide filtré : message "Aucun résultat" + bouton reset (différent de "Aucune a
 | **jobteaser** | RemoteOK (JobTeaser inaccessible) | ✅ Offres remote |
 | **Adzuna** | API officielle (ne supporte pas CH) | ✅ Int'l seulement |
 
+**Paramètres ScrapersPage** :
+- **Durée** : défaut **7 jours** (était 5)
+- **Mode date** : toggle "Nb de jours" ↔ "Date précise" — la date est convertie en `hours_old` côté frontend
+- **Exclure les stages** : filtre post-scraping via `_is_internship(job)` dans `BaseScraper.run()`
+  - Détecte via `job.job_type` (`internship`, `stage`, `intern`)
+  - Détecte via mots-clés dans le titre : `intern`, `internship`, `stage`, `stagiaire`, `apprenti`, `apprentice`, `trainee`, `werkstudent`, `praktikant`, `praktikum`
+  - Paramètre `exclude_internships: bool` propagé : `ScrapeRequest` → route → task Celery → `ScraperService._run()` → `BaseScraper.run()`
+
+**Opérateurs booléens** (moteur post-scraping `base.py`) :
+- `AND` · `OR` · `NOT` · `" "` (phrase exacte) · `( )` (groupement)
+- Évaluation : parenthèses > NOT > AND > OR
+- Appliqué sur `title + description` après chaque `_fetch()` pour cohérence sur toutes les sources
+
 ---
 
-## 13. CV Matching & ATS
+## 14. CV Matching & ATS
 
 **Standard** : prompt 3 étapes (analyse → décision → génération), `temperature:0.25`, `num_predict:2500`
 **ATS** : prompt renforcé (keyword mirroring, reformulation obligatoire), `num_predict:4000`
@@ -292,7 +358,7 @@ Vide filtré : message "Aucun résultat" + bouton reset (différent de "Aucune a
 
 ---
 
-## 14. Alertes email
+## 15. Alertes email
 
 ```ini
 SMTP_HOST=smtp.gmail.com | SMTP_PORT=587 | SMTP_USER | SMTP_PASSWORD | ALERT_EMAIL_TO | ALERT_SCORE_THRESHOLD=80
@@ -302,7 +368,7 @@ SMTP_HOST=smtp.gmail.com | SMTP_PORT=587 | SMTP_USER | SMTP_PASSWORD | ALERT_EMA
 
 ---
 
-## 15. Variables d'environnement
+## 16. Variables d'environnement
 
 ```ini
 OLLAMA_MODEL=phi4-mini          # ou phi3.5:3.8b, qwen2.5:14b, deepseek-r1:32b
@@ -321,7 +387,7 @@ MISTRAL_API_KEY=      # modèle français (mistral-small-latest)
 
 ---
 
-## 16. Bugs connus / règles importantes
+## 17. Bugs connus / règles importantes
 
 1. **Celery** : doit être redémarré après toute modification d'un scraper
 2. `is_remote=None` → jobspy crash : toujours `bool(remote_only)`
@@ -331,11 +397,12 @@ MISTRAL_API_KEY=      # modèle français (mistral-small-latest)
 6. CVs menu CV (`stored_cvs`) ≠ CVs CV Intelligence (`cvs`) — bridge via `import-from-store/{id}`
 7. `handleSelect` historique CVMatching → appelle `fetchGeneratedOne(id)` (pas le summary)
 8. Tri offres inter-pages : toujours `sort_by=scraped_at&sort_order=desc&limit=200`
-9. `OllamaStatusProvider` est dans `AppLayout` — toute page utilisant `useOllamaStatus` doit être enfant de ce layout (c'est le cas de toutes les routes)
+9. `OllamaStatusProvider` est dans `AppLayout` — toute page utilisant `useOllamaStatus` doit être enfant de ce layout
+10. **PDF PyMuPDF** : `_extract_pdf()` retourne un `tuple[str, list[str]]` (texte, avertissements) — ne pas oublier le dépacking dans `parse()`
 
 ---
 
-## 17. Backlog
+## 18. Backlog
 
 ### Priorité haute
 - `sudo apt install pandoc` (export DOCX réel)
@@ -349,15 +416,15 @@ MISTRAL_API_KEY=      # modèle français (mistral-small-latest)
 - Sauvegarder en BDD la description fetchée (Offres Intelligence) pour éviter re-fetch
 - Instrumenter `ScrapersPage` avec `useOllamaStatus` pour le résumé IA Celery (affichage différé via polling)
 - Automatisation : notification email après chaque run (résultat du rapport par email)
+- Automatisation : étendre aux 8 sources (actuellement Indeed + LinkedIn uniquement)
 
 ### Priorité basse
-- Packaging `.deb` v1.5.x
 - Export JSON Resume (format ATS)
 - Automatisation : historique des runs (logs persistants en BDD)
 
 ---
 
-## 18. Automatisation (v1.5.1)
+## 19. Automatisation (v1.5.1)
 
 **Route** : `/automation` | **Composant** : `AutomationPage.jsx`  
 **Backend** : `app/api/routes/automation.py` | **Config** : `automation_config.json` (racine backend)
@@ -398,12 +465,6 @@ MISTRAL_API_KEY=      # modèle français (mistral-small-latest)
 **Dépendance à installer** :
 ```bash
 pip install apscheduler --break-system-packages
-```
-
-**Vérification logs uvicorn au démarrage** :
-```
-[Automation] Reprise planification : 'DevOps AND senior' à 08:00 Europe/Paris
-[Automation] Job planifié tous les jours à 08:00
 ```
 
 **Opérateurs mots-clés supportés** :
