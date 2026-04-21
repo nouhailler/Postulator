@@ -6,7 +6,7 @@ import {
   Brain, Trash2, AlertTriangle, Globe, Sparkles, Loader, X, CheckCheck,
 } from 'lucide-react'
 import { useAsync }    from '../hooks/useAsync.js'
-import { fetchJobs, fetchJob, updateJobStatus, deleteJob, purgeJobs } from '../api/jobs.js'
+import { fetchJobs, fetchJob, updateJobStatus, deleteJob, purgeJobs, purgeJobsByCriteria } from '../api/jobs.js'
 import { fetchCVs }   from '../api/cvs.js'
 import { scoreBatch, getScoreBatchStatus } from '../api/analysis.js'
 import { mockJobs }    from '../data/mockData.js'
@@ -214,37 +214,145 @@ function ScoreBatchModal({ cvs, onConfirm, onCancel, loading }) {
 
 // ── Modal Réinitialiser ───────────────────────────────────────────────────────
 
-function ResetModal({ onConfirm, onCancel, loading }) {
+const SOURCES_FILTER = ['', 'indeed', 'linkedin', 'glassdoor', 'ziprecruiter', 'jobup', 'jobsch', 'jobteaser', 'adzuna']
+
+function ResetModal({ onConfirm, onConfirmCriteria, onCancel, loading }) {
+  const [tab,        setTab]        = useState('recent')   // 'recent' | 'criteria'
   const [keepRecent, setKeepRecent] = useState(20)
+
+  // Critères
+  const [maxScore,   setMaxScore]   = useState('')
+  const [beforeDate, setBeforeDate] = useState('')
+  const [srcFilter,  setSrcFilter]  = useState('')
+  const [preview,    setPreview]    = useState(null)   // { would_delete }
+  const [previewing, setPreviewing] = useState(false)
+
+  const hasAnyCriteria = maxScore !== '' || beforeDate !== '' || srcFilter !== ''
+
+  const handlePreview = async () => {
+    setPreviewing(true); setPreview(null)
+    try {
+      const r = await purgeJobsByCriteria({
+        maxScore:   maxScore   !== '' ? parseFloat(maxScore)   : null,
+        beforeDate: beforeDate !== '' ? beforeDate              : null,
+        source:     srcFilter  !== '' ? srcFilter               : null,
+        keepSelected: true, dryRun: true,
+      })
+      setPreview(r)
+    } catch { setPreview(null) }
+    finally { setPreviewing(false) }
+  }
+
+  const handleCriteriaConfirm = () => {
+    onConfirmCriteria({
+      maxScore:   maxScore   !== '' ? parseFloat(maxScore)   : null,
+      beforeDate: beforeDate !== '' ? beforeDate              : null,
+      source:     srcFilter  !== '' ? srcFilter               : null,
+    })
+  }
+
   return (
     <div className={styles.modalOverlay}>
-      <div className={styles.modal}>
+      <div className={styles.modal} style={{ maxWidth: 520 }}>
         <div className={styles.modalIcon}>
           <AlertTriangle size={24} strokeWidth={2} style={{ color: 'var(--error)' }} />
         </div>
-        <h3 className={styles.modalTitle}>Réinitialiser les offres</h3>
-        <p className={styles.modalText}>
-          Cette action va supprimer les offres en base.
-          Les offres que vous avez sélectionnées (statut ≠ "À voir") seront toujours conservées.
-        </p>
-        <div className={styles.modalField}>
-          <label className={styles.modalLabel}>
-            Garder les{' '}
-            <input
-              type="number" min={0} max={200}
-              value={keepRecent}
-              onChange={e => setKeepRecent(Math.max(0, parseInt(e.target.value) || 0))}
-              className={styles.modalInput}
-            />
-            {' '}offres les plus récentes (0 = tout supprimer)
-          </label>
-        </div>
-        <div className={styles.modalActions}>
-          <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
-          <button className={styles.modalConfirm} onClick={() => onConfirm(keepRecent)} disabled={loading}>
-            {loading ? 'Suppression…' : 'Confirmer la réinitialisation'}
+        <h3 className={styles.modalTitle}>Nettoyer les offres</h3>
+
+        {/* Onglets */}
+        <div className={styles.resetTabs}>
+          <button
+            className={`${styles.resetTab} ${tab === 'recent' ? styles.resetTabActive : ''}`}
+            onClick={() => setTab('recent')}>
+            Garder N récentes
+          </button>
+          <button
+            className={`${styles.resetTab} ${tab === 'criteria' ? styles.resetTabActive : ''}`}
+            onClick={() => setTab('criteria')}>
+            Supprimer par critères
           </button>
         </div>
+
+        {tab === 'recent' && (
+          <>
+            <p className={styles.modalText}>
+              Conserve les <em>N</em> offres les plus récentes. Les offres sélectionnées (statut ≠ "À voir") sont toujours protégées.
+            </p>
+            <div className={styles.modalField}>
+              <label className={styles.modalLabel}>
+                Garder les{' '}
+                <input
+                  type="number" min={0} max={500}
+                  value={keepRecent}
+                  onChange={e => setKeepRecent(Math.max(0, parseInt(e.target.value) || 0))}
+                  className={styles.modalInput}
+                />
+                {' '}offres les plus récentes <span style={{ opacity: 0.6 }}>(0 = tout supprimer)</span>
+              </label>
+            </div>
+            <div className={styles.modalActions}>
+              <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
+              <button className={styles.modalConfirm} onClick={() => onConfirm(keepRecent)} disabled={loading}>
+                {loading ? <><Loader size={13} strokeWidth={2} style={{ animation: 'spin 0.9s linear infinite', display: 'inline-block', marginRight: 5 }} /> Suppression…</> : 'Confirmer'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {tab === 'criteria' && (
+          <>
+            <p className={styles.modalText}>
+              Supprime les offres correspondant aux critères ci-dessous. Les offres sélectionnées (statut ≠ "À voir") sont protégées.
+            </p>
+            <div className={styles.criteriaGrid}>
+              <div className={styles.criteriaField}>
+                <label className={styles.criteriaLabel}>Score IA inférieur à (%)</label>
+                <input className={styles.criteriaInput} type="number" min={0} max={100} step={5}
+                  placeholder="Ex : 50 (vide = ignorer)"
+                  value={maxScore} onChange={e => { setMaxScore(e.target.value); setPreview(null) }} />
+                <p className={styles.criteriaHint}>Supprime les offres scorées EN DESSOUS de ce seuil</p>
+              </div>
+              <div className={styles.criteriaField}>
+                <label className={styles.criteriaLabel}>Scrapées avant le</label>
+                <input className={styles.criteriaInput} type="date"
+                  value={beforeDate} onChange={e => { setBeforeDate(e.target.value); setPreview(null) }} />
+                <p className={styles.criteriaHint}>Supprime les offres plus anciennes que cette date</p>
+              </div>
+              <div className={styles.criteriaField}>
+                <label className={styles.criteriaLabel}>Source spécifique</label>
+                <select className={styles.criteriaInput}
+                  value={srcFilter} onChange={e => { setSrcFilter(e.target.value); setPreview(null) }}>
+                  <option value="">Toutes les sources</option>
+                  {SOURCES_FILTER.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <p className={styles.criteriaHint}>Limite la suppression à une source</p>
+              </div>
+            </div>
+
+            {preview && (
+              <div className={`${styles.previewBox} ${preview.would_delete === 0 ? styles.previewBoxEmpty : styles.previewBoxWarn}`}>
+                {preview.would_delete === 0
+                  ? '✓ Aucune offre ne correspond à ces critères.'
+                  : `⚠ ${preview.would_delete} offre${preview.would_delete !== 1 ? 's' : ''} sera${preview.would_delete !== 1 ? 'ont' : ''} supprimée${preview.would_delete !== 1 ? 's' : ''}.`
+                }
+              </div>
+            )}
+
+            <div className={styles.modalActions}>
+              <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
+              <button className={`btn-ghost ${styles.previewBtn}`}
+                onClick={handlePreview}
+                disabled={!hasAnyCriteria || previewing || loading}>
+                {previewing ? 'Calcul…' : '🔍 Simuler'}
+              </button>
+              <button className={styles.modalConfirm}
+                onClick={handleCriteriaConfirm}
+                disabled={!hasAnyCriteria || loading}>
+                {loading ? 'Suppression…' : 'Confirmer'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -375,6 +483,24 @@ export default function JobsPage() {
     finally { setResetting(false) }
   }
 
+  const handleResetByCriteria = async ({ maxScore, beforeDate, source }) => {
+    setResetting(true)
+    try {
+      const result = await purgeJobsByCriteria({
+        maxScore, beforeDate, source, keepSelected: true, dryRun: false,
+      })
+      setShowReset(false)
+      setResetMsg(`✓ ${result.deleted} offre${result.deleted !== 1 ? 's' : ''} supprimée${result.deleted !== 1 ? 's' : ''} · ${result.remaining} conservée${result.remaining !== 1 ? 's' : ''}`)
+      setTimeout(() => setResetMsg(null), 5000)
+      setPage(0); refetch()
+    } catch (err) {
+      console.error(err)
+      setResetMsg(`Erreur : ${err.message}`)
+      setTimeout(() => setResetMsg(null), 5000)
+    }
+    finally { setResetting(false) }
+  }
+
   const handleScoreBatchConfirm = async (cvId, limit) => {
     setScoreBatching(true)
     try {
@@ -406,7 +532,12 @@ export default function JobsPage() {
     <div className={styles.page}>
 
       {showReset && (
-        <ResetModal onConfirm={handleReset} onCancel={() => setShowReset(false)} loading={resetting} />
+        <ResetModal
+          onConfirm={handleReset}
+          onConfirmCriteria={handleResetByCriteria}
+          onCancel={() => setShowReset(false)}
+          loading={resetting}
+        />
       )}
       {showScoreBatch && (
         <ScoreBatchModal

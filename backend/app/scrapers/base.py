@@ -101,6 +101,20 @@ def _keyword_matches(keywords: str, job: "RawJob") -> bool:
     return _match_keyword_query(keywords, text)
 
 
+# Mots-clés indiquant un stage / internship dans le titre
+_INTERNSHIP_TITLE_KEYWORDS = (
+    'intern', 'internship', 'stage', 'stagiaire', 'apprenti', 'apprentice',
+    'trainee', 'werkstudent', 'praktikant', 'praktikum',
+)
+
+def _is_internship(job: "RawJob") -> bool:
+    """Détecte si une offre est un stage/internship via son type ou son titre."""
+    if job.job_type and job.job_type.lower() in ('internship', 'stage', 'intern'):
+        return True
+    title_lower = (job.title or '').lower()
+    return any(kw in title_lower for kw in _INTERNSHIP_TITLE_KEYWORDS)
+
+
 @dataclass
 class RawJob:
     """Représentation intermédiaire d'une offre avant insertion en BDD."""
@@ -134,6 +148,7 @@ class BaseScraper(ABC):
         hours_old: Optional[int]   = None,
         remote_only: bool          = False,
         job_types: Optional[list[str]] = None,
+        exclude_internships: bool  = False,
     ) -> list[RawJob]:
         delay = random.uniform(settings.scraper_delay_min, settings.scraper_delay_max)
         logger.debug(f"[{self.source_name}] Délai anti-blocage : {delay:.1f}s")
@@ -156,6 +171,14 @@ class BaseScraper(ABC):
                     logger.info(
                         f"[{self.source_name}] Filtre booléen : {before} → {len(jobs)} offres "
                         f"(requête : {keywords!r})"
+                    )
+            # Filtre stages/internships
+            if exclude_internships:
+                before = len(jobs)
+                jobs = [j for j in jobs if not _is_internship(j)]
+                if len(jobs) < before:
+                    logger.info(
+                        f"[{self.source_name}] Exclusion stages : {before} → {len(jobs)} offres"
                     )
             return jobs
         except Exception as exc:

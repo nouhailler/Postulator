@@ -25,6 +25,7 @@ def run_scrape(
     hours_old: Optional[int] = None,
     remote_only: bool = False,
     job_types: Optional[list[str]] = None,
+    exclude_internships: bool = False,
     search_profile_id: Optional[int] = None,
 ) -> dict:
     """Scraping standard sans proxy."""
@@ -42,6 +43,7 @@ def run_scrape(
                 hours_old=hours_old,
                 remote_only=remote_only,
                 job_types=job_types,
+                exclude_internships=exclude_internships,
                 search_profile_id=search_profile_id,
             )
 
@@ -70,6 +72,7 @@ def run_scrape_with_proxies(
     hours_old: Optional[int] = None,
     remote_only: bool = False,
     job_types: Optional[list[str]] = None,
+    exclude_internships: bool = False,
     search_profile_id: Optional[int] = None,
 ) -> dict:
     """Scraping avec rotation de proxies résidentiels."""
@@ -88,6 +91,7 @@ def run_scrape_with_proxies(
                 hours_old=hours_old,
                 remote_only=remote_only,
                 job_types=job_types,
+                exclude_internships=exclude_internships,
                 search_profile_id=search_profile_id,
             )
 

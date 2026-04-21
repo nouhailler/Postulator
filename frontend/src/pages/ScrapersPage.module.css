@@ -598,3 +598,22 @@
   line-height: 1.5;
   margin: 0;
 }
+
+/* ── Sélecteur de mode date (nb jours / date précise) ── */
+.dateModeBtn {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px; border: none; cursor: pointer;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.03em;
+  background: var(--surface-container-high);
+  color: var(--outline);
+  transition: background 0.15s, color 0.15s;
+  margin-left: 4px;
+}
+.dateModeBtn:hover { color: var(--on-surface-variant); }
+.dateModeBtnActive {
+  background: rgba(123,208,255,0.15);
+  color: var(--primary);
+}
+.dateModeHint {
+  font-size: 10px; color: var(--outline); margin-top: 5px; font-style: italic;
+}

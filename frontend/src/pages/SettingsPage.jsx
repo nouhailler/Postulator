@@ -1,8 +1,29 @@
 import { useState, useEffect } from 'react'
-import { Mail, CheckCircle, XCircle, Loader, Bell, Settings, Shield, Brain, ExternalLink, AlertTriangle, Cloud } from 'lucide-react'
+import { Mail, CheckCircle, XCircle, Loader, Settings, Shield, Brain, ExternalLink, AlertTriangle, Cloud, Palette } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchAlertStatus, testSmtp } from '../api/alerts.js'
 import styles from './SettingsPage.module.css'
+
+// ── Helpers thème ─────────────────────────────────────────────────────────────
+function applyTheme(theme, customColor) {
+  const root = document.documentElement
+  if (theme === 'light') {
+    root.setAttribute('data-theme', 'light')
+    root.style.removeProperty('--surface')
+    root.style.removeProperty('--surface-container')
+    root.style.removeProperty('--surface-container-low')
+  } else if (theme === 'custom' && customColor) {
+    root.removeAttribute('data-theme')
+    root.style.setProperty('--surface', customColor)
+    root.style.setProperty('--surface-container', customColor + 'cc')
+    root.style.setProperty('--surface-container-low', customColor + 'dd')
+  } else {
+    root.removeAttribute('data-theme')
+    root.style.removeProperty('--surface')
+    root.style.removeProperty('--surface-container')
+    root.style.removeProperty('--surface-container-low')
+  }
+}
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
 function Section({ icon, title, subtitle, children }) {
@@ -36,6 +57,22 @@ function ConfigField({ label, value, masked, hint }) {
 export default function SettingsPage() {
   const [testing,    setTesting]    = useState(false)
   const [testResult, setTestResult] = useState(null)   // { ok, message, error }
+
+  // ── Thème ─────────────────────────────────────────────────────────────────
+  const [theme,       setTheme]       = useState(() => localStorage.getItem('postulator_theme') || 'dark')
+  const [customColor, setCustomColor] = useState(() => localStorage.getItem('postulator_custom_color') || '#1a0e3a')
+
+  const handleThemeChange = (newTheme) => {
+    setTheme(newTheme)
+    localStorage.setItem('postulator_theme', newTheme)
+    applyTheme(newTheme, customColor)
+  }
+
+  const handleCustomColorApply = () => {
+    localStorage.setItem('postulator_custom_color', customColor)
+    if (theme === 'custom') applyTheme('custom', customColor)
+    else handleThemeChange('custom')
+  }
 
   const { data: alertStatus, loading } = useAsync(fetchAlertStatus, [], { fallback: null })
 
@@ -280,6 +317,71 @@ ADZUNA_APP_KEY=votre_app_key`}</pre>
           <p>Les proxies se configurent dans la page <strong>Scrapers</strong>, zone "Lancer le scraping avec Proxy".</p>
           <p style={{ marginTop: 6 }}>Format : <code>IP:PORT:USER:PASSWORD</code> — un par ligne.</p>
           <p style={{ marginTop: 6 }}>Ils ne sont pas persistés dans <code>.env</code> — à rentrer à chaque session.</p>
+        </div>
+      </Section>
+
+      {/* ── APPARENCE ── */}
+      <Section
+        icon={<Palette size={16} strokeWidth={2} style={{ color: theme === 'dark' ? 'var(--outline)' : theme === 'light' ? 'var(--primary)' : '#a855f7' }} />}
+        title="Apparence"
+        subtitle="Choisissez le thème de l'interface — sombre, clair ou personnalisé.">
+
+        <div className={styles.themeRow}>
+          {/* Sombre (défaut) */}
+          <div
+            className={`${styles.themeCard} ${theme === 'dark' ? styles.themeCardActive : ''}`}
+            onClick={() => handleThemeChange('dark')}
+          >
+            <div className={`${styles.themePreview} ${styles.themePreviewDark}`} />
+            <div>
+              <p className={styles.themeCardLabel}>Sombre</p>
+              <p className={styles.themeCardSub}>Défaut — fond bleu nuit</p>
+            </div>
+          </div>
+
+          {/* Clair */}
+          <div
+            className={`${styles.themeCard} ${theme === 'light' ? styles.themeCardActive : ''}`}
+            onClick={() => handleThemeChange('light')}
+          >
+            <div className={`${styles.themePreview} ${styles.themePreviewLight}`} />
+            <div>
+              <p className={styles.themeCardLabel}>Clair</p>
+              <p className={styles.themeCardSub}>Fond blanc-bleuté</p>
+            </div>
+          </div>
+
+          {/* Personnalisé */}
+          <div
+            className={`${styles.themeCard} ${theme === 'custom' ? styles.themeCardActive : ''}`}
+            onClick={() => handleThemeChange('custom')}
+          >
+            <div
+              className={styles.themePreview}
+              style={{ background: `linear-gradient(135deg, ${customColor} 60%, #a855f7 100%)` }}
+            />
+            <div>
+              <p className={styles.themeCardLabel}>Personnalisé</p>
+              <p className={styles.themeCardSub}>Couleur de fond libre</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sélecteur de couleur (toujours visible, appliqué au mode custom) */}
+        <div className={styles.colorPickerRow}>
+          <p className={styles.colorPickerLabel}>
+            Couleur de fond personnalisée
+            {theme !== 'custom' && <span style={{ opacity: 0.6 }}> — activez le mode "Personnalisé" pour l'appliquer</span>}
+          </p>
+          <input
+            className={styles.colorInput}
+            type="color"
+            value={customColor}
+            onChange={e => setCustomColor(e.target.value)}
+          />
+          <button className={styles.themeApplyBtn} onClick={handleCustomColorApply}>
+            Appliquer
+          </button>
         </div>
       </Section>
 

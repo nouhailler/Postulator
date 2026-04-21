@@ -162,3 +162,72 @@
 .infoTitle { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 5px; }
 .infoText { font-size: 11px; color: var(--on-surface-variant); line-height: 1.7; }
 .infoText code { font-size: 10px; background: var(--surface-container); padding: 1px 5px; border-radius: 3px; }
+
+/* ── Modal prévisualisation PDF ── */
+.modalOverlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modalBox {
+  background: var(--surface-container);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: var(--radius-lg);
+  width: 100%; max-width: 680px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modalHeader {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.modalTitle {
+  font-family: var(--font-headline); font-size: 14px; font-weight: 700;
+  color: var(--on-surface); margin-bottom: 3px;
+}
+.modalSub { font-size: 11px; color: var(--outline); }
+
+.modalWarnings {
+  padding: 12px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.modalWarningItem {
+  display: flex; align-items: flex-start; gap: 8px;
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 12px; color: var(--on-surface-variant); line-height: 1.5;
+}
+
+.modalPreviewHeader {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 20px 6px;
+  font-size: 11px; font-weight: 600; color: var(--outline);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.modalPreviewText {
+  flex: 1; overflow-y: auto;
+  margin: 0; padding: 8px 20px 14px;
+  font-size: 11px; color: var(--on-surface-variant);
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+  background: var(--surface-container-low);
+  max-height: 320px;
+}
+
+.modalActions {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.modalCancel { font-size: 13px !important; }
+.modalConfirm {
+  display: inline-flex !important; align-items: center !important; gap: 6px !important;
+  font-size: 13px !important;
+}

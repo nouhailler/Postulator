@@ -461,12 +461,16 @@ export default function ScrapersPage() {
   const [sources,    setSources]    = useState(['indeed'])
   const [jobTypes,   setJobTypes]   = useState([])
   const [results,    setResults]    = useState(10)
-  const [remoteOnly, setRemoteOnly] = useState(false)
-  const [daysOld,    setDaysOld]    = useState('5')
+  const [remoteOnly,          setRemoteOnly]          = useState(false)
+  const [daysOld,             setDaysOld]             = useState('7')
+  const [dateMode,            setDateMode]            = useState('days')   // 'days' | 'since'
+  const [sinceDate,           setSinceDate]           = useState('')
+  const [excludeInternships,  setExcludeInternships]  = useState(false)
 
   // Mode de saisie des mots-clés : 'free' | 'esco'
   const [kwMode,     setKwMode]     = useState('free')
   const [escoItem,   setEscoItem]   = useState(null)  // item ESCO sélectionné
+  const [opsOpen,    setOpsOpen]    = useState(false) // panneau opérateurs booléens
 
   // Proxy
   const [proxyOpen, setProxyOpen] = useState(true)
@@ -524,14 +528,23 @@ export default function ScrapersPage() {
   // Mots-clés effectifs : selon le mode
   const effectiveKeywords = kwMode === 'esco' && escoItem ? escoItem.label : keywords
 
+  const computedHoursOld = (() => {
+    if (dateMode === 'since' && sinceDate) {
+      const ms = Date.now() - new Date(sinceDate).getTime()
+      return Math.max(1, Math.round(ms / 3_600_000))
+    }
+    return daysOld ? parseInt(daysOld, 10) * 24 : null
+  })()
+
   const basePayload = () => ({
-    keywords:           effectiveKeywords.trim(),
-    location:           locationValue,
+    keywords:             effectiveKeywords.trim(),
+    location:             locationValue,
     sources,
-    job_types:          jobTypes,
-    results_per_source: results,
-    remote_only:        remoteOnly,
-    hours_old:          daysOld ? parseInt(daysOld, 10) * 24 : null,
+    job_types:            jobTypes,
+    results_per_source:   results,
+    remote_only:          remoteOnly,
+    hours_old:            computedHoursOld,
+    exclude_internships:  excludeInternships,
   })
 
   const isRunning      = status === 'queued' || status === 'running'
@@ -595,10 +608,102 @@ export default function ScrapersPage() {
           </div>
 
           {kwMode === 'free' ? (
-            <input className={styles.input} type="text"
-              placeholder="Ex : développeur Python senior, supply chain manager…"
-              value={keywords} onChange={e => setKeywords(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && canLaunchProxy && handleLaunchWithProxies()} />
+            <>
+              <input className={styles.input} type="text"
+                placeholder="Ex : développeur Python senior, supply chain manager…"
+                value={keywords} onChange={e => setKeywords(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && canLaunchProxy && handleLaunchWithProxies()} />
+              {/* Panneau opérateurs booléens collapsible */}
+              <button className={styles.opsToggle} onClick={() => setOpsOpen(o => !o)} type="button">
+                <Info size={10} strokeWidth={2} />
+                Opérateurs booléens disponibles
+                {opsOpen
+                  ? <ChevronUp  size={10} strokeWidth={2} style={{ marginLeft: 'auto' }} />
+                  : <ChevronDown size={10} strokeWidth={2} style={{ marginLeft: 'auto' }} />
+                }
+              </button>
+              {opsOpen && (
+                <div className={styles.opsPanel}>
+                  {/* Opérateurs */}
+                  <div className={styles.opsGrid}>
+                    <div className={styles.opsRow}><code>AND</code><span>Les deux termes obligatoires · <em>Python AND senior</em></span></div>
+                    <div className={styles.opsRow}><code>OR</code><span>L'un ou l'autre · <em>DevOps OR SRE</em></span></div>
+                    <div className={styles.opsRow}><code>NOT</code><span>Exclure un terme · <em>Python NOT junior</em></span></div>
+                    <div className={styles.opsRow}><code>" "</code><span>Phrase exacte · <em>"data engineer"</em></span></div>
+                    <div className={styles.opsRow}><code>( )</code><span>Groupement · <em>(Python OR Java) AND NOT stage</em></span></div>
+                  </div>
+                  {/* Tableau compatibilité */}
+                  <div className={styles.opsCompatTable}>
+                    <div className={styles.opsCompatHeader}>
+                      <span>Source</span>
+                      <span>AND / OR</span>
+                      <span>NOT</span>
+                      <span>" "</span>
+                      <span>( )</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Indeed</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>LinkedIn</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Glassdoor</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>ZipRecruiter</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsNone}>✗</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Adzuna</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNative}>✓ natif</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Jobs.ch</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNone}>✗</span>
+                      <span className={styles.opsNone}>✗</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>Jobup.ch</span>
+                      <span className={styles.opsPartial}>⚠ partiel</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsNone}>✗</span>
+                      <span className={styles.opsNone}>✗</span>
+                    </div>
+                    <div className={styles.opsCompatRow}>
+                      <span className={styles.opsCompatSource}>RemoteOK</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                      <span className={styles.opsPostulator}>↓ Postulator</span>
+                    </div>
+                  </div>
+                  <p className={styles.opsNote}>
+                    <strong>✓ natif</strong> = traité par la plateforme · <strong>⚠ partiel</strong> = traité approximativement · <strong>↓ Postulator</strong> = filtré sur les résultats reçus · <strong>✗</strong> = non supporté (Postulator filtre à la place)
+                  </p>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <ESCOField
@@ -680,18 +785,47 @@ export default function ScrapersPage() {
             <div className={styles.rangeLabels}><span>5</span><span>200</span></div>
           </div>
 
-          {/* Jours */}
+          {/* Jours / Depuis une date */}
           <div>
-            <label className={styles.label}>Offres publiées depuis (jours)</label>
-            <input
-              className={styles.input}
-              type="number"
-              placeholder="Ex : 5 (vide = toutes)"
-              min={1}
-              max={30}
-              value={daysOld}
-              onChange={e => setDaysOld(e.target.value)}
-            />
+            <label className={styles.label}>
+              Offres publiées depuis
+              <span className={styles.labelHint} style={{ marginLeft: 8 }}>
+                <button type="button"
+                  className={`${styles.dateModeBtn} ${dateMode === 'days' ? styles.dateModeBtnActive : ''}`}
+                  onClick={() => setDateMode('days')}>
+                  Nb de jours
+                </button>
+                <button type="button"
+                  className={`${styles.dateModeBtn} ${dateMode === 'since' ? styles.dateModeBtnActive : ''}`}
+                  onClick={() => setDateMode('since')}>
+                  Date précise
+                </button>
+              </span>
+            </label>
+            {dateMode === 'days' ? (
+              <input
+                className={styles.input}
+                type="number"
+                placeholder="Ex : 7 (vide = toutes)"
+                min={1}
+                max={60}
+                value={daysOld}
+                onChange={e => setDaysOld(e.target.value)}
+              />
+            ) : (
+              <input
+                className={styles.input}
+                type="date"
+                value={sinceDate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={e => setSinceDate(e.target.value)}
+              />
+            )}
+            {dateMode === 'since' && sinceDate && (
+              <p className={styles.dateModeHint}>
+                ≈ {Math.round((Date.now() - new Date(sinceDate).getTime()) / 86_400_000)} jours depuis le {new Date(sinceDate).toLocaleDateString('fr-FR')}
+              </p>
+            )}
           </div>
         </div>
 
@@ -783,6 +917,13 @@ export default function ScrapersPage() {
                 <span className={styles.toggleThumb} />
               </div>
               Remote uniquement
+            </label>
+            <label className={styles.toggleLabel} title="Filtre post-scraping : exclut les offres dont le titre contient 'stage', 'intern', 'stagiaire'…">
+              <div className={`${styles.toggle} ${excludeInternships ? styles.toggleOn : ''}`}
+                onClick={() => setExcludeInternships(p => !p)} role="switch" aria-checked={excludeInternships}>
+                <span className={styles.toggleThumb} />
+              </div>
+              Exclure les stages
             </label>
             <label className={styles.toggleLabel} title="Après chaque scraping, Ollama génère un résumé de 10 lignes pour les 10 premières offres récupérées">
               <div className={`${styles.toggle} ${autoSummarize ? styles.toggleAI : ''}`}

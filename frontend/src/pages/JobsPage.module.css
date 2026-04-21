@@ -187,6 +187,41 @@
 /* Banner erreur (rouge) */
 .errorBanner { background: rgba(255,180,171,0.07) !important; border-color: rgba(255,180,171,0.25) !important; color: var(--error) !important; }
 
+/* ── Modal étendue (onglets reset) ── */
+.resetTabs { display: flex; gap: 0; margin: -6px -6px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+.resetTab {
+  flex: 1; padding: 8px 12px; font-size: 12px; font-weight: 600;
+  background: none; border: none; cursor: pointer;
+  color: var(--outline); border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.resetTab:hover { color: var(--on-surface-variant); }
+.resetTabActive { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
+
+.criteriaGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; text-align: left; }
+@media (max-width: 600px) { .criteriaGrid { grid-template-columns: 1fr; } }
+.criteriaField { display: flex; flex-direction: column; gap: 4px; }
+.criteriaLabel { font-size: 11px; font-weight: 600; color: var(--on-surface-variant); }
+.criteriaInput {
+  background: var(--surface-container); border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md); padding: 7px 10px;
+  font-size: 12px; color: var(--on-surface); outline: none; width: 100%;
+}
+.criteriaInput:focus { border-color: var(--primary); }
+.criteriaHint { font-size: 10px; color: var(--outline); line-height: 1.4; }
+
+.previewBox {
+  border-radius: var(--radius-md); padding: 8px 12px;
+  font-size: 12px; font-weight: 600; margin-bottom: 12px;
+}
+.previewBoxEmpty { background: rgba(60,221,199,0.07); border: 1px solid rgba(60,221,199,0.2); color: var(--tertiary); }
+.previewBoxWarn  { background: rgba(245,158,11,0.07); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; }
+
+.previewBtn {
+  display: inline-flex !important; align-items: center !important;
+  font-size: 12px !important; padding: 6px 12px !important;
+}
+
 /* ── Empty ── */
 .empty { background: var(--surface-container-low); border-radius: var(--radius-lg); padding: 48px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; color: var(--outline); font-size: 13px; }
 

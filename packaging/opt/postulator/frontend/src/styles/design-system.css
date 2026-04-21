@@ -165,3 +165,56 @@ body {
   border-radius: 2px;
   height: 3px;
 }
+
+/* ============================================================
+   THÈME CLAIR — [data-theme="light"]
+   ============================================================ */
+[data-theme="light"] {
+  --surface:                   #f0f4ff;
+  --surface-dim:               #e8ecf8;
+  --surface-container-lowest:  #ffffff;
+  --surface-container-low:     #f7f9ff;
+  --surface-container:         #eef1fa;
+  --surface-container-high:    #e4e8f5;
+  --surface-container-highest: #d8ddf0;
+  --surface-variant:           #dde2ef;
+  --surface-bright:            #c8cedf;
+
+  --primary:           #0078b8;
+  --primary-container: #0095e0;
+  --on-primary:        #ffffff;
+  --secondary:         #5a6880;
+  --secondary-container: #c8d4e8;
+  --on-secondary-container: #354560;
+  --tertiary:          #007c70;
+  --tertiary-container: #00a892;
+  --on-tertiary:       #ffffff;
+
+  --on-surface:        #1a2340;
+  --on-surface-variant: #3d4d66;
+  --outline:           #6b7a94;
+  --outline-variant:   #b8c3d8;
+
+  --error:             #c4003a;
+  --error-container:   #ffd9e0;
+}
+
+[data-theme="light"] body {
+  background-color: var(--surface);
+  color: var(--on-surface);
+}
+
+[data-theme="light"] .btn-ghost {
+  border-color: rgba(0,120,184,0.3);
+  color: var(--primary);
+}
+[data-theme="light"] .btn-ghost:hover {
+  background: rgba(0,120,184,0.08);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--surface-container-high);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-bright);
+}

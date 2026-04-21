@@ -45,3 +45,31 @@ export async function purgeJobs({ keepRecent = 20, keepSelected = true } = {}) {
   }
   return res.json()
 }
+
+/**
+ * DELETE /api/jobs/by-criteria — suppression en masse par critères.
+ * @param {object} params
+ *   maxScore     {number|null}  - score IA maximum (supprimer les offres EN DESSOUS de ce seuil)
+ *   beforeDate   {string|null}  - date YYYY-MM-DD (supprimer les offres AVANT cette date)
+ *   source       {string|null}  - source spécifique
+ *   keepSelected {boolean}      - protéger les offres non-'new' (défaut true)
+ *   dryRun       {boolean}      - simulation sans suppression (défaut false)
+ */
+export async function purgeJobsByCriteria({
+  maxScore = null, beforeDate = null, source = null,
+  keepSelected = true, dryRun = false,
+} = {}) {
+  const params = { keep_selected: keepSelected, dry_run: dryRun }
+  if (maxScore   != null) params.max_score   = maxScore
+  if (beforeDate != null) params.before_date = beforeDate
+  if (source)             params.source      = source
+
+  const qs = new URLSearchParams(params).toString()
+  const BASE_URL = (import.meta.env.VITE_API_URL ?? '') + '/api'
+  const res = await fetch(`${BASE_URL}/jobs/by-criteria?${qs}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `HTTP ${res.status}`)
+  }
+  return res.json()
+}

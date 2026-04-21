@@ -7,13 +7,14 @@ from pydantic import BaseModel, Field
 
 
 class ScrapeRequest(BaseModel):
-    keywords:           str
-    location:           Optional[str] = None
-    sources:            list[str]     = Field(default=["indeed"])
-    results_per_source: int           = Field(default=10, ge=5, le=200)
-    hours_old:          Optional[int] = None
-    remote_only:        bool          = False
-    job_types:          list[str]     = Field(default=[])
+    keywords:             str
+    location:             Optional[str] = None
+    sources:              list[str]     = Field(default=["indeed"])
+    results_per_source:   int           = Field(default=10, ge=5, le=200)
+    hours_old:            Optional[int] = None
+    remote_only:          bool          = False
+    job_types:            list[str]     = Field(default=[])
+    exclude_internships:  bool          = False
 
 
 class ScrapeWithProxiesRequest(ScrapeRequest):

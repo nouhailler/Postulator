@@ -163,3 +163,57 @@
 }
 .infoBox strong { color: var(--on-surface); }
 .infoBox code { font-size: 11px; background: var(--surface-container-high); padding: 1px 5px; border-radius: 3px; color: var(--primary); }
+
+/* ── Apparence / Thème ── */
+.themeRow {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 16px;
+}
+.themeCard {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--outline-variant);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--surface-container);
+  user-select: none;
+}
+.themeCard:hover { border-color: var(--primary); }
+.themeCardActive { border-color: var(--primary) !important; background: rgba(123,208,255,0.07); }
+
+.themePreview {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
+}
+.themePreviewDark   { background: linear-gradient(135deg, #0b1326 60%, #7bd0ff 100%); }
+.themePreviewLight  { background: linear-gradient(135deg, #f0f4ff 60%, #0078b8 100%); }
+.themePreviewCustom { background: linear-gradient(135deg, #2d1a4a 60%, #a855f7 100%); }
+
+.themeCardLabel { font-size: 13px; font-weight: 600; color: var(--on-surface); }
+.themeCardSub   { font-size: 10px; color: var(--outline); }
+
+.colorPickerRow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-container);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.06);
+  margin-top: 6px;
+}
+.colorPickerLabel { font-size: 12px; color: var(--on-surface-variant); flex: 1; }
+.colorInput {
+  width: 44px; height: 28px;
+  border-radius: var(--radius-sm); border: none; cursor: pointer;
+  background: none; padding: 0;
+}
+.themeApplyBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(123,208,255,0.12);
+  border: 1px solid rgba(123,208,255,0.3);
+  color: var(--primary); border-radius: var(--radius-md);
+  padding: 6px 14px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s;
+}
+.themeApplyBtn:hover { background: rgba(123,208,255,0.2); }

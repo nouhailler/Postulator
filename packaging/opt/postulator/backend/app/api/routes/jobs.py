@@ -8,8 +8,12 @@ Routes :
   GET    /api/jobs/{id}         → détail complet
   PATCH  /api/jobs/{id}/status  → mise à jour statut Kanban
   DELETE /api/jobs/{id}         → suppression d'une offre
-  DELETE /api/jobs              → purge : supprime TOUTES les offres (ou garde N récentes)
+  DELETE /api/jobs              → purge : supprime les offres selon critères
+  DELETE /api/jobs/by-criteria  → suppression en masse par critères (score, date, source)
 """
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import asc, desc, select, or_, delete, func
 
@@ -178,4 +182,89 @@ async def purge_jobs(
         "remaining": total_after,
         "kept_selected": keep_selected,
         "kept_recent":   keep_recent,
+    }
+
+
+@router.delete("/by-criteria", status_code=200)
+async def purge_jobs_by_criteria(
+    db:            DBSession,
+    max_score:     Optional[float] = Query(None, description="Supprimer les offres dont le score IA est INFÉRIEUR à ce seuil (%)"),
+    before_date:   Optional[str]   = Query(None, description="Supprimer les offres scrapées AVANT cette date (YYYY-MM-DD)"),
+    source:        Optional[str]   = Query(None, description="Supprimer uniquement les offres de cette source"),
+    keep_selected: bool            = Query(True,  description="Protéger les offres dont le statut n'est pas 'new'"),
+    dry_run:       bool            = Query(False,  description="Simulation : renvoie le nombre qui serait supprimé sans agir"),
+) -> dict:
+    """
+    Suppression en masse d'offres selon des critères combinés.
+
+    Critères disponibles (cumulables) :
+    - max_score    : supprime les offres avec ai_score < max_score (et ai_score non nul)
+    - before_date  : supprime les offres scrapées avant cette date
+    - source       : limite la suppression à une source spécifique
+    - keep_selected: protège les offres dont le statut != 'new' (défaut : true)
+
+    Au moins un critère parmi max_score / before_date / source est requis.
+    dry_run=true permet de simuler sans supprimer.
+    """
+    if max_score is None and before_date is None and source is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Au moins un critère est requis : max_score, before_date ou source."
+        )
+
+    # Construire les conditions de suppression
+    conditions = []
+
+    if max_score is not None:
+        # Supprime les offres scorées EN DESSOUS du seuil (ai_score non null)
+        conditions.append(
+            (Job.ai_score.isnot(None)) & (Job.ai_score < max_score)
+        )
+
+    if before_date is not None:
+        try:
+            dt = datetime.strptime(before_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Format de date invalide — attendu YYYY-MM-DD.")
+        conditions.append(Job.scraped_at < dt)
+
+    if source is not None:
+        conditions.append(Job.source == source)
+
+    # Construire la requête de sélection des IDs à supprimer
+    stmt = select(Job.id)
+    if len(conditions) == 1:
+        stmt = stmt.where(conditions[0])
+    else:
+        # Intersection : toutes les conditions doivent être vraies (AND)
+        from sqlalchemy import and_
+        stmt = stmt.where(and_(*conditions))
+
+    # Protéger les offres sélectionnées (statut != 'new')
+    if keep_selected:
+        stmt = stmt.where(Job.status == "new")
+
+    result = await db.execute(stmt)
+    ids_to_delete = [row[0] for row in result.fetchall()]
+    count = len(ids_to_delete)
+
+    if dry_run or count == 0:
+        total_remaining = await db.scalar(select(func.count()).select_from(Job))
+        return {
+            "deleted":   0 if dry_run else count,
+            "would_delete": count,
+            "remaining": total_remaining,
+            "dry_run":   dry_run,
+        }
+
+    # Suppression effective
+    await db.execute(delete(Job).where(Job.id.in_(ids_to_delete)))
+    await db.commit()
+
+    total_after = await db.scalar(select(func.count()).select_from(Job))
+    return {
+        "deleted":   count,
+        "would_delete": count,
+        "remaining": total_after,
+        "dry_run":   False,
     }

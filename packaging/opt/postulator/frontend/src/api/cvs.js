@@ -27,6 +27,17 @@ export async function deleteCV(id) {
 }
 
 /**
+ * POST /api/cvs/preview-pdf
+ * Extrait le texte d'un PDF sans le sauvegarder.
+ * Retourne { text, warnings, char_count, line_count }
+ */
+export async function previewCVPdf(file) {
+  const form = new FormData()
+  form.append('file', file)
+  return api.upload('/cvs/preview-pdf', form)
+}
+
+/**
  * POST /api/cvs/import-from-store/{id}
  * Importe un StoredCV (menu CV) dans la table cvs (CV Intelligence)
  * sans re-télécharger de fichier.

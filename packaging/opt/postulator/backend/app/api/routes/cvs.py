@@ -5,12 +5,16 @@ Gestion des CVs : upload, liste, suppression, set default, import depuis stored_
 Routes :
   GET    /api/cvs                         → liste des CVs
   POST   /api/cvs/upload                  → upload + parsing
+  POST   /api/cvs/preview-pdf             → extraction texte sans sauvegarde (validation)
   POST   /api/cvs/import-from-store/{id}  → import depuis un StoredCV (menu CV)
   GET    /api/cvs/{id}                    → détail d'un CV
   PATCH  /api/cvs/{id}                    → renommer / set default
   DELETE /api/cvs/{id}                    → suppression
   POST   /api/cvs/{id}/analyze            → extraction skills via Ollama
 """
+import tempfile
+from pathlib import Path
+
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 
@@ -53,6 +57,39 @@ async def upload_cv(
     await db.commit()
     await db.refresh(cv)
     return cv
+
+
+@router.post("/preview-pdf")
+async def preview_pdf(
+    file: UploadFile = File(...),
+) -> dict:
+    """
+    Extrait le texte d'un PDF sans le sauvegarder en base.
+    Retourne : { text, warnings, char_count, line_count }
+    Utilisé par le frontend pour afficher un écran de validation avant import.
+    """
+    content = await file.read()
+    if len(content) > MAX_SIZE_MB * 1024 * 1024:
+        raise HTTPException(status_code=413, detail=f"Fichier trop volumineux (max {MAX_SIZE_MB} MB).")
+
+    suffix = Path(file.filename or "upload.pdf").suffix or ".pdf"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+
+    try:
+        from app.services.cv_service import CVService
+        text, warnings = CVService._extract_pdf(tmp_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    lines = [l for l in text.split('\n') if l.strip()]
+    return {
+        "text": text,
+        "warnings": warnings,
+        "char_count": len(text),
+        "line_count": len(lines),
+    }
 
 
 @router.post("/import-from-store/{store_id}", response_model=CVRead, status_code=201)

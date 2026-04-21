@@ -27,15 +27,17 @@ class ScraperService:
         self.db = db
 
     async def run_search(self, keywords, sources, location=None, results_per_source=10,
-                         hours_old=None, remote_only=False, job_types=None, search_profile_id=None):
+                         hours_old=None, remote_only=False, job_types=None,
+                         exclude_internships=False, search_profile_id=None):
         return await self._run(keywords=keywords, sources=sources, location=location,
                                results_per_source=results_per_source, hours_old=hours_old,
                                remote_only=remote_only, job_types=job_types,
+                               exclude_internships=exclude_internships,
                                search_profile_id=search_profile_id, proxy_manager=None)
 
     async def run_search_with_proxies(self, keywords, sources, proxy_lines, location=None,
                                       results_per_source=10, hours_old=None, remote_only=False,
-                                      job_types=None, search_profile_id=None):
+                                      job_types=None, exclude_internships=False, search_profile_id=None):
         from app.scrapers.proxy_manager import ResidentialProxyManager
 
         mgr = ResidentialProxyManager(proxy_lines)
@@ -54,6 +56,7 @@ class ScraperService:
         return await self._run(keywords=keywords, sources=sources, location=location,
                                results_per_source=results_per_source, hours_old=hours_old,
                                remote_only=remote_only, job_types=job_types,
+                               exclude_internships=exclude_internships,
                                search_profile_id=search_profile_id, proxy_manager=mgr)
 
     async def _get_last_used_proxy(self) -> Optional[str]:
@@ -76,7 +79,7 @@ class ScraperService:
             return None
 
     async def _run(self, keywords, sources, location, results_per_source, hours_old,
-                   remote_only, job_types, search_profile_id, proxy_manager):
+                   remote_only, job_types, exclude_internships, search_profile_id, proxy_manager):
         total_new = 0
         total_dup = 0
         logs: list[ScrapeLog] = []
@@ -118,6 +121,7 @@ class ScraperService:
                 raw_jobs = await scraper.run(
                     keywords=keywords, location=location, results=results_per_source,
                     hours_old=hours_old, remote_only=remote_only, job_types=job_types or [],
+                    exclude_internships=exclude_internships,
                 )
                 new, dup = await self._persist_jobs(raw_jobs)
                 total_new += new

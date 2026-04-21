@@ -4,10 +4,10 @@ import { useOllamaStatus } from '../contexts/OllamaStatusContext.jsx'
 import {
   Upload, Star, Trash2, Brain, CheckCircle, ChevronDown,
   Loader, AlertCircle, Clock, Save, CheckCheck,
-  FileText, ArrowDownToLine,
+  FileText, ArrowDownToLine, TriangleAlert, Eye,
 } from 'lucide-react'
 import { useAsync }     from '../hooks/useAsync.js'
-import { fetchCVs, uploadCV, deleteCV, updateCV, analyzeCV, importCVFromStore } from '../api/cvs.js'
+import { fetchCVs, uploadCV, deleteCV, updateCV, analyzeCV, importCVFromStore, previewCVPdf } from '../api/cvs.js'
 import { fetchCVList }  from '../api/cvStore.js'
 import { fetchJobs }    from '../api/jobs.js'
 import { scoreJobSync } from '../api/analysis.js'
@@ -173,6 +173,11 @@ export default function AnalysisPage() {
   const [importError, setImportError] = useState(null)
   const [importDone,  setImportDone]  = useState(null)
 
+  // ── Modal de prévisualisation PDF ─────────────────────────────────────────
+  const [pdfPreview,    setPdfPreview]    = useState(null)   // { file, text, warnings, char_count, line_count }
+  const [previewing,    setPreviewing]    = useState(false)  // appel API en cours
+  const [confirmingPdf, setConfirmingPdf] = useState(false)  // upload après confirmation
+
   // ── Même tri que le menu Offres : scraped_at DESC ─────────────────────────
   const { data: jobs } = useAsync(
     () => fetchJobs({ limit: 200, sort_by: 'scraped_at', sort_order: 'desc' }),
@@ -195,12 +200,52 @@ export default function AnalysisPage() {
   // ── Upload fichier ────────────────────────────────────────────────────────
   const handleFileSelect = useCallback(async (file) => {
     if (!file) return
+    // Pour les PDFs : appel preview d'abord, affichage modal si avertissements
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    if (isPdf) {
+      setPreviewing(true); setUploadError(null)
+      try {
+        const preview = await previewCVPdf(file)
+        if (preview.warnings?.length > 0) {
+          // Il y a des avertissements → afficher la modal de validation
+          setPdfPreview({ file, ...preview })
+          return
+        }
+        // Pas d'avertissements → upload direct
+        const name = uploadName.trim() || file.name.replace(/\.[^.]+$/, '')
+        setUploading(true)
+        await uploadCV(file, name)
+        setUploadName('')
+        await refetchCVs()
+      } catch (err) {
+        setUploadError(err.detail ?? err.message ?? 'Erreur analyse PDF')
+      } finally {
+        setPreviewing(false); setUploading(false)
+      }
+      return
+    }
+    // Fichiers non-PDF : upload direct
     const name = uploadName.trim() || file.name.replace(/\.[^.]+$/, '')
     setUploading(true); setUploadError(null)
     try { await uploadCV(file, name); setUploadName(''); await refetchCVs() }
     catch (err) { setUploadError(err.detail ?? err.message ?? 'Erreur upload') }
     finally { setUploading(false) }
   }, [uploadName, refetchCVs])
+
+  // ── Confirmation de la modal PDF ──────────────────────────────────────────
+  const handlePdfConfirm = useCallback(async () => {
+    if (!pdfPreview) return
+    const name = uploadName.trim() || pdfPreview.file.name.replace(/\.[^.]+$/, '')
+    setConfirmingPdf(true); setUploadError(null)
+    try {
+      await uploadCV(pdfPreview.file, name)
+      setUploadName('')
+      setPdfPreview(null)
+      await refetchCVs()
+    } catch (err) {
+      setUploadError(err.detail ?? err.message ?? 'Erreur upload')
+    } finally { setConfirmingPdf(false) }
+  }, [pdfPreview, uploadName, refetchCVs])
 
   const handleDrop = useCallback((e) => {
     e.preventDefault(); setDragOver(false)
@@ -357,19 +402,21 @@ export default function AnalysisPage() {
           )}
 
           <div
-            className={`${styles.dropZone} ${dragOver ? styles.dropZoneOver : ''} ${uploading ? styles.dropZoneLoading : ''}`}
+            className={`${styles.dropZone} ${dragOver ? styles.dropZoneOver : ''} ${(uploading || previewing) ? styles.dropZoneLoading : ''}`}
             onDragOver={e => { e.preventDefault(); setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
-            onClick={() => !uploading && fileInputRef.current?.click()}
+            onClick={() => !(uploading || previewing) && fileInputRef.current?.click()}
           >
             <input ref={fileInputRef} type="file" accept=".pdf,.txt,.md" style={{ display: 'none' }}
               onChange={e => handleFileSelect(e.target.files[0])} />
-            {uploading
+            {(uploading || previewing)
               ? <Loader size={24} strokeWidth={1.5} className={styles.spin} style={{ color: 'var(--primary)', marginBottom: 8 }} />
               : <Upload size={24} strokeWidth={1.5} style={{ color: 'var(--primary)', marginBottom: 8 }} />
             }
-            <p className={styles.dropText}>{uploading ? 'Upload en cours…' : 'Ou déposer un fichier CV ici'}</p>
+            <p className={styles.dropText}>
+              {previewing ? 'Analyse du PDF en cours…' : uploading ? 'Upload en cours…' : 'Ou déposer un fichier CV ici'}
+            </p>
             <p className={styles.dropHint}>PDF, TXT ou Markdown · max 10 MB</p>
           </div>
           {uploadError && (
@@ -465,6 +512,60 @@ export default function AnalysisPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Modal de prévisualisation PDF ── */}
+      {pdfPreview && (
+        <div className={styles.modalOverlay} onClick={() => !confirmingPdf && setPdfPreview(null)}>
+          <div className={styles.modalBox} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <TriangleAlert size={16} strokeWidth={2} style={{ color: '#f59e0b', flexShrink: 0 }} />
+              <div>
+                <p className={styles.modalTitle}>Vérification du PDF avant import</p>
+                <p className={styles.modalSub}>
+                  {pdfPreview.char_count} caractères · {pdfPreview.line_count} lignes
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.modalWarnings}>
+              {pdfPreview.warnings.map((w, i) => (
+                <div key={i} className={styles.modalWarningItem}>
+                  <AlertCircle size={12} strokeWidth={2} style={{ flexShrink: 0, color: '#f59e0b' }} />
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.modalPreviewHeader}>
+              <Eye size={12} strokeWidth={2} style={{ color: 'var(--outline)' }} />
+              <span>Aperçu du texte extrait</span>
+            </div>
+            <pre className={styles.modalPreviewText}>
+              {pdfPreview.text.slice(0, 2000)}{pdfPreview.text.length > 2000 ? '\n\n[… texte tronqué pour l\'aperçu]' : ''}
+            </pre>
+
+            <div className={styles.modalActions}>
+              <button
+                className={`btn-ghost ${styles.modalCancel}`}
+                onClick={() => setPdfPreview(null)}
+                disabled={confirmingPdf}
+              >
+                Annuler
+              </button>
+              <button
+                className={`btn-primary ${styles.modalConfirm}`}
+                onClick={handlePdfConfirm}
+                disabled={confirmingPdf}
+              >
+                {confirmingPdf
+                  ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Import en cours…</>
+                  : <><CheckCircle size={13} strokeWidth={2} /> Confirmer l'import</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

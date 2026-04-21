@@ -31,6 +31,7 @@ async def run_scraper(payload: ScrapeRequest) -> ScrapeStatus:
             hours_old=payload.hours_old,
             remote_only=payload.remote_only,
             job_types=payload.job_types,
+            exclude_internships=payload.exclude_internships,
         )
         return ScrapeStatus(
             task_id=task.id,
@@ -68,6 +69,7 @@ async def run_scraper_with_proxies(payload: ScrapeWithProxiesRequest) -> ScrapeS
             hours_old=payload.hours_old,
             remote_only=payload.remote_only,
             job_types=payload.job_types,
+            exclude_internships=payload.exclude_internships,
         )
         return ScrapeStatus(
             task_id=task.id,
