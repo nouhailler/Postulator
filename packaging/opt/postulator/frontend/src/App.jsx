@@ -5,6 +5,7 @@ import AutomationPage         from './pages/AutomationPage.jsx'
 import DashboardPage          from './pages/DashboardPage.jsx'
 import CVPage                 from './pages/CVPage.jsx'
 import JobsPage               from './pages/JobsPage.jsx'
+import JobAnalysisPage        from './pages/JobAnalysisPage.jsx'
 import JobsIntelligencePage   from './pages/JobsIntelligencePage.jsx'
 import ScrapersPage           from './pages/ScrapersPage.jsx'
 import AnalysisPage           from './pages/AnalysisPage.jsx'
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="cv"                 element={<CVPage />} />
         <Route path="jobs"               element={<JobsPage />} />
         <Route path="jobs-intelligence"  element={<JobsIntelligencePage />} />
+        <Route path="job-analysis"       element={<JobAnalysisPage />} />
         <Route path="scrapers"           element={<ScrapersPage />} />
         <Route path="analysis"           element={<AnalysisPage />} />
         <Route path="cv-matching"        element={<CVMatchingPage />} />

@@ -230,15 +230,22 @@
 .input:disabled, .select:disabled { opacity: 0.5; cursor: not-allowed; }
 .noDataHint { font-size: 11px; color: var(--outline); font-style: italic; margin-top: 2px; }
 
-/* Opérateurs logiques */
+/* ── Opérateurs logiques ── */
 .operatorsHelp {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,0.025);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+}
+
+/* Grille des opérateurs */
+.operatorsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 .operatorRow {
   display: flex;
@@ -259,6 +266,65 @@
   flex-shrink: 0;
   min-width: 36px;
   text-align: center;
+}
+
+/* Tableau de compatibilité sources */
+.compatTable {
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  font-size: 10px;
+}
+.compatHeader {
+  display: grid;
+  grid-template-columns: 90px repeat(4, 1fr);
+  gap: 0;
+  background: rgba(255,255,255,0.04);
+  padding: 5px 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--outline);
+}
+.compatRow {
+  display: grid;
+  grid-template-columns: 90px repeat(4, 1fr);
+  gap: 0;
+  padding: 5px 8px;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  align-items: center;
+}
+.compatRow:last-child { border-bottom: none; }
+.compatSource {
+  font-weight: 700;
+  color: var(--on-surface);
+  font-size: 11px;
+}
+.compatNative {
+  color: #3cddc7;
+  font-weight: 600;
+  font-size: 10px;
+}
+.compatPartial {
+  color: #f9c74f;
+  font-weight: 600;
+  font-size: 10px;
+}
+.compatPostulator {
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 10px;
+}
+.compatNone {
+  color: var(--outline);
+  font-size: 10px;
+}
+.compatNote {
+  font-size: 10px;
+  color: var(--outline);
+  line-height: 1.5;
+  font-style: italic;
+  margin: 0;
 }
 
 /* Localisation */

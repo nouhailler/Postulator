@@ -103,12 +103,25 @@ export const HELP_CONTENT = {
     ],
   },
 
+  '/job-analysis': {
+    title: 'Analyse de l\'offre — Adéquation sémantique',
+    intro: 'Évaluez si une offre correspond à votre contenu de poste grâce à une analyse IA sémantique approfondie. Les correspondances sont surlignées en rouge.',
+    sections: [
+      { title: 'Sélection de l\'offre', icon: '🔍', content: 'Tapez dans la barre de recherche pour filtrer vos offres scrapées. Cliquez sur la flèche pour parcourir toutes les offres. L\'icône verte indique que la description est disponible en BDD ; l\'icône orange signale que l\'IA devra récupérer la page en ligne.' },
+      { title: 'Contenu de poste', icon: '📝', content: 'Décrivez librement ce que vous recherchez : "un poste de direction avec management d\'équipe", "développeur senior Python avec expérience cloud", "commercial B2B SaaS en mode chasse". Pas besoin de mots-clés exacts — l\'IA interprète sémantiquement.' },
+      { title: 'Surlignage des correspondances', icon: '🔴', content: 'Les éléments de l\'offre correspondant à votre contenu de poste sont surlignés en rouge. L\'IA identifie les correspondances implicites : "pilotage d\'une équipe de managers" → "poste de Direction", même sans le mot exact.' },
+      { title: 'Questions de suivi', icon: '💬', content: 'Après l\'analyse initiale, posez des questions de suivi dans la zone de saisie en bas. L\'historique de la conversation est conservé pour la session. Appuyez sur Entrée pour envoyer, Maj+Entrée pour un saut de ligne.' },
+      { title: 'Provider IA', icon: '⚡', content: 'Si OpenRouter est configuré dans Paramètres, l\'analyse utilise les modèles cloud gratuits avec fallback automatique. Sinon, Ollama local est utilisé. Le badge en haut à droite indique le provider actif.' },
+    ],
+  },
+
   '/settings': {
     title: 'Paramètres — Configuration',
-    intro: 'Configuration de Postulator : alertes email, modèle IA, scrapers.',
+    intro: 'Configuration de Postulator : alertes email, modèle IA, OpenRouter (cloud gratuit), scrapers.',
     sections: [
+      { title: 'OpenRouter (cloud gratuit)', icon: '⚡', content: 'OpenRouter donne accès à des modèles IA gratuits (DeepSeek R1, Llama 4, Gemma 3…) sans GPU local. Créez un compte sur openrouter.ai, générez une clé API, collez-la ici. Si configuré, OpenRouter remplace Ollama sur toutes les fonctions IA. Fallback automatique sur le modèle suivant en cas d\'erreur.' },
       { title: 'Alertes email', icon: '📧', content: 'Configurez SMTP dans backend/.env (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, ALERT_EMAIL_TO, ALERT_SCORE_THRESHOLD). Cliquez "Tester" pour vérifier. Redémarrez uvicorn après modification.' },
-      { title: 'Modèle Ollama', icon: '🤖', content: 'Changez OLLAMA_MODEL dans backend/.env. Modèles recommandés pour 16GB VRAM : phi4-mini (rapide), qwen2.5:14b (équilibré), deepseek-r1:32b (avancé).' },
+      { title: 'Modèle Ollama', icon: '🤖', content: 'Changez OLLAMA_MODEL dans backend/.env. Modèles recommandés pour 16GB VRAM : phi4-mini (rapide), qwen2.5:14b (équilibré), deepseek-r1:32b (avancé). Non utilisé si OpenRouter est configuré.' },
       { title: 'Adzuna', icon: '🔑', content: 'Inscription gratuite sur developer.adzuna.com. Ajoutez ADZUNA_APP_ID et ADZUNA_APP_KEY dans .env. 10 000 requêtes/mois. Couvre UK, US, DE, FR, AU, CA, NL, AT, BE, IT, PL, SG.' },
     ],
   },

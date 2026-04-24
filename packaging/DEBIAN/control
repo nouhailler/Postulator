@@ -1,5 +1,5 @@
 Package: postulator
-Version: 1.5.3
+Version: 1.5.4
 Architecture: all
 Maintainer: Patrick Nouhailler <patrick@nouhailler.fr>
 Installed-Size: 1348
@@ -15,12 +15,15 @@ Description: Agregateur de recherche d'emploi open source avec IA locale
  correspondance avec votre CV via Ollama (IA 100% locale) et genere des
  CVs adaptes a chaque offre — sans envoyer de donnees dans le cloud.
  .
- Fonctionnalites v1.5.3 :
-  - Import PDF : extraction par blocs PyMuPDF, suppression des bullets,
-    jonction des lignes fragmentees, ecran de validation avant import
-  - Themes : sombre (defaut) / clair / couleur personnalisee dans Parametres
-  - Scrapers : 7 jours par defaut, mode date precise (depuis une date),
-    toggle "Exclure les stages" (filtre post-scraping)
-  - Offres : suppression en masse par criteres (score, date, source)
-    avec simulation avant suppression
-  - Operateurs booleens AND/OR/NOT/parentheses/guillemets sur 8 sources
+ Fonctionnalites v1.5.4 :
+  - OpenRouter : integration complete des modeles IA gratuits en cloud
+    (DeepSeek R1, Llama 4, Gemma 3, Qwen3...) — remplace Ollama si configure
+  - Fallback automatique : si un modele est indisponible (rate limit, erreur),
+    essai silencieux du modele suivant parmi tous les modeles gratuits
+  - Page "Analyse de l'offre" : analyse semantique offre vs contenu de poste,
+    surlignage des correspondances en rouge, conversation multi-tour,
+    modale plein ecran pour lire les reponses confortablement
+  - Parametres OpenRouter : liste dynamique des modeles gratuits depuis l'API,
+    select avec refresh, test de connexion (ping), sauvegarde en base
+  - Offres Intelligence : badge dynamique Ollama/OpenRouter
+  - Migration BDD : table openrouter_config

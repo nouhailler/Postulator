@@ -529,20 +529,56 @@ export default function AutomationPage() {
             disabled={isRunning}
           />
           <div className={styles.operatorsHelp}>
-            <div className={styles.operatorRow}>
-              <code>AND</code>
-              <span>Les deux termes doivent être présents · <em>Ex : Python AND senior</em></span>
+            {/* Opérateurs */}
+            <div className={styles.operatorsGrid}>
+              <div className={styles.operatorRow}>
+                <code>AND</code>
+                <span>Les deux termes obligatoires · <em>Python AND senior</em></span>
+              </div>
+              <div className={styles.operatorRow}>
+                <code>OR</code>
+                <span>L'un ou l'autre · <em>DevOps OR SRE</em></span>
+              </div>
+              <div className={styles.operatorRow}>
+                <code>NOT</code>
+                <span>Exclure un terme · <em>Python NOT junior</em></span>
+              </div>
+              <div className={styles.operatorRow}>
+                <code>" "</code>
+                <span>Phrase exacte · <em>"machine learning"</em></span>
+              </div>
+              <div className={styles.operatorRow}>
+                <code>( )</code>
+                <span>Groupement · <em>(Python OR Java) AND NOT stage</em></span>
+              </div>
             </div>
-            <div className={styles.operatorRow}>
-              <code>OR</code>
-              <span>L'un ou l'autre · <em>Ex : DevOps OR SRE</em></span>
+            {/* Tableau de compatibilité */}
+            <div className={styles.compatTable}>
+              <div className={styles.compatHeader}>
+                <span>Source</span>
+                <span>AND / OR</span>
+                <span>NOT</span>
+                <span>" "</span>
+                <span>( )</span>
+              </div>
+              <div className={styles.compatRow}>
+                <span className={styles.compatSource}>Indeed</span>
+                <span className={styles.compatNative}>✓ natif</span>
+                <span className={styles.compatNative}>✓ natif</span>
+                <span className={styles.compatNative}>✓ natif</span>
+                <span className={styles.compatNative}>✓ natif</span>
+              </div>
+              <div className={styles.compatRow}>
+                <span className={styles.compatSource}>LinkedIn</span>
+                <span className={styles.compatNative}>✓ natif</span>
+                <span className={styles.compatNative}>✓ natif</span>
+                <span className={styles.compatNative}>✓ natif</span>
+                <span className={styles.compatNative}>✓ natif</span>
+              </div>
             </div>
-            <div className={styles.operatorRow}>
-              <code>( )</code>
-              <span>Groupement prioritaire · <em>Ex : (Python OR Java) AND senior</em><br />
-                <span style={{ color:'var(--outline)', fontSize:10 }}>Les parenthèses sont évaluées en premier, puis AND, puis OR.</span>
-              </span>
-            </div>
+            <p className={styles.compatNote}>
+              Postulator applique également un filtre booléen sur les résultats reçus — garantissant que les offres correspondent à votre requête même si la plateforme l'ignore partiellement.
+            </p>
           </div>
         </div>
 

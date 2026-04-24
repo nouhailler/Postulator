@@ -184,8 +184,14 @@ async def analyze_cv(cv_id: int, db: DBSession, model: str | None = None) -> CVR
         raise HTTPException(status_code=404, detail=f"CV {cv_id} introuvable.")
 
     from app.services.cv_service import CVService
+    from app.services.openrouter_service import load_openrouter_config
+    or_cfg = await load_openrouter_config(db)
     svc = CVService(db)
-    cv = await svc.analyze(cv, model=model)
+    cv = await svc.analyze(
+        cv, model=model,
+        openrouter_key=or_cfg.api_key if or_cfg else None,
+        openrouter_model=or_cfg.model if or_cfg else None,
+    )
     await db.commit()
     await db.refresh(cv)
     return cv

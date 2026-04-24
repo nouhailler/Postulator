@@ -135,28 +135,49 @@ class CVService:
         cv.parsed_at = datetime.utcnow()
         return cv
 
-    async def analyze(self, cv: CV, model: Optional[str] = None) -> CV:
-        """Lance l'extraction de compétences via Ollama."""
+    async def analyze(
+        self, cv: CV, model: Optional[str] = None,
+        openrouter_key: Optional[str] = None,
+        openrouter_model: Optional[str] = None,
+    ) -> CV:
+        """Lance l'extraction de compétences via OpenRouter (priorité) ou Ollama."""
         if not cv.raw_text:
             await self.parse(cv)
-        svc = OllamaService(model=model)
-        skills = await svc.extract_skills(cv.raw_text or "")
+        if openrouter_key:
+            from app.services.openrouter_service import OpenRouterService
+            svc_or = OpenRouterService(openrouter_key, openrouter_model or "")
+            skills = await svc_or.extract_skills(cv.raw_text or "")
+        else:
+            svc = OllamaService(model=model)
+            skills = await svc.extract_skills(cv.raw_text or "")
         cv.skills = json.dumps(skills, ensure_ascii=False)
         return cv
 
     async def score_against_job(
-        self, cv: CV, job: Job, model: Optional[str] = None
+        self, cv: CV, job: Job, model: Optional[str] = None,
+        openrouter_key: Optional[str] = None,
+        openrouter_model: Optional[str] = None,
     ) -> dict:
-        """Calcule le score IA CV ↔ offre et met à jour job.ai_score."""
+        """Calcule le score IA CV ↔ offre via OpenRouter (priorité) ou Ollama."""
         if not cv.raw_text:
             await self.parse(cv)
-        svc = OllamaService(model=model)
-        result = await svc.score_job(
-            cv_text=cv.raw_text or "",
-            job_title=job.title,
-            company=job.company,
-            job_description=job.description or "",
-        )
+        if openrouter_key:
+            from app.services.openrouter_service import OpenRouterService
+            svc_or = OpenRouterService(openrouter_key, openrouter_model or "")
+            result = await svc_or.score_job(
+                cv_text=cv.raw_text or "",
+                job_title=job.title,
+                company=job.company,
+                job_description=job.description or "",
+            )
+        else:
+            svc = OllamaService(model=model)
+            result = await svc.score_job(
+                cv_text=cv.raw_text or "",
+                job_title=job.title,
+                company=job.company,
+                job_description=job.description or "",
+            )
         job.ai_score = float(result.get("score", 0))
         job.ai_summary = json.dumps(result, ensure_ascii=False)
         job.cv_id = cv.id

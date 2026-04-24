@@ -206,29 +206,48 @@ Note : réponds uniquement à partir du titre et des informations connues sur ce
 
 Question : {payload.question}"""
 
-    # ── 3. Appel Ollama ───────────────────────────────────────────────────────
+    # ── 3. Appel IA (OpenRouter prioritaire, sinon Ollama) ────────────────────
+    from app.services.openrouter_service import load_openrouter_config
+    or_cfg = await load_openrouter_config(db)
+
     try:
-        import httpx as _httpx
-        import ollama
-
-        client = ollama.AsyncClient(
-            host=settings.ollama_base_url,
-            timeout=_httpx.Timeout(connect=10, read=300, write=10, pool=5),
-        )
-
         t0 = time.monotonic()
-        response = await client.chat(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_prompt},
-            ],
-            stream=False,
-            options={"temperature": 0.3, "num_predict": 1200},
-        )
-        duration_ms = int((time.monotonic() - t0) * 1000)
 
-        answer = response["message"]["content"].strip()
+        if or_cfg:
+            from app.services.openrouter_service import chat_with_fallback
+            answer, model = await chat_with_fallback(
+                api_key=or_cfg.api_key,
+                preferred=or_cfg.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_prompt},
+                ],
+                max_tokens=1200,
+                temperature=0.3,
+                timeout=120.0,
+            )
+
+        else:
+            # ── Ollama (local) ───────────────────────────────────────────────
+            import httpx as _httpx
+            import ollama
+
+            client = ollama.AsyncClient(
+                host=settings.ollama_base_url,
+                timeout=_httpx.Timeout(connect=10, read=300, write=10, pool=5),
+            )
+            response = await client.chat(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": user_prompt},
+                ],
+                stream=False,
+                options={"temperature": 0.3, "num_predict": 1200},
+            )
+            answer = response["message"]["content"].strip()
+
+        duration_ms = int((time.monotonic() - t0) * 1000)
 
         # ── 4. Sauvegarder en BDD ─────────────────────────────────────────────
         record = JobQuestion(
@@ -251,7 +270,9 @@ Question : {payload.question}"""
         )
 
     except Exception as exc:
+        provider = "OpenRouter" if or_cfg else "Ollama"
         raise HTTPException(
             status_code=503,
-            detail=f"Ollama indisponible : {exc}. Vérifiez qu'Ollama est démarré sur {settings.ollama_base_url}."
+            detail=f"{provider} indisponible : {exc}."
+            + ("" if or_cfg else f" Vérifiez qu'Ollama est démarré sur {settings.ollama_base_url}.")
         )

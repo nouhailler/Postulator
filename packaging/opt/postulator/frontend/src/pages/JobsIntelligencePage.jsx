@@ -178,6 +178,25 @@ function stripHtml(html) {
 export default function JobsIntelligencePage() {
   const { setOllamaStatus, clearOllamaStatus } = useOllamaStatus()
 
+  // Détection du provider IA actif
+  const [aiProvider, setAiProvider] = useState('ollama')  // 'ollama' | 'openrouter'
+  const [aiModel,    setAiModel]    = useState('')
+  useEffect(() => {
+    fetch('/api/settings/openrouter')
+      .then(r => r.json())
+      .then(d => {
+        if (d.configured) {
+          setAiProvider('openrouter')
+          setAiModel(d.model || '')
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const isOpenRouter  = aiProvider === 'openrouter'
+  const providerLabel = isOpenRouter ? 'OpenRouter' : 'Ollama'
+  const badgeLabel    = isOpenRouter ? '100% Cloud · OpenRouter' : '100% local · Ollama'
+
   const [selectedJobId, setSelectedJobId] = useState('')
   const [selectedJob,   setSelectedJob]   = useState(null)
   const [jobSearch,     setJobSearch]     = useState('')
@@ -388,12 +407,12 @@ export default function JobsIntelligencePage() {
             Offres Intelligence
           </h1>
           <p className={styles.pageSub}>
-            Interrogez Ollama sur n'importe quelle offre — interprétation, compétences, culture d'entreprise…
+            Interrogez {providerLabel} sur n'importe quelle offre — interprétation, compétences, culture d'entreprise…
           </p>
         </div>
-        <div className={styles.headerBadge}>
-          <Sparkles size={13} strokeWidth={2} style={{ color: 'var(--tertiary)' }} />
-          <span>100% local · Ollama</span>
+        <div className={styles.headerBadge} style={isOpenRouter ? { borderColor: 'rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.08)', color: '#f97316' } : {}}>
+          <Sparkles size={13} strokeWidth={2} style={{ color: isOpenRouter ? '#f97316' : 'var(--tertiary)' }} />
+          <span>{badgeLabel}</span>
         </div>
       </div>
 
@@ -493,7 +512,7 @@ export default function JobsIntelligencePage() {
                   <div className={styles.jobCardDescWrap}>
                     <div className={styles.jobCardDescHeader}>
                       <FileText size={11} strokeWidth={2} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />
-                      <span className={styles.jobCardDescLabel}>Description transmise à Ollama</span>
+                      <span className={styles.jobCardDescLabel}>Description transmise à {providerLabel}</span>
                     </div>
                     <p className={styles.jobCardDesc}>
                       {descPreview}{cleanDescription.length > 300 ? '…' : ''}
@@ -553,7 +572,7 @@ export default function JobsIntelligencePage() {
               <MessageSquare size={40} strokeWidth={1} style={{ color: 'var(--outline)', marginBottom: 12 }} />
               <p>Sélectionnez une offre à gauche pour commencer</p>
               <p className={styles.chatEmptyHint}>
-                Interrogez Ollama sur n'importe quelle offre scrapée.
+                Interrogez {providerLabel} sur n'importe quelle offre scrapée.
                 Posez vos questions en langage naturel.
               </p>
             </div>
@@ -566,7 +585,7 @@ export default function JobsIntelligencePage() {
                     <p>Prêt à analyser <strong>{selectedJob.title}</strong></p>
                     <p className={styles.chatWelcomeHint}>
                       {cleanDescription
-                        ? 'La description complète de l\'offre a été transmise à Ollama.'
+                        ? `La description complète de l'offre a été transmise à ${providerLabel}.`
                         : 'Attention : cette offre n\'a pas de description — les réponses seront limitées.'}
                     </p>
                     {pastQuestions.length > 0 && (
@@ -628,7 +647,7 @@ export default function JobsIntelligencePage() {
                   </button>
                 </div>
                 <p className={styles.inputHint}>
-                  Propulsé par Ollama · IA 100% locale · Entrée pour envoyer
+                  Propulsé par {providerLabel}{isOpenRouter ? ` · ${aiModel}` : ' · IA 100% locale'} · Entrée pour envoyer
                 </p>
               </div>
             </>

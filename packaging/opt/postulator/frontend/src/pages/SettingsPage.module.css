@@ -152,6 +152,153 @@
 .modelSpeed { font-size: 10px; color: var(--primary); font-family: var(--font-headline); font-weight: 600; }
 .modelUsage { font-size: 10px; color: var(--outline); }
 
+/* ── OpenRouter form ── */
+.orForm {
+  background: var(--surface-container);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.orField { display: flex; flex-direction: column; gap: 5px; }
+.orLabel {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--outline);
+}
+.orInputRow { display: flex; gap: 6px; align-items: center; }
+.orInput {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13px; color: var(--on-surface);
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.orInput::placeholder { color: var(--outline); font-size: 12px; }
+.orInput:focus { border-color: rgba(249,115,22,0.5); }
+.orIconBtn {
+  width: 34px; height: 34px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  color: var(--outline);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.orIconBtn:hover:not(:disabled) { color: var(--on-surface); border-color: rgba(255,255,255,0.25); }
+.orIconBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.orActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.orSaveBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(249,115,22,0.12);
+  border: 1.5px solid rgba(249,115,22,0.5);
+  color: #f97316;
+  border-radius: var(--radius-md);
+  padding: 8px 18px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-body);
+}
+.orSaveBtn:hover:not(:disabled) { background: rgba(249,115,22,0.22); }
+.orSaveBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.orClearBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(255,180,171,0.3);
+  color: var(--error);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-body);
+}
+.orClearBtn:hover:not(:disabled) { background: rgba(255,180,171,0.08); }
+.orClearBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.modelCardActive {
+  border-color: rgba(249,115,22,0.6) !important;
+  background: rgba(249,115,22,0.07) !important;
+}
+
+/* ── Select modèle OpenRouter ── */
+.orSelect {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13px; color: var(--on-surface);
+  font-family: var(--font-body);
+  outline: none;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 0.15s;
+}
+.orSelect:focus { border-color: rgba(249,115,22,0.5); }
+.orSelect option { background: var(--surface-container); color: var(--on-surface); }
+
+.orModelCount {
+  font-size: 10px; font-weight: 400; color: #f97316;
+  background: rgba(249,115,22,0.1);
+  border-radius: 20px; padding: 2px 8px; margin-left: 8px;
+}
+.orHint {
+  font-size: 11px; color: var(--outline); font-style: italic; margin-top: 4px;
+}
+
+/* ── Liste dynamique des modèles ── */
+.orModelsHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.orRefreshSmall {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--outline);
+  background: var(--surface-container);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  font-family: var(--font-body);
+}
+.orRefreshSmall:hover:not(:disabled) { color: var(--on-surface); border-color: rgba(255,255,255,0.2); }
+.orRefreshSmall:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.orModelsList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.orModelsList::-webkit-scrollbar { width: 4px; }
+.orModelsList::-webkit-scrollbar-thumb { background: var(--surface-container-high); border-radius: 2px; }
+
+.orModelItem {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  background: var(--surface-container);
+  border: 1.5px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.orModelItem:hover { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.04); }
+.orModelItemActive {
+  border-color: rgba(249,115,22,0.6) !important;
+  background: rgba(249,115,22,0.09) !important;
+}
+.orModelItemName { font-size: 12px; font-weight: 600; color: var(--on-surface); }
+.orModelItemId   { font-size: 10px; color: var(--outline); font-family: monospace; }
+.orModelItemCtx  { font-size: 10px; color: var(--tertiary); margin-top: 2px; }
+
 /* ── Info box ── */
 .infoBox {
   background: var(--surface-container);

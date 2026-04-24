@@ -137,23 +137,30 @@ Génère un CV Markdown structuré avec ces sections dans l'ordre optimal :
 
 IMPORTANT : Réponds UNIQUEMENT avec le Markdown du CV, sans explication autour."""
 
-    # Appel Ollama
+    # Appel IA : OpenRouter (priorité) ou Ollama
     try:
-        import httpx
-        import ollama as ol
+        from app.services.openrouter_service import load_openrouter_config
+        or_cfg = await load_openrouter_config(db)
 
-        model = payload.model or settings.ollama_model
-        client = ol.AsyncClient(
-            host=settings.ollama_base_url,
-            timeout=httpx.Timeout(connect=10, read=300, write=10, pool=5),
-        )
-        response = await client.generate(
-            model=model,
-            prompt=prompt,
-            stream=False,
-            options={"temperature": 0.4, "num_predict": 1500},
-        )
-        cv_markdown = response["response"].strip()
+        if or_cfg:
+            from app.services.openrouter_service import OpenRouterService
+            svc_or      = OpenRouterService(or_cfg.api_key, or_cfg.model)
+            cv_markdown = await svc_or.generate_cv(prompt)
+            model       = or_cfg.model
+        else:
+            import httpx
+            import ollama as ol
+            model  = payload.model or settings.ollama_model
+            client = ol.AsyncClient(
+                host=settings.ollama_base_url,
+                timeout=httpx.Timeout(connect=10, read=300, write=10, pool=5),
+            )
+            response    = await client.generate(
+                model=model, prompt=prompt, stream=False,
+                options={"temperature": 0.4, "num_predict": 1500},
+            )
+            cv_markdown = response["response"].strip()
+
         return {
             "cv_markdown": cv_markdown,
             "job_title":   job.title,
@@ -161,7 +168,7 @@ IMPORTANT : Réponds UNIQUEMENT avec le Markdown du CV, sans explication autour.
             "model":       model,
         }
     except Exception as exc:
-        raise HTTPException(status_code=503, detail=f"Erreur Ollama : {exc}")
+        raise HTTPException(status_code=503, detail=f"Erreur IA : {exc}")
 
 
 def _build_profile_context(p: UserProfile) -> str:

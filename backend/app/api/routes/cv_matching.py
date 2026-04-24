@@ -141,6 +141,7 @@ async def generate_cv(
     settings: AppSettings,
 ) -> GeneratedCVFull:
     """Génère un CV Markdown adapté à l'offre et le sauvegarde en base."""
+    from app.services.openrouter_service import load_openrouter_config
     source_cv = await db.get(StoredCV, payload.source_cv_id)
     if not source_cv:
         raise HTTPException(status_code=404, detail=f"CV source {payload.source_cv_id} introuvable.")
@@ -149,10 +150,17 @@ async def generate_cv(
     if not job:
         raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
 
-    model          = payload.model or settings.ollama_model
-    cv_markdown    = await _generate_with_ollama(
-        source_cv, job, model, settings.ollama_base_url, payload.language or "fr"
-    )
+    or_cfg = await load_openrouter_config(db)
+    lang   = payload.language or "fr"
+
+    if or_cfg:
+        model       = or_cfg.model
+        cv_markdown = await _generate_with_openrouter(source_cv, job, or_cfg, lang)
+    else:
+        model       = payload.model or settings.ollama_model
+        cv_markdown = await _generate_with_ollama(
+            source_cv, job, model, settings.ollama_base_url, lang
+        )
     source_cv_text = _build_source_text(source_cv)
 
     gen = GeneratedCV(
@@ -182,8 +190,10 @@ async def generate_ats_cv(
 ) -> ATSResult:
     """
     Génère un CV optimisé ATS + score ATS + analyse keywords.
+    Utilise OpenRouter si configuré, sinon Ollama.
     Ne sauvegarde PAS en base — utiliser /save-ats pour persister le résultat.
     """
+    from app.services.openrouter_service import load_openrouter_config
     source_cv = await db.get(StoredCV, payload.source_cv_id)
     if not source_cv:
         raise HTTPException(status_code=404, detail=f"CV source {payload.source_cv_id} introuvable.")
@@ -192,11 +202,16 @@ async def generate_ats_cv(
     if not job:
         raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
 
-    model          = payload.model or settings.ollama_model
     source_cv_text = _build_source_text(source_cv)
+    lang           = payload.language or "fr"
+    or_cfg         = await load_openrouter_config(db)
 
+    if or_cfg:
+        return await _generate_ats_with_openrouter(source_cv, job, or_cfg, lang, source_cv_text)
+
+    model = payload.model or settings.ollama_model
     return await _generate_ats_with_ollama(
-        source_cv, job, model, settings.ollama_base_url, payload.language or "fr", source_cv_text
+        source_cv, job, model, settings.ollama_base_url, lang, source_cv_text
     )
 
 
@@ -284,8 +299,18 @@ async def generate_ats_cv_cloud(
 
 
 @router.get("/cloud-status")
-async def cloud_ai_status(settings: AppSettings):
-    """Retourne le provider Cloud disponible et le modèle utilisé."""
+async def cloud_ai_status(settings: AppSettings, db: DBSession):
+    """Retourne le provider Cloud disponible et le modèle utilisé (OpenRouter prioritaire)."""
+    from app.services.openrouter_service import load_openrouter_config
+    or_cfg = await load_openrouter_config(db)
+
+    if or_cfg:
+        return {
+            "provider":   "openrouter",
+            "model":      or_cfg.model,
+            "configured": True,
+        }
+
     provider = settings.cloud_ai_provider
     models = {
         "anthropic": "claude-haiku-4-5-20251001",
@@ -293,8 +318,8 @@ async def cloud_ai_status(settings: AppSettings):
         "mistral":   "mistral-small-latest",
     }
     return {
-        "provider": provider,
-        "model":    models.get(provider) if provider else None,
+        "provider":   provider,
+        "model":      models.get(provider) if provider else None,
         "configured": provider is not None,
     }
 
@@ -430,6 +455,82 @@ def _ats_label(score: float) -> str:
     if score < 60:  return "possible"
     if score < 80:  return "bon"
     return "top"
+
+
+# ── Génération OpenRouter standard ───────────────────────────────────────────
+
+async def _generate_with_openrouter(cv: StoredCV, job: Job, or_cfg, lang: str) -> str:
+    """Génère un CV Markdown adapté à l'offre via OpenRouter."""
+    from app.services.openrouter_service import OpenRouterService
+    ctx        = _build_cv_context(cv)
+    desc_clean = _clean_html(job.description or "")[:2000]
+    lang_label = "français" if lang == "fr" else "English"
+
+    prompt = f"""Tu es un consultant RH expert en optimisation de CV.
+
+=== OFFRE D'EMPLOI CIBLE ===
+Poste : {job.title}
+Entreprise : {job.company}
+Description complète :
+{desc_clean}
+
+=== CV SOURCE DU CANDIDAT ===
+{_section("IDENTITÉ", ctx["identity"])}
+{_section("RÉSUMÉ PROFESSIONNEL ACTUEL", ctx["summary"])}
+{_section("EXPÉRIENCES PROFESSIONNELLES", ctx["experiences"])}
+{_section("COMPÉTENCES TECHNIQUES", ctx["skills"])}
+{_section("FORMATION", ctx["education"])}
+{_section("LANGUES", ctx["languages"])}
+{_section("CERTIFICATIONS", ctx["certifications"])}
+{_section("PROJETS", ctx["projects"])}
+
+=== TON TRAVAIL ===
+Génère un CV adapté en {lang_label} pour ce poste. Reformule avec les mots-clés de l'offre,
+mets en avant les expériences pertinentes, minimise ce qui est hors-sujet.
+
+FORMAT DE SORTIE OBLIGATOIRE (Markdown strict) :
+# {cv.full_name or "[Prénom NOM]"}
+**{job.title}** | {cv.location or "[Ville]"} | {cv.email or "[email]"}{" | " + cv.phone if cv.phone else ""}
+{(cv.linkedin_url + " | ") if cv.linkedin_url else ""}{cv.github_url if cv.github_url else ""}
+
+---
+## Résumé professionnel
+[Résumé réécrit pour ce poste]
+
+---
+## Expériences professionnelles
+### [Titre poste] · [Entreprise] *(mois année – mois année)*
+- [Réalisation avec impact mesurable]
+
+---
+## Compétences techniques
+**[Technologies demandées dans l'offre]** : [liste]
+
+---
+## Formation
+### [Diplôme] · [Établissement] *(année)*
+
+---
+## Langues
+- [Langue] : [Niveau]
+
+RÈGLE ABSOLUE : Réponds UNIQUEMENT avec le Markdown du CV. Aucun commentaire avant ou après."""
+
+    svc = OpenRouterService(or_cfg.api_key, or_cfg.model)
+    return await svc.generate_cv(prompt)
+
+
+# ── Génération OpenRouter ATS ──────────────────────────────────────────────────
+
+async def _generate_ats_with_openrouter(
+    cv: StoredCV, job: Job, or_cfg, lang: str, source_cv_text: str
+) -> ATSResult:
+    """Génère un CV ATS-optimisé via OpenRouter."""
+    from app.services.openrouter_service import OpenRouterService
+    prompt = _build_ats_cloud_prompt(cv, job, lang)
+    svc    = OpenRouterService(or_cfg.api_key, or_cfg.model)
+    raw    = await svc.generate_ats_cv(prompt)
+    return _parse_ats_cloud_response(raw, source_cv_text)
 
 
 # ── Génération Ollama standard ────────────────────────────────────────────────

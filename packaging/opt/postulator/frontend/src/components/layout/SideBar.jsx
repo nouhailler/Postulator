@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, FileText, Briefcase, Radio,
-  Brain, Sparkles, Kanban, History, Settings, Plus, MessageSquare, Zap,
+  Brain, Sparkles, Kanban, History, Settings, Plus, MessageSquare, Zap, ScanSearch,
 } from 'lucide-react'
 import styles from './SideBar.module.css'
 
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { label: 'CV',                 path: '/cv',                 icon: FileText,   highlight: true },
   { label: 'Offres',             path: '/jobs',               icon: Briefcase },
   { label: 'Offres Intelligence',path: '/jobs-intelligence',  icon: MessageSquare },
+  { label: 'Analyse de l\'offre',path: '/job-analysis',       icon: ScanSearch,   highlight: true },
   { label: 'Scrapers',           path: '/scrapers',           icon: Radio },
   { label: 'Automatisation',      path: '/automation',         icon: Zap,          highlight: true },
   { label: 'CV Intelligence',    path: '/analysis',           icon: Brain },

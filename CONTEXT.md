@@ -1,5 +1,5 @@
 # CONTEXT.md – Postulator
-> Dernière mise à jour : session du 21 avril 2026 — **v1.5.3**
+> Dernière mise à jour : session du 22 avril 2026 — **v1.5.4**
 > À lire **en début de chaque session Claude** pour reprendre sans perte de temps.
 
 ---
@@ -12,7 +12,7 @@
 - Logo : carré dégradé teal/bleu avec "P" — "Postulator · Job Intelligence Platform"
 - Chemin : `/home/patrick/Documents/Claude/Projects/Postulator/`
 - Repo : `https://github.com/nouhailler/postulator`
-- Version courante : **1.5.3**
+- Version courante : **1.5.4**
 
 ---
 
@@ -50,6 +50,7 @@ npm run dev   # → http://localhost:5173
 | **Automatisation** | **`/automation`** | **Zap** |
 | CV Intelligence | `/analysis` | Brain |
 | CV Matching | `/cv-matching` | Sparkles |
+| **Analyse de l'offre** | **`/job-analysis`** | **ScanSearch** |
 | Pipeline | `/board` | Kanban |
 | Historique | `/history` | History |
 | Paramètres | `/settings` | Settings |
@@ -69,6 +70,7 @@ app/
 ├── models/
 │   ├── job.py                 ← +ai_summary (résumé IA / JSON score batch)
 │   ├── job_question.py        ← Q&A Offres Intelligence (job_id, question, answer, model, duration_ms)
+│   ├── openrouter_config.py   ← Config OpenRouter (id=1, api_key, model, updated_at) ← v1.5.4
 │   ├── cv.py · scrape_log.py · stored_cv.py · generated_cv.py
 │   ├── match_history.py · user_profile.py · search_profiles.py
 ├── api/routes/
@@ -76,7 +78,9 @@ app/
 │   │                            DELETE /api/jobs (keep_recent + keep_selected)
 │   │                            DELETE /api/jobs/by-criteria (max_score, before_date, source, dry_run) ← v1.5.3
 │   ├── cvs.py                 ← POST /api/cvs/preview-pdf (extraction sans sauvegarde) ← v1.5.3
-│   ├── jobs_intelligence.py   ← POST /chat + GET /questions/{job_id} — sauvegarde Q&A en BDD
+│   ├── jobs_intelligence.py   ← POST /chat + GET /questions/{job_id} — OpenRouter prioritaire ← v1.5.4
+│   ├── job_analysis.py        ← POST /api/job-analysis/analyze — analyse sémantique multi-tour ← v1.5.4
+│   ├── settings.py            ← GET/POST /api/settings/openrouter + /ping + /models ← v1.5.4
 │   ├── scrapers.py            ← run + run-with-proxies + logs/{id} (détail proxy)
 │   │                            payload + exclude_internships ← v1.5.3
 │   ├── analysis.py            ← score-sync + summarize-jobs + score-batch + score-batch/status
@@ -97,6 +101,8 @@ app/
 │   │                            PyMuPDF blocs, suppression bullets, jonction lignes fragmentées
 │   │                            4 types d'avertissements (isolés, courts, garbled, trop court)
 │   ├── scraper_service.py     ← run_search() + exclude_internships ← v1.5.3
+│   ├── openrouter_service.py  ← chat_with_fallback() + OpenRouterService + FREE_MODELS_FALLBACK ← v1.5.4
+│   │                            fallback auto sur 8 modèles gratuits (429/503/content=null)
 │   ├── ollama_service.py · email_service.py
 └── workers/
     └── celery_app.py · scrape_task.py  ← run_scrape + exclude_internships ← v1.5.3
@@ -105,13 +111,13 @@ app/
 ### Frontend
 ```
 src/
-├── App.jsx                    ← 11 routes + init thème depuis localStorage au démarrage ← v1.5.3
+├── App.jsx                    ← 12 routes + init thème depuis localStorage au démarrage ← v1.5.4
 ├── styles/
 │   └── design-system.css      ← :root (dark) + [data-theme="light"] complet ← v1.5.3
 ├── contexts/
 │   └── OllamaStatusContext.jsx ← Context global statut Ollama (v1.4.0)
 ├── data/
-│   ├── helpContent.js         ← aide contextuelle toutes pages (+ /automation v1.5.1)
+│   ├── helpContent.js         ← aide contextuelle toutes pages (+ /job-analysis v1.5.4)
 │   └── esco_dictionary.json   ← 265 métiers + 212 compétences (offline)
 ├── api/
 │   ├── client.js              ← postAI timeout 10min + support signal AbortController externe
@@ -121,7 +127,7 @@ src/
 │   ├── analysis.js · scrapers.js · cvStore.js · cvMatching.js · profile.js
 ├── components/
 │   ├── layout/
-│   │   ├── SideBar.jsx        ← 11 items nav dont Automatisation (Zap) (v1.5.1)
+│   │   ├── SideBar.jsx        ← 12 items nav dont Analyse de l'offre (ScanSearch) ← v1.5.4
 │   │   ├── HelpPanel.jsx      ← bouton ? + panneau aide contextuelle
 │   │   ├── OllamaBanner.jsx   ← bannière teal sticky sous TopBar (v1.4.0)
 │   │   └── TopBar · AppLayout ← AppLayout wrap OllamaStatusProvider (v1.4.0)
@@ -135,11 +141,14 @@ src/
     ├── JobsPage               ← filtres: texte, source, lieu (ILIKE), statut, score, remote
     │                            score en masse, icône ✨ si ai_summary, pagination
     │                            ResetModal 2 onglets : "Garder N récentes" / "Supprimer par critères" ← v1.5.3
-    ├── JobsIntelligencePage   ← combobox offres, chat Ollama, historique Q&A accordion (v1.4.0)
+    ├── JobsIntelligencePage   ← combobox offres, chat IA, historique Q&A accordion — OpenRouter prioritaire ← v1.5.4
+    ├── JobAnalysisPage        ← analyse sémantique offre vs contenu poste, surlignage ==match== en rouge ← v1.5.4
+    │                            multi-tour conversation, timer, provider badge, follow-up questions
     ├── ScrapersPage           ← 8 sources groupées, 24 pays, toggle Résumé IA, proxies
     │                            défaut 7 jours, mode date précise, toggle Exclure les stages ← v1.5.3
     ├── AnalysisPage           ← modal preview PDF avant import (avertissements + aperçu texte) ← v1.5.3
-    ├── SettingsPage           ← +section Apparence : Dark/Light/Custom + color picker ← v1.5.3
+    ├── SettingsPage           ← +section OpenRouter (clé API, modèle, test ping, liste modèles) ← v1.5.4
+    │                            +section Apparence : Dark/Light/Custom + color picker ← v1.5.3
     ├── CVMatchingPage · HistoryPage
 ```
 
@@ -151,6 +160,7 @@ src/
 |-------|-------------|
 | `jobs` | Offres scrapées (+company_url, +ai_summary) |
 | `job_questions` | Q&A Offres Intelligence par offre (v1.4.0) |
+| `openrouter_config` | Config OpenRouter (id=1, api_key, model, updated_at) ← v1.5.4 |
 | `cvs` | CVs uploadés (CV Intelligence) |
 | `stored_cvs` | CVs nommés/datés (page CV) |
 | `generated_cvs` | CVs générés (+source_cv_text pour diff, +is_ats, +ats_*) |
@@ -165,7 +175,8 @@ python scripts/migrate_add_company_url.py
 python scripts/migrate_add_source_cv_text.py
 python scripts/migrate_add_ats_fields.py
 python scripts/migrate_add_proxies_tried.py
-python scripts/migrate_add_job_questions.py   # v1.4.0 — à lancer une fois
+python scripts/migrate_add_job_questions.py      # v1.4.0 — à lancer une fois
+python scripts/migrate_add_openrouter_config.py  # v1.5.4 — à lancer une fois
 ```
 
 ---
@@ -179,8 +190,13 @@ python scripts/migrate_add_job_questions.py   # v1.4.0 — à lancer une fois
 | DELETE `/api/jobs/by-criteria` | Suppression par critères : max_score, before_date, source, dry_run ← v1.5.3 |
 | POST `/api/cvs/upload` | Upload + parsing CV |
 | POST `/api/cvs/preview-pdf` | Extraction texte PDF sans sauvegarde → {text, warnings, char_count, line_count} ← v1.5.3 |
-| POST `/api/jobs-intelligence/chat` | Chat Ollama sur une offre — cascade BDD→fetch URL→titre |
+| POST `/api/jobs-intelligence/chat` | Chat IA sur une offre — OpenRouter prioritaire, fallback Ollama ← v1.5.4 |
 | GET `/api/jobs-intelligence/questions/{job_id}` | Historique Q&A sauvegardées pour une offre (v1.4.0) |
+| POST `/api/job-analysis/analyze` | Analyse sémantique offre vs contenu poste, multi-tour ← v1.5.4 |
+| GET `/api/settings/openrouter` | État config OpenRouter (clé masquée + modèle) ← v1.5.4 |
+| POST `/api/settings/openrouter` | Sauvegarde clé API + modèle OpenRouter ← v1.5.4 |
+| GET `/api/settings/openrouter/ping` | Test connexion OpenRouter → {ok, model, latency_ms} ← v1.5.4 |
+| GET `/api/settings/openrouter/models` | Liste modèles gratuits OpenRouter ← v1.5.4 |
 | POST `/api/scrapers/run` | Scraping Celery async (+exclude_internships) ← v1.5.3 |
 | POST `/api/scrapers/run-with-proxies` | Scraping avec proxies résidentiels (+exclude_internships) ← v1.5.3 |
 | GET `/api/scrapers/logs/{id}` | Détail log (proxy IP, proxies tentés…) |

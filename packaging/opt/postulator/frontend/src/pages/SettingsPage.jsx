@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Mail, CheckCircle, XCircle, Loader, Settings, Shield, Brain, ExternalLink, AlertTriangle, Cloud, Palette } from 'lucide-react'
+import { Mail, CheckCircle, XCircle, Loader, Settings, Shield, Brain, ExternalLink, AlertTriangle, Cloud, Palette, Zap, Save, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchAlertStatus, testSmtp } from '../api/alerts.js'
 import styles from './SettingsPage.module.css'
@@ -94,12 +94,113 @@ export default function SettingsPage() {
   // Statut Cloud AI (chargé via l'endpoint backend)
   const [cloudStatus, setCloudStatus] = useState(null)
   const [loadingCloud, setLoadingCloud] = useState(true)
-  useEffect(() => {
+
+  const reloadCloudStatus = () => {
+    setLoadingCloud(true)
     fetch('/api/cv-matching/cloud-status')
       .then(r => r.json()).then(setCloudStatus)
       .catch(() => setCloudStatus({ configured: false }))
       .finally(() => setLoadingCloud(false))
-  }, [])
+  }
+  useEffect(() => { reloadCloudStatus() }, [])
+
+  // ── OpenRouter ─────────────────────────────────────────────────────────────
+  const [orStatus,       setOrStatus]       = useState(null)   // {configured, masked_key, model}
+  const [orKey,          setOrKey]          = useState('')
+  const [orModel,        setOrModel]        = useState('deepseek/deepseek-r1:free')
+  const [orShowKey,      setOrShowKey]      = useState(false)
+  const [orSaving,       setOrSaving]       = useState(false)
+  const [orSaveResult,   setOrSaveResult]   = useState(null)   // {ok, message}
+  const [orModels,       setOrModels]       = useState([])
+  const [orLoadingModels,setOrLoadingModels]= useState(false)
+
+  const loadOrStatus = () => {
+    fetch('/api/settings/openrouter')
+      .then(r => r.json())
+      .then(d => {
+        setOrStatus(d)
+        setOrModel(d.model || 'deepseek/deepseek-r1:free')
+        // Auto-charger la liste des modèles dès que la clé est connue
+        fetchOrModels()
+      })
+      .catch(() => setOrStatus({ configured: false, model: 'deepseek/deepseek-r1:free' }))
+  }
+
+  const fetchOrModels = async () => {
+    setOrLoadingModels(true)
+    try {
+      const res  = await fetch('/api/settings/openrouter/models')
+      const data = await res.json()
+      setOrModels(Array.isArray(data) ? data : [])
+    } catch {
+      setOrModels([])
+    } finally {
+      setOrLoadingModels(false)
+    }
+  }
+
+  useEffect(() => { loadOrStatus() }, [])
+
+  const handleOrSave = async () => {
+    setOrSaving(true)
+    setOrSaveResult(null)
+    try {
+      const res = await fetch('/api/settings/openrouter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: orKey, model: orModel }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Erreur sauvegarde')
+      setOrSaveResult({ ok: true, message: 'Configuration sauvegardée !' })
+      setOrKey('')
+      loadOrStatus()
+      reloadCloudStatus()
+    } catch (err) {
+      setOrSaveResult({ ok: false, message: err.message })
+    } finally {
+      setOrSaving(false)
+    }
+  }
+
+  const handleOrClear = async () => {
+    setOrSaving(true)
+    setOrSaveResult(null)
+    try {
+      const res = await fetch('/api/settings/openrouter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: '', model: orModel }),
+      })
+      if (!res.ok) throw new Error('Erreur')
+      setOrSaveResult({ ok: true, message: 'Clé supprimée — Ollama utilisé par défaut.' })
+      loadOrStatus()
+      reloadCloudStatus()
+    } catch (err) {
+      setOrSaveResult({ ok: false, message: err.message })
+    } finally {
+      setOrSaving(false)
+    }
+  }
+
+  const [orPinging,    setOrPinging]    = useState(false)
+  const [orPingResult, setOrPingResult] = useState(null)  // {ok, model, latency_ms, error}
+
+  const handleOrPing = async () => {
+    setOrPinging(true)
+    setOrPingResult(null)
+    try {
+      const res  = await fetch('/api/settings/openrouter/ping')
+      const data = await res.json()
+      setOrPingResult(data)
+    } catch (err) {
+      setOrPingResult({ ok: false, error: err.message })
+    } finally {
+      setOrPinging(false)
+    }
+  }
+
+  const handleOrLoadModels = () => fetchOrModels()
 
   return (
     <div className={styles.page}>
@@ -213,9 +314,199 @@ ALERT_SCORE_THRESHOLD=80`}</pre>
         </div>
       </Section>
 
+      {/* ── OPENROUTER ── */}
+      <Section
+        icon={<Zap size={16} strokeWidth={2} style={{ color: orStatus?.configured ? '#f97316' : 'var(--outline)' }} />}
+        title="OpenRouter (modèles gratuits)"
+        subtitle="Utilisez des modèles IA gratuits en ligne pour toutes les fonctionnalités IA — remplace Ollama si configuré.">
+
+        {/* Statut */}
+        <div className={`${styles.statusBanner} ${orStatus?.configured ? styles.statusBannerOk : styles.statusBannerWarn}`}
+          style={orStatus?.configured ? { borderColor: 'rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.07)', color: '#f97316' } : {}}>
+          {!orStatus
+            ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Chargement…</>
+            : orStatus.configured
+              ? <><CheckCircle size={14} strokeWidth={2} /> OpenRouter actif — modèle : <strong>{orStatus.model}</strong> · Clé : {orStatus.masked_key}</>
+              : <><AlertTriangle size={14} strokeWidth={2} /> OpenRouter non configuré — Ollama (local) utilisé par défaut.</>
+          }
+        </div>
+
+        {/* Formulaire de configuration */}
+        <div className={styles.orForm}>
+          {/* Clé API */}
+          <div className={styles.orField}>
+            <label className={styles.orLabel}>Clé API OpenRouter</label>
+            <div className={styles.orInputRow}>
+              <input
+                type={orShowKey ? 'text' : 'password'}
+                className={styles.orInput}
+                placeholder={orStatus?.configured ? '(clé enregistrée — laissez vide pour conserver)' : 'sk-or-v1-...'}
+                value={orKey}
+                onChange={e => setOrKey(e.target.value)}
+                autoComplete="off"
+              />
+              <button className={styles.orIconBtn} onClick={() => setOrShowKey(v => !v)} title={orShowKey ? 'Masquer' : 'Afficher'}>
+                {orShowKey ? <EyeOff size={14} strokeWidth={2} /> : <Eye size={14} strokeWidth={2} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Modèle */}
+          <div className={styles.orField}>
+            <label className={styles.orLabel}>
+              Modèle
+              {orModels.length > 0 && (
+                <span className={styles.orModelCount}>{orModels.length} modèles gratuits disponibles</span>
+              )}
+            </label>
+            <div className={styles.orInputRow}>
+              {orModels.length > 0 ? (
+                <select
+                  className={styles.orSelect}
+                  value={orModel}
+                  onChange={e => setOrModel(e.target.value)}
+                >
+                  {orModels.map(m => (
+                    <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                  ))}
+                  {/* Si le modèle actuel n'est pas dans la liste, l'ajouter */}
+                  {orModel && !orModels.find(m => m.id === orModel) && (
+                    <option value={orModel}>{orModel}</option>
+                  )}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  className={styles.orInput}
+                  value={orModel}
+                  onChange={e => setOrModel(e.target.value)}
+                  placeholder="deepseek/deepseek-r1:free"
+                />
+              )}
+              <button
+                className={styles.orIconBtn}
+                onClick={handleOrLoadModels}
+                disabled={orLoadingModels}
+                title="Rafraîchir la liste depuis OpenRouter API">
+                {orLoadingModels
+                  ? <Loader size={14} className={styles.spin} strokeWidth={2} />
+                  : <RefreshCw size={14} strokeWidth={2} />}
+              </button>
+            </div>
+            {orLoadingModels && (
+              <p className={styles.orHint}>Récupération des modèles gratuits depuis OpenRouter…</p>
+            )}
+          </div>
+
+          {/* Boutons */}
+          <div className={styles.orActions}>
+            <button
+              className={styles.orSaveBtn}
+              onClick={handleOrSave}
+              disabled={orSaving || (!orKey && !orStatus?.configured)}>
+              {orSaving
+                ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Sauvegarde…</>
+                : <><Save size={13} strokeWidth={2} /> Sauvegarder</>}
+            </button>
+            {orStatus?.configured && (
+              <button className={styles.orClearBtn} onClick={handleOrClear} disabled={orSaving}>
+                <XCircle size={13} strokeWidth={2} /> Supprimer la clé
+              </button>
+            )}
+          </div>
+
+          {/* Résultat sauvegarde */}
+          {orSaveResult && (
+            <div className={`${styles.testResult} ${orSaveResult.ok ? styles.testResultOk : styles.testResultErr}`}>
+              {orSaveResult.ok
+                ? <><CheckCircle size={14} strokeWidth={2} /> {orSaveResult.message}</>
+                : <><XCircle size={14} strokeWidth={2} /> {orSaveResult.message}</>}
+            </div>
+          )}
+        </div>
+
+        {/* Bouton test de connexion */}
+        {orStatus?.configured && (
+          <div className={styles.testRow}>
+            <button
+              className={`${styles.testBtn} ${orPinging ? styles.testBtnDisabled : ''}`}
+              style={{ borderColor: '#f97316', color: '#f97316', background: 'rgba(249,115,22,0.08)' }}
+              onClick={handleOrPing}
+              disabled={orPinging}>
+              {orPinging
+                ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Test en cours…</>
+                : <><Zap size={13} strokeWidth={2} /> Tester la connexion OpenRouter</>}
+            </button>
+          </div>
+        )}
+        {orPingResult && (
+          <div className={`${styles.testResult} ${orPingResult.ok ? styles.testResultOk : styles.testResultErr}`}
+            style={orPingResult.ok ? { borderColor: 'rgba(249,115,22,0.3)', background: 'rgba(249,115,22,0.07)', color: '#f97316' } : {}}>
+            {orPingResult.ok
+              ? <><CheckCircle size={14} strokeWidth={2} /> OpenRouter opérationnel · {orPingResult.model} · {orPingResult.latency_ms}ms</>
+              : <><XCircle size={14} strokeWidth={2} /> {orPingResult.error}</>}
+          </div>
+        )}
+
+        {/* Modèles gratuits — liste dynamique */}
+        <div className={styles.envBlock}>
+          <div className={styles.orModelsHeader}>
+            <p className={styles.envBlockTitle}>
+              {orModels.length > 0
+                ? `${orModels.length} modèles gratuits disponibles — cliquez pour sélectionner`
+                : 'Modèles gratuits OpenRouter'}
+            </p>
+            <button
+              className={styles.orRefreshSmall}
+              onClick={handleOrLoadModels}
+              disabled={orLoadingModels}
+              title="Rafraîchir depuis OpenRouter API">
+              {orLoadingModels
+                ? <Loader size={12} className={styles.spin} strokeWidth={2} />
+                : <RefreshCw size={12} strokeWidth={2} />}
+              {orLoadingModels ? 'Chargement…' : 'Rafraîchir'}
+            </button>
+          </div>
+
+          {orModels.length > 0 ? (
+            <div className={styles.orModelsList}>
+              {orModels.map(m => (
+                <div
+                  key={m.id}
+                  className={`${styles.orModelItem} ${orModel === m.id ? styles.orModelItemActive : ''}`}
+                  onClick={() => setOrModel(m.id)}
+                  title={m.id}
+                >
+                  <span className={styles.orModelItemName}>{m.name || m.id}</span>
+                  <span className={styles.orModelItemId}>{m.id}</span>
+                  {m.context && m.context !== '?' && (
+                    <span className={styles.orModelItemCtx}>{Number(m.context).toLocaleString()} ctx</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.orHint}>
+              {orLoadingModels
+                ? 'Récupération en cours…'
+                : 'Cliquez sur Rafraîchir pour charger les modèles gratuits depuis l\'API OpenRouter.'}
+            </p>
+          )}
+
+          <p className={styles.envBlockNote}>
+            💡 <strong>Gratuit sans limite de tokens</strong> avec les modèles <code>:free</code>.
+            Les modèles disponibles évoluent dans le temps — rafraîchissez pour voir la liste à jour.{' '}
+            Obtenez votre clé gratuite sur{' '}
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className={styles.link}>
+              openrouter.ai/keys <ExternalLink size={11} strokeWidth={2} />
+            </a>
+          </p>
+        </div>
+      </Section>
+
       {/* ── CLOUD AI ── */}
       <Section
-        icon={<Cloud size={16} strokeWidth={2} style={{ color: cloudStatus?.configured ? '#a78bfa' : 'var(--outline)' }} />}
+        icon={<Cloud size={16} strokeWidth={2} style={{ color: cloudStatus?.configured && cloudStatus?.provider !== 'openrouter' ? '#a78bfa' : 'var(--outline)' }} />}
         title="Cloud AI (CV ATS CLOUD)"
         subtitle="Utilisez Claude ou ChatGPT pour générer des CVs ATS sans GPU — idéal sur PC sans carte graphique.">
 

@@ -76,6 +76,7 @@ async def score_sync(payload: CVAnalysisRequest, db: DBSession) -> dict:
     from app.models.cv import CV
     from app.models.job import Job
     from app.services.cv_service import CVService
+    from app.services.openrouter_service import load_openrouter_config
 
     cv = await db.get(CV, payload.cv_id)
     job = await db.get(Job, payload.job_id)
@@ -84,8 +85,13 @@ async def score_sync(payload: CVAnalysisRequest, db: DBSession) -> dict:
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {payload.job_id} introuvable.")
 
+    or_cfg = await load_openrouter_config(db)
     svc = CVService(db)
-    result = await svc.score_against_job(cv, job, model=payload.model)
+    result = await svc.score_against_job(
+        cv, job, model=payload.model,
+        openrouter_key=or_cfg.api_key if or_cfg else None,
+        openrouter_model=or_cfg.model if or_cfg else None,
+    )
     await db.commit()
     return result
 
@@ -131,8 +137,16 @@ async def summarize_jobs(
     job_ids = [j.id for j in jobs]
     _summarize_state = {"running": True, "done": 0, "total": len(job_ids), "errors": 0}
 
+    # Charger config OpenRouter (priorité sur Ollama si configuré)
+    from app.services.openrouter_service import load_openrouter_config
+    or_cfg = await load_openrouter_config(db)
+
     # Lancer en arrière-plan
-    asyncio.create_task(_run_summarize_batch(job_ids, settings.ollama_model, settings.ollama_base_url))
+    asyncio.create_task(_run_summarize_batch(
+        job_ids, settings.ollama_model, settings.ollama_base_url,
+        openrouter_key=or_cfg.api_key if or_cfg else None,
+        openrouter_model=or_cfg.model if or_cfg else None,
+    ))
 
     return {
         "status": "started",
@@ -202,10 +216,16 @@ async def score_batch(
         "finished_at": None,
     }
 
+    # Charger config OpenRouter (priorité sur Ollama si configuré)
+    from app.services.openrouter_service import load_openrouter_config
+    or_cfg = await load_openrouter_config(db)
+
     asyncio.create_task(
         _run_score_batch(
             job_ids, payload.cv_id, payload.model or settings.ollama_model,
-            settings.ollama_base_url
+            settings.ollama_base_url,
+            openrouter_key=or_cfg.api_key if or_cfg else None,
+            openrouter_model=or_cfg.model if or_cfg else None,
         )
     )
 
@@ -260,8 +280,12 @@ async def ollama_models(settings: AppSettings) -> dict:
 
 # ── Tâches arrière-plan ───────────────────────────────────────────────────────
 
-async def _run_summarize_batch(job_ids: list[int], model: str, base_url: str) -> None:
-    """Résumé IA séquentiel offre par offre."""
+async def _run_summarize_batch(
+    job_ids: list[int], model: str, base_url: str,
+    openrouter_key: Optional[str] = None,
+    openrouter_model: Optional[str] = None,
+) -> None:
+    """Résumé IA séquentiel offre par offre — OpenRouter ou Ollama."""
     global _summarize_state
     from app.db.database import AsyncSessionLocal
     from app.models.job import Job
@@ -275,7 +299,11 @@ async def _run_summarize_batch(job_ids: list[int], model: str, base_url: str) ->
                     _summarize_state["done"]   += 1
                     continue
 
-                summary = await _generate_job_summary(job, model, base_url)
+                summary = await _generate_job_summary(
+                    job, model, base_url,
+                    openrouter_key=openrouter_key,
+                    openrouter_model=openrouter_model,
+                )
                 if summary:
                     job.ai_summary = summary
                     await db.commit()
@@ -293,8 +321,12 @@ async def _run_summarize_batch(job_ids: list[int], model: str, base_url: str) ->
     _summarize_state["running"] = False
 
 
-async def _run_score_batch(job_ids: list[int], cv_id: int, model: str, base_url: str) -> None:
-    """Score en masse séquentiel."""
+async def _run_score_batch(
+    job_ids: list[int], cv_id: int, model: str, base_url: str,
+    openrouter_key: Optional[str] = None,
+    openrouter_model: Optional[str] = None,
+) -> None:
+    """Score en masse séquentiel — OpenRouter ou Ollama."""
     global _score_batch_state
     from app.db.database import AsyncSessionLocal
     from app.models.cv import CV
@@ -313,7 +345,11 @@ async def _run_score_batch(job_ids: list[int], cv_id: int, model: str, base_url:
                     continue
 
                 svc    = CVService(db)
-                result = await svc.score_against_job(cv, job, model=model)
+                result = await svc.score_against_job(
+                    cv, job, model=model,
+                    openrouter_key=openrouter_key,
+                    openrouter_model=openrouter_model,
+                )
                 await db.commit()
 
                 score = result.get("score") or result.get("ai_score") or 0
@@ -350,19 +386,27 @@ async def _run_score_batch(job_ids: list[int], cv_id: int, model: str, base_url:
     _score_batch_state["finished_at"] = datetime.utcnow().isoformat()
 
 
-async def _generate_job_summary(job, model: str, base_url: str) -> Optional[str]:
-    """Génère un résumé de 10 lignes max via Ollama."""
-    import httpx as _httpx
-    import ollama as ol
-
+async def _generate_job_summary(
+    job, model: str, base_url: str,
+    openrouter_key: Optional[str] = None,
+    openrouter_model: Optional[str] = None,
+) -> Optional[str]:
+    """Génère un résumé de 10 lignes max via OpenRouter (priorité) ou Ollama."""
+    import re as _re
     desc_clean = (job.description or "")[:3000]
-    # Nettoyer HTML basique
-    import re
-    desc_clean = re.sub(r'<[^>]+>', ' ', desc_clean)
-    desc_clean = re.sub(r'\s+', ' ', desc_clean).strip()
-
+    desc_clean = _re.sub(r'<[^>]+>', ' ', desc_clean)
+    desc_clean = _re.sub(r'\s+', ' ', desc_clean).strip()
     if len(desc_clean) < 50:
         return None
+
+    if openrouter_key:
+        from app.services.openrouter_service import OpenRouterService
+        svc_or = OpenRouterService(openrouter_key, openrouter_model or "")
+        return await svc_or.generate_summary(job.title, job.company, desc_clean)
+
+    # Fallback Ollama
+    import httpx as _httpx
+    import ollama as ol
 
     prompt = f"""Tu es un expert en recrutement. Analyse cette offre d'emploi et fournis un résumé structuré.
 
@@ -393,11 +437,10 @@ Maximum 10 bullet points. Chaque point : 1 ligne concise."""
             options={"temperature": 0.2, "num_predict": 600},
         )
         raw = response["response"].strip()
-        # Garder seulement les lignes qui commencent par • ou -
-        lines = [l.strip() for l in raw.split('\n') if l.strip() and (l.strip().startswith('•') or l.strip().startswith('-') or l.strip().startswith('*'))]
-        lines = lines[:10]   # hard cap 10 lignes
+        lines = [l.strip() for l in raw.split('\n') if l.strip() and
+                 (l.strip().startswith('•') or l.strip().startswith('-') or l.strip().startswith('*'))]
+        lines = lines[:10]
         if not lines:
-            # Si pas de bullets, prendre les 10 premières lignes non vides
             lines = [l.strip() for l in raw.split('\n') if l.strip()][:10]
         return '\n'.join(lines)
     except Exception as exc:
