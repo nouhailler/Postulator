@@ -263,16 +263,11 @@ async def generate_ats_cv_cloud(
     settings: AppSettings,
 ) -> ATSResult:
     """
-    Génère un CV optimisé ATS via un modèle Cloud (Anthropic Claude ou OpenAI).
-    Provider sélectionné automatiquement selon ANTHROPIC_API_KEY / OPENAI_API_KEY dans .env.
+    Génère un CV optimisé ATS via un modèle Cloud.
+    Priorité : OpenRouter (si configuré dans Paramètres) → Anthropic → OpenAI → Mistral (.env).
     Ne sauvegarde PAS en base — utiliser /save-ats pour persister.
     """
-    provider = settings.cloud_ai_provider
-    if not provider:
-        raise HTTPException(
-            status_code=503,
-            detail="Aucune clé API Cloud configurée. Ajoutez ANTHROPIC_API_KEY ou OPENAI_API_KEY dans backend/.env.",
-        )
+    from app.services.openrouter_service import load_openrouter_config
 
     source_cv = await db.get(StoredCV, payload.source_cv_id)
     if not source_cv:
@@ -283,18 +278,32 @@ async def generate_ats_cv_cloud(
         raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
 
     source_cv_text = _build_source_text(source_cv)
+    lang = payload.language or "fr"
+
+    # ── Priorité 1 : OpenRouter ────────────────────────────────────────────────
+    or_cfg = await load_openrouter_config(db)
+    if or_cfg:
+        return await _generate_ats_with_openrouter(source_cv, job, or_cfg, lang, source_cv_text)
+
+    # ── Priorité 2 : Clés .env ─────────────────────────────────────────────────
+    provider = settings.cloud_ai_provider
+    if not provider:
+        raise HTTPException(
+            status_code=503,
+            detail="Aucune clé API Cloud configurée. Configurez OpenRouter dans Paramètres, ou ajoutez ANTHROPIC_API_KEY / OPENAI_API_KEY dans backend/.env.",
+        )
 
     if provider == "anthropic":
         return await _generate_ats_with_claude(
-            source_cv, job, settings.anthropic_api_key, payload.language or "fr", source_cv_text
+            source_cv, job, settings.anthropic_api_key, lang, source_cv_text
         )
     elif provider == "openai":
         return await _generate_ats_with_openai(
-            source_cv, job, settings.openai_api_key, payload.language or "fr", source_cv_text
+            source_cv, job, settings.openai_api_key, lang, source_cv_text
         )
     else:
         return await _generate_ats_with_mistral(
-            source_cv, job, settings.mistral_api_key, payload.language or "fr", source_cv_text
+            source_cv, job, settings.mistral_api_key, lang, source_cv_text
         )
 
 

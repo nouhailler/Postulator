@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Search, Loader, Clock, Send, ChevronDown, Sparkles,
-  AlertCircle, Hourglass, Zap, Cpu, CheckCircle2, X, Maximize2,
+  AlertCircle, Hourglass, Zap, Cpu, CheckCircle2, X, Maximize2, Trash2,
 } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchJobs } from '../api/jobs.js'
@@ -239,17 +239,50 @@ export default function JobAnalysisPage() {
     return () => document.removeEventListener('mousedown', h)
   }, [selectedJob])
 
+  const [loadingHistory, setLoadingHistory] = useState(false)
+
+  const loadHistory = useCallback(async (jobId) => {
+    setLoadingHistory(true)
+    try {
+      const data = await api.get(`/job-analysis/history/${jobId}`)
+      // Convertir les entrées BDD au format local {criteria, question, answer, provider, model, duration_ms}
+      setHistory((data ?? []).map(h => ({
+        criteria:    h.criteria,
+        question:    h.question,
+        answer:      h.answer,
+        provider:    h.provider,
+        model:       h.model,
+        duration_ms: h.duration_ms,
+        desc_source: h.desc_source,
+      })))
+    } catch {
+      setHistory([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }, [])
+
+  const handleDeleteHistory = async () => {
+    if (!selectedJob) return
+    if (!window.confirm('Supprimer tout l\'historique des analyses pour cette offre ?')) return
+    try {
+      await api.delete(`/job-analysis/history/${selectedJob.id}`)
+      setHistory([])
+    } catch {}
+  }
+
   const selectJob = job => {
     setSelectedJob(job)
     setInputText(`${job.title} — ${job.company}`)
     setShowDropdown(false); setBrowsingAll(false)
     setHistory([]); setFollowUp('')
+    loadHistory(job.id)
   }
 
   // Formulaire
   const [criteria,  setCriteria]  = useState('')
 
-  // Historique des échanges
+  // Historique des échanges (chargé depuis BDD + nouvelles entrées en temps réel)
   const [history,   setHistory]   = useState([])  // [{criteria, question, answer, provider, duration_ms}]
 
   // Question de suivi
@@ -502,7 +535,12 @@ export default function JobAnalysisPage() {
         {/* ── Zone de résultats ── */}
         <div className={styles.resultsArea}>
 
-          {history.length === 0 && !analyzing ? (
+          {loadingHistory ? (
+            <div className={styles.empty}>
+              <Loader size={24} strokeWidth={1.5} className={styles.spin} style={{ color: 'var(--primary)', marginBottom: 10 }} />
+              <p style={{ fontSize: 13, color: 'var(--outline)' }}>Chargement de l'historique…</p>
+            </div>
+          ) : history.length === 0 && !analyzing ? (
             <div className={styles.empty}>
               <Sparkles size={36} strokeWidth={1} style={{ color: 'var(--outline)', marginBottom: 12 }} />
               <p>Sélectionnez une offre, décrivez votre contenu de poste,</p>
@@ -514,6 +552,23 @@ export default function JobAnalysisPage() {
             </div>
           ) : (
             <div className={styles.results}>
+
+              {/* En-tête historique avec bouton suppression */}
+              {history.length > 0 && !analyzing && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 4 }}>
+                  <button
+                    onClick={handleDeleteHistory}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      fontSize: 11, color: 'var(--outline)',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
+                    }}
+                    title="Supprimer l'historique des analyses pour cette offre"
+                  >
+                    <Trash2 size={11} strokeWidth={2} /> Effacer l'historique
+                  </button>
+                </div>
+              )}
 
               {/* Historique des échanges */}
               {history.map((entry, i) => {

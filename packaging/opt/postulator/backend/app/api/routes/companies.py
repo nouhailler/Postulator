@@ -33,8 +33,9 @@ router = APIRouter(prefix="/companies", tags=["Companies"])
 
 CONFIG_PATH = Path("companies_config.json")
 
-# ── In-memory run status ──────────────────────────────────────────────────────
-_run_status: dict[int, dict] = {}
+# ── In-memory run status & cancel flags ──────────────────────────────────────
+_run_status:   dict[int, dict] = {}
+_cancel_flags: dict[int, bool] = {}  # True = annulation demandée pour cet id
 
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -75,6 +76,16 @@ async def save_config(payload: CompaniesConfig) -> dict:
 @router.get("/run-status")
 async def get_run_status() -> dict:
     return _run_status
+
+
+@router.post("/{company_id}/cancel", status_code=200)
+async def cancel_run(company_id: int) -> dict:
+    """Demande l'annulation du run en cours pour cette entreprise."""
+    if not _run_status.get(company_id, {}).get("running"):
+        return {"ok": False, "message": "Aucun run en cours."}
+    _cancel_flags[company_id] = True
+    _run_status[company_id]["message"] = "Annulation demandée…"
+    return {"ok": True, "message": "Annulation en cours…"}
 
 
 # ── DDG Search ────────────────────────────────────────────────────────────────
@@ -217,6 +228,7 @@ async def _do_discover(
     from app.services.company_scraper_service import discover_careers_url
 
     logs: list[dict] = []
+    _cancel_flags.pop(company_id, None)
     _run_status[company_id] = {
         "running": True, "phase": "discovering",
         "message": f"Recherche de l'URL carrières pour « {name} »…",
@@ -224,12 +236,30 @@ async def _do_discover(
     }
 
     def log_cb(level: str, msg: str) -> None:
+        if _cancel_flags.get(company_id):
+            return
         logs.append({"level": level, "msg": msg})
         _run_status[company_id]["logs"] = logs[:]
         _run_status[company_id]["message"] = msg
 
     try:
         result = await discover_careers_url(name, domain, proxies, ai_key, ai_model, log_cb=log_cb)
+
+        # Vérifier si annulation demandée après la découverte
+        if _cancel_flags.get(company_id):
+            _cancel_flags.pop(company_id, None)
+            logs.append({"level": "warn", "msg": "⛔ Découverte annulée par l'utilisateur."})
+            _run_status[company_id] = {
+                "running": False, "phase": "error", "message": "Annulé.",
+                "logs": logs,
+            }
+            async with AsyncSessionLocal() as db:
+                co = await db.get(Company, company_id)
+                if co:
+                    co.scrape_status = "pending"
+                    await db.commit()
+            return
+
         url = result.get("url")
         async with AsyncSessionLocal() as db:
             co = await db.get(Company, company_id)
@@ -260,6 +290,8 @@ async def _do_discover(
                 co.scrape_status = "error"
                 co.error_msg = str(exc)[:500]
                 await db.commit()
+    finally:
+        _cancel_flags.pop(company_id, None)
 
 
 # ── Scrape ────────────────────────────────────────────────────────────────────
@@ -311,13 +343,36 @@ async def _do_scrape(
     from app.db.database import AsyncSessionLocal
     from app.services.company_scraper_service import scrape_company, save_jobs_to_db
 
+    logs: list[dict] = []
+    _cancel_flags.pop(company_id, None)
     _run_status[company_id] = {
         "running": True, "phase": "scraping",
         "message": f"Scraping de « {name} » via {ats_type}…",
+        "logs": logs,
     }
+
+    def log_cb(level: str, msg: str) -> None:
+        logs.append({"level": level, "msg": msg})
+        _run_status[company_id]["logs"] = logs[:]
+        _run_status[company_id]["message"] = msg
+
     try:
+        log_cb("info", f"🔍 URL : {careers_url}")
+        log_cb("info", f"⚙️ Méthode : {ats_type}{' / slug=' + ats_slug if ats_slug else ''}")
+
+        # Vérifier annulation avant le scraping
+        if _cancel_flags.get(company_id):
+            raise RuntimeError("Annulé par l'utilisateur.")
+
         jobs = await scrape_company(name, careers_url, ats_type, ats_slug, proxies, ai_key, ai_model)
+
+        if _cancel_flags.get(company_id):
+            raise RuntimeError("Annulé par l'utilisateur.")
+
+        log_cb("ok", f"✅ {len(jobs)} offre(s) trouvée(s) sur la page.")
         count = await save_jobs_to_db(jobs, name, company_id)
+        log_cb("ok", f"💾 {count} nouvelle(s) offre(s) enregistrée(s) (doublons ignorés).")
+
         async with AsyncSessionLocal() as db:
             co = await db.get(Company, company_id)
             if co:
@@ -330,14 +385,24 @@ async def _do_scrape(
             "running": False, "phase": "done",
             "message": f"{count} nouvelle(s) offre(s) ajoutée(s).",
             "jobs_found": count,
+            "logs": logs,
         }
     except Exception as exc:
         from loguru import logger
         logger.error(f"[Company-Scrape] id={company_id}: {exc}")
-        _run_status[company_id] = {"running": False, "phase": "error", "message": str(exc)[:200]}
+        is_cancelled = _cancel_flags.get(company_id) or "Annulé" in str(exc)
+        logs.append({"level": "warn" if is_cancelled else "error",
+                     "msg": f"⛔ Annulé." if is_cancelled else f"❌ Erreur : {exc}"})
+        _run_status[company_id] = {
+            "running": False, "phase": "error",
+            "message": "Annulé." if is_cancelled else str(exc)[:200],
+            "logs": logs,
+        }
         async with AsyncSessionLocal() as db:
             co = await db.get(Company, company_id)
             if co:
-                co.scrape_status = "error"
-                co.error_msg = str(exc)[:500]
+                co.scrape_status = "pending" if is_cancelled else "error"
+                co.error_msg = None if is_cancelled else str(exc)[:500]
                 await db.commit()
+    finally:
+        _cancel_flags.pop(company_id, None)

@@ -562,6 +562,11 @@ python scripts/migrate_add_companies.py  # v1.6.0 — à lancer une fois
 - Export JSON Resume (format ATS)
 - Automatisation : historique des runs (logs persistants en BDD)
 
+### Nice to have (future releases)
+- **Obscura** ([github.com/h4ckf0r0day/obscura](https://github.com/h4ckf0r0day/obscura)) — navigateur headless Rust avec stealth mode natif (anti-fingerprinting Canvas/WebGL/Audio, `navigator.webdriver=undefined`, TLS fingerprint différent). Drop-in Playwright via CDP ou usage CLI direct (`obscura fetch <url> --stealth`). À surveiller : projet récent (avril 2026), 70 MB binaire statique, 30 MB RAM. Pertinent pour remplacer Playwright dans `_playwright_html()` pour contourner CF Standard. CF Enterprise (Nestlé) nécessite toujours des proxies résidentiels quelle que soit la solution.
+  - Ordre d'intégration envisagé : `httpx` → `obscura --stealth` → `playwright + proxy résidentiel`
+  - Attendre stabilisation du projet + retours communauté avant intégration
+
 ---
 
 ## 19. Automatisation (v1.5.1)

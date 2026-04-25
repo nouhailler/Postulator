@@ -3,7 +3,9 @@ app/api/routes/job_analysis.py
 Analyse détaillée d'une offre par rapport à un contenu de poste défini par l'utilisateur.
 
 Routes :
-  POST /api/job-analysis/analyze  → analyse initiale ou question de suivi
+  POST /api/job-analysis/analyze          → analyse initiale ou question de suivi (+ sauvegarde auto)
+  GET  /api/job-analysis/history/{job_id} → historique des analyses pour une offre
+  DELETE /api/job-analysis/history/{job_id} → supprimer l'historique d'une offre
 """
 import re
 import time
@@ -13,6 +15,7 @@ from typing import Optional
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import select, delete
 
 from app.api.deps import AppSettings, DBSession
 
@@ -41,6 +44,21 @@ class AnalyzeResponse(BaseModel):
     model:       str
     provider:    str   # "openrouter" | "ollama"
     desc_source: str   # "database" | "fetched" | "none"
+    history_id:  Optional[int] = None  # id de l'entrée sauvegardée en BDD
+
+
+class AnalysisHistoryItem(BaseModel):
+    id:          int
+    job_id:      int
+    criteria:    Optional[str]
+    question:    Optional[str]
+    answer:      str
+    provider:    Optional[str]
+    model:       Optional[str]
+    duration_ms: int
+    desc_source: Optional[str]
+    created_at:  datetime
+    model_config = {"from_attributes": True}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -229,14 +247,56 @@ async def analyze_job(
 
         duration_ms = int((time.monotonic() - t0) * 1000)
 
+        # ── Sauvegarder en BDD ────────────────────────────────────────────────
+        from app.models.job_analysis import JobAnalysis
+        entry = JobAnalysis(
+            job_id      = payload.job_id,
+            criteria    = payload.criteria.strip() if not payload.question else None,
+            question    = payload.question.strip() if payload.question else None,
+            answer      = answer,
+            provider    = provider,
+            model       = model,
+            duration_ms = duration_ms,
+            desc_source = desc_source,
+        )
+        db.add(entry)
+        await db.commit()
+        await db.refresh(entry)
+
         return AnalyzeResponse(
             answer=answer,
             duration_ms=duration_ms,
             model=model,
             provider=provider,
             desc_source=desc_source,
+            history_id=entry.id,
         )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         label = "OpenRouter" if or_cfg else "Ollama"
         raise HTTPException(status_code=503, detail=f"{label} indisponible : {exc}")
+
+
+# ── Historique ────────────────────────────────────────────────────────────────
+
+@router.get("/history/{job_id}", response_model=list[AnalysisHistoryItem])
+async def get_analysis_history(job_id: int, db: DBSession) -> list:
+    """Retourne l'historique des analyses pour une offre donnée, ordre chronologique."""
+    from app.models.job_analysis import JobAnalysis
+    result = await db.execute(
+        select(JobAnalysis)
+        .where(JobAnalysis.job_id == job_id)
+        .order_by(JobAnalysis.created_at.asc())
+    )
+    return result.scalars().all()
+
+
+@router.delete("/history/{job_id}", status_code=200)
+async def delete_analysis_history(job_id: int, db: DBSession) -> dict:
+    """Supprime tout l'historique des analyses pour une offre."""
+    from app.models.job_analysis import JobAnalysis
+    await db.execute(delete(JobAnalysis).where(JobAnalysis.job_id == job_id))
+    await db.commit()
+    return {"ok": True}

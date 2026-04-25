@@ -548,13 +548,13 @@ export default function JobsIntelligencePage() {
               </p>
             )}
 
-            {/* Suggestions */}
-            {selectedJob && messages.length === 0 && (
+            {/* Suggestions — toujours visibles si une offre est sélectionnée */}
+            {selectedJob && (
               <div className={styles.suggestionsWrap}>
                 <p className={styles.suggestionsLabel}>Questions suggérées</p>
                 <div className={styles.suggestions}>
                   {SUGGESTIONS.map((s, i) => (
-                    <button key={i} className={styles.suggestion} onClick={() => handleAsk(s)}>
+                    <button key={i} className={styles.suggestion} onClick={() => handleAsk(s)} disabled={thinking}>
                       {s}
                     </button>
                   ))}

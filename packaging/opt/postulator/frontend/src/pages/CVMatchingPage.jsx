@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOllamaStatus } from '../contexts/OllamaStatusContext.jsx'
 import {
   Sparkles, Trash2, Download, FileText, Loader,
   AlertCircle, Clock, ExternalLink, StickyNote, CheckCheck,
   GitCompare, Target, CheckCircle2, XCircle, Lightbulb,
-  ChevronDown, ChevronUp, Save,
+  ChevronDown, ChevronUp, Save, X,
 } from 'lucide-react'
 import { useAsync }    from '../hooks/useAsync.js'
 import { fetchCVList } from '../api/cvStore.js'
@@ -480,6 +480,9 @@ export default function CVMatchingPage() {
   const [atsCloudError,      setAtsCloudError]      = useState(null)
   const [cloudStatus,        setCloudStatus]        = useState(null)  // { provider, model, configured }
 
+  // AbortController partagé pour annuler toute génération en cours
+  const abortRef = useRef(null)
+
   // Charger le statut Cloud au montage
   useEffect(() => {
     fetchCloudStatus().then(setCloudStatus).catch(() => setCloudStatus({ configured: false }))
@@ -515,47 +518,68 @@ export default function CVMatchingPage() {
     if (!result.ok) { setDocxMsg(result.message); handleExportMD() }
   }
 
+  // Annuler toute génération en cours
+  const handleCancel = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+  }
+
   // Génération standard
   const handleGenerate = async () => {
     if (!selCvId || !selJobId) return
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
     setGenerating(true); setGenError(null); setActiveMode('standard')
     setOllamaStatus('CV Matching')
     try {
-      const gen = await generateMatchingCV(parseInt(selCvId), parseInt(selJobId), language)
+      const gen = await generateMatchingCV(parseInt(selCvId), parseInt(selJobId), language, null, ctrl.signal)
       await refetchGen()
       setViewGen(gen)
       setDiffMode(true)
     } catch (err) {
-      setGenError(err.detail ?? err.message ?? 'Erreur Ollama')
-    } finally { setGenerating(false); clearOllamaStatus() }
+      if (err?.name !== 'AbortError' && !err?.message?.includes('aborted'))
+        setGenError(err.detail ?? err.message ?? 'Erreur Ollama')
+      else
+        setGenError('Génération annulée.')
+    } finally { setGenerating(false); clearOllamaStatus(); abortRef.current = null }
   }
 
   // Génération ATS local (Ollama)
   const handleGenerateATS = async () => {
     if (!selCvId || !selJobId) return
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
     setGeneratingATS(true); setAtsError(null); setActiveMode('ats')
     setAtsResult(null); setAtsSavedId(null)
     setOllamaStatus('CV Matching ATS')
     try {
-      const result = await generateATSCV(parseInt(selCvId), parseInt(selJobId), language)
+      const result = await generateATSCV(parseInt(selCvId), parseInt(selJobId), language, null, ctrl.signal)
       setAtsResult(result)
     } catch (err) {
-      setAtsError(err.detail ?? err.message ?? 'Erreur Ollama ATS')
-    } finally { setGeneratingATS(false); clearOllamaStatus() }
+      if (err?.name !== 'AbortError' && !err?.message?.includes('aborted'))
+        setAtsError(err.detail ?? err.message ?? 'Erreur Ollama ATS')
+      else
+        setAtsError('Génération annulée.')
+    } finally { setGeneratingATS(false); clearOllamaStatus(); abortRef.current = null }
   }
 
-  // Génération ATS Cloud (Claude / OpenAI)
+  // Génération ATS Cloud (OpenRouter / Claude / OpenAI)
   const handleGenerateATSCloud = async () => {
     if (!selCvId || !selJobId) return
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
     setGeneratingATSCloud(true); setAtsCloudError(null); setActiveMode('ats')
     setAtsResult(null); setAtsSavedId(null)
     setOllamaStatus('CV Matching ATS Cloud')
     try {
-      const result = await generateATSCloudCV(parseInt(selCvId), parseInt(selJobId), language)
+      const result = await generateATSCloudCV(parseInt(selCvId), parseInt(selJobId), language, ctrl.signal)
       setAtsResult(result)
     } catch (err) {
-      setAtsCloudError(err.detail ?? err.message ?? 'Erreur Cloud ATS')
-    } finally { setGeneratingATSCloud(false); clearOllamaStatus() }
+      if (err?.name !== 'AbortError' && !err?.message?.includes('aborted'))
+        setAtsCloudError(err.detail ?? err.message ?? 'Erreur ATS Cloud')
+      else
+        setAtsCloudError('Génération annulée.')
+    } finally { setGeneratingATSCloud(false); clearOllamaStatus(); abortRef.current = null }
   }
 
   // Callback après sauvegarde ATS réussie
@@ -694,13 +718,15 @@ export default function CVMatchingPage() {
                 onClick={handleGenerateATSCloud}
                 disabled={!selCvId || !selJobId || generating || generatingATS || generatingATSCloud || !cloudStatus?.configured}
                 title={cloudStatus?.configured
-                  ? `Génère via ${cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'OpenAI' : 'Mistral AI'} (${cloudStatus.model})`
-                  : 'Configurez ANTHROPIC_API_KEY, OPENAI_API_KEY ou MISTRAL_API_KEY dans backend/.env'
+                  ? cloudStatus.provider === 'openrouter'
+                    ? `Génère via OpenRouter (${cloudStatus.model})`
+                    : `Génère via ${cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'OpenAI' : 'Mistral AI'} (${cloudStatus.model})`
+                  : 'Configurez OpenRouter dans Paramètres, ou ANTHROPIC_API_KEY / OPENAI_API_KEY dans backend/.env'
                 }>
                 {generatingATSCloud
                   ? <><Loader size={13} className={styles.spin} strokeWidth={2} /> Cloud… <ElapsedTimer running={generatingATSCloud} /></>
                   : cloudStatus?.configured
-                    ? <><Target size={13} strokeWidth={2} /> CV ATS CLOUD <span style={{fontSize:10, opacity:0.75}}>({cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'GPT' : 'Mistral'})</span></>
+                    ? <><Target size={13} strokeWidth={2} /> CV ATS CLOUD <span style={{fontSize:10, opacity:0.75}}>({cloudStatus.provider === 'openrouter' ? 'OpenRouter' : cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'GPT' : 'Mistral'})</span></>
                     : <><Target size={13} strokeWidth={2} /> CV ATS CLOUD <span style={{fontSize:10, opacity:0.5}}>(non configuré)</span></>
                 }
               </button>
@@ -710,21 +736,39 @@ export default function CVMatchingPage() {
               <span><strong>Générer</strong> — CV adapté, sauvegardé automatiquement</span>
               <span><strong>CV ATS LOCAL</strong> — Ollama local + score + mots-clés (GPU requis)</span>
               <span><strong>CV ATS CLOUD</strong> — {cloudStatus?.configured
-                ? `${cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'OpenAI' : 'Mistral AI 🇫🇷'} (${cloudStatus.model}) — fonctionne sans GPU`
-                : 'configurez ANTHROPIC_API_KEY, OPENAI_API_KEY ou MISTRAL_API_KEY dans .env'
+                ? cloudStatus.provider === 'openrouter'
+                  ? `OpenRouter (${cloudStatus.model}) — cloud gratuit, sans GPU`
+                  : `${cloudStatus.provider === 'anthropic' ? 'Claude' : cloudStatus.provider === 'openai' ? 'OpenAI' : 'Mistral AI 🇫🇷'} (${cloudStatus.model}) — fonctionne sans GPU`
+                : 'configurez OpenRouter dans Paramètres, ou ANTHROPIC_API_KEY / OPENAI_API_KEY dans .env'
               }</span>
             </div>
 
             {(generating || generatingATS || generatingATSCloud) && (
               <div className={styles.progressBar}>
                 <div style={{ height: 3, background: 'linear-gradient(90deg,var(--primary),var(--tertiary))', borderRadius: 2, marginBottom: 6 }} />
-                <p style={{ fontSize: 11, color: 'var(--outline)', fontStyle: 'italic' }}>
-                  {generatingATSCloud
-                    ? `${cloudStatus?.provider === 'anthropic' ? 'Claude' : cloudStatus?.provider === 'openai' ? 'OpenAI' : 'Mistral AI'} analyse et optimise le CV ATS… (10-30s)`
-                    : generatingATS ? 'Ollama analyse et optimise le CV ATS… (1-5 min)'
-                    : "Ollama adapte le CV à l'offre… (1-5 min)"
-                  }
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <p style={{ fontSize: 11, color: 'var(--outline)', fontStyle: 'italic', margin: 0 }}>
+                    {generatingATSCloud
+                      ? cloudStatus?.provider === 'openrouter'
+                        ? `OpenRouter analyse et optimise le CV ATS… (10-30s)`
+                        : `${cloudStatus?.provider === 'anthropic' ? 'Claude' : cloudStatus?.provider === 'openai' ? 'OpenAI' : 'Mistral AI'} analyse et optimise le CV ATS… (10-30s)`
+                      : generatingATS ? 'Ollama analyse et optimise le CV ATS… (1-5 min)'
+                      : "Ollama adapte le CV à l'offre… (1-5 min)"
+                    }
+                  </p>
+                  <button
+                    onClick={handleCancel}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      fontSize: 11, color: '#ff6b6b', background: 'rgba(255,107,107,0.1)',
+                      border: '1px solid rgba(255,107,107,0.3)', borderRadius: 6,
+                      padding: '3px 8px', cursor: 'pointer', flexShrink: 0,
+                    }}
+                    title="Annuler la génération en cours"
+                  >
+                    <X size={11} strokeWidth={2} /> Annuler
+                  </button>
+                </div>
               </div>
             )}
 

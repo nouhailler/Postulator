@@ -10,7 +10,7 @@ import {
   fetchCompanies, createCompany, updateCompany, deleteCompany,
   discoverCompanyUrl, scrapeCompany, scrapeAllCompanies,
   fetchRunStatus, fetchCompaniesConfig, saveCompaniesConfig,
-  ddgSearch,
+  cancelCompanyRun, ddgSearch,
 } from '../api/companies.js'
 import styles from './CompaniesPage.module.css'
 
@@ -462,7 +462,7 @@ function LogPanel({ logs }) {
   )
 }
 
-function CompanyCard({ company, runState, onDiscover, onScrape, onDelete, onUpdateUrl }) {
+function CompanyCard({ company, runState, onDiscover, onScrape, onCancel, onDelete, onUpdateUrl }) {
   const [editingUrl, setEditingUrl] = useState(false)
   const [urlDraft,   setUrlDraft]   = useState(company.careers_url || '')
   const [showLogs,   setShowLogs]   = useState(false)
@@ -472,10 +472,10 @@ function CompanyCard({ company, runState, onDiscover, onScrape, onDelete, onUpda
   const canScrape   = !!company.careers_url && !isRunning
   const atsMeta     = ATS_META[company.ats_type] || ATS_META.unknown
 
-  // Auto-ouvre les logs dès que la découverte démarre
+  // Auto-ouvre les logs dès qu'un run démarre (découverte OU scraping)
   useEffect(() => {
-    if (isRunning && runState?.phase === 'discovering') setShowLogs(true)
-  }, [isRunning, runState?.phase])
+    if (isRunning) setShowLogs(true)
+  }, [isRunning])
 
   const saveUrl = async () => {
     setEditingUrl(false)
@@ -589,7 +589,7 @@ function CompanyCard({ company, runState, onDiscover, onScrape, onDelete, onUpda
           onClick={() => setShowLogs(v => !v)}
         >
           {showLogs ? <ChevronUp size={10} strokeWidth={2} /> : <ChevronDown size={10} strokeWidth={2} />}
-          {showLogs ? 'Masquer' : 'Voir'} les logs de découverte ({runState.logs.length})
+          {showLogs ? 'Masquer' : 'Voir'} les logs ({runState.logs.length})
           {isRunning && <Loader size={9} strokeWidth={2} className={styles.spin} style={{ marginLeft: 4 }} />}
         </button>
       )}
@@ -618,26 +618,34 @@ function CompanyCard({ company, runState, onDiscover, onScrape, onDelete, onUpda
 
       {/* Actions */}
       <div className={styles.cardActions}>
-        <button
-          className={styles.discoverBtn}
-          onClick={() => onDiscover(company.id)}
-          disabled={!canDiscover}
-          title="Découvrir l'URL carrières via DuckDuckGo + IA"
-        >
-          {isRunning && runState?.phase === 'discovering'
-            ? <><Loader size={12} strokeWidth={2} className={styles.spin} /> Découverte…</>
-            : <><Search size={12} strokeWidth={2} /> Découvrir URL</>}
-        </button>
-        <button
-          className={styles.scrapeBtn}
-          onClick={() => onScrape(company.id)}
-          disabled={!canScrape}
-          title={canScrape ? 'Scraper les offres' : 'Découvrez d\'abord l\'URL'}
-        >
-          {isRunning && runState?.phase === 'scraping'
-            ? <><Loader size={12} strokeWidth={2} className={styles.spin} /> Scraping…</>
-            : <><Play size={12} strokeWidth={2} /> Scraper</>}
-        </button>
+        {isRunning ? (
+          <button
+            className={styles.cancelBtn}
+            onClick={() => onCancel(company.id)}
+            title="Annuler l'opération en cours"
+          >
+            <X size={12} strokeWidth={2} /> Annuler
+          </button>
+        ) : (
+          <>
+            <button
+              className={styles.discoverBtn}
+              onClick={() => onDiscover(company.id)}
+              disabled={!canDiscover}
+              title="Découvrir l'URL carrières via DuckDuckGo + IA"
+            >
+              <Search size={12} strokeWidth={2} /> Découvrir URL
+            </button>
+            <button
+              className={styles.scrapeBtn}
+              onClick={() => onScrape(company.id)}
+              disabled={!canScrape}
+              title={canScrape ? 'Scraper les offres' : 'Découvrez d\'abord l\'URL'}
+            >
+              <Play size={12} strokeWidth={2} /> Scraper
+            </button>
+          </>
+        )}
         <button
           className={styles.deleteBtn}
           onClick={() => onDelete(company.id)}
@@ -711,8 +719,8 @@ export default function CompaniesPage() {
   // Intervalle plus rapide (800ms) pendant une découverte pour avoir les logs en temps réel
   useEffect(() => {
     const anyRunning    = Object.values(runStatus).some(s => s?.running)
-    const anyDiscovery  = Object.values(runStatus).some(s => s?.running && s?.phase === 'discovering')
-    const interval      = anyDiscovery ? 800 : 2500
+    const anyLogs       = Object.values(runStatus).some(s => s?.running && (s?.phase === 'discovering' || s?.phase === 'scraping'))
+    const interval      = anyLogs ? 800 : 2500
 
     if (anyRunning) {
       // Relancer l'intervalle si l'intervalle actuel n'est pas au bon rythme
@@ -821,6 +829,18 @@ export default function CompaniesPage() {
     setCompanies(prev => [company, ...prev])
     setShowAddModal(false)
     handleDiscover(company.id)
+  }
+
+  const handleCancel = async id => {
+    try {
+      await cancelCompanyRun(id)
+      setRunStatus(prev => ({
+        ...prev,
+        [id]: { ...prev[id], message: 'Annulation en cours…' },
+      }))
+    } catch (e) {
+      console.error('cancel error', e)
+    }
   }
 
   const handleScrapeAll = async () => {
@@ -1075,6 +1095,7 @@ export default function CompaniesPage() {
                 runState={runStatus[company.id]}
                 onDiscover={handleDiscover}
                 onScrape={handleScrape}
+                onCancel={handleCancel}
                 onDelete={handleDelete}
                 onUpdateUrl={handleUpdateUrl}
               />

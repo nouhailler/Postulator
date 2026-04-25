@@ -10,32 +10,32 @@ export const deleteGenerated   = (id)           => api.delete(`/cv-matching/${id
 export const updateNotes       = (id, notes)    => api.patch(`/cv-matching/${id}/notes`, { notes })
 
 /** POST /api/cv-matching/generate — adapte le CV à l'offre, sauvegarde en historique */
-export function generateMatchingCV(sourceCvId, jobId, language = 'fr', model = null) {
+export function generateMatchingCV(sourceCvId, jobId, language = 'fr', model = null, signal = null) {
   return api.postAI('/cv-matching/generate', {
     source_cv_id: sourceCvId,
     job_id:       jobId,
     language,
     model,
-  })
+  }, { signal })
 }
 
 /** POST /api/cv-matching/generate-ats — génère CV ATS + score + keywords (NON sauvegardé) */
-export function generateATSCV(sourceCvId, jobId, language = 'fr', model = null) {
+export function generateATSCV(sourceCvId, jobId, language = 'fr', model = null, signal = null) {
   return api.postAI('/cv-matching/generate-ats', {
     source_cv_id: sourceCvId,
     job_id:       jobId,
     language,
     model,
-  })
+  }, { signal })
 }
 
-/** POST /api/cv-matching/generate-ats-cloud — génère CV ATS via Claude ou OpenAI (NON sauvegardé) */
-export function generateATSCloudCV(sourceCvId, jobId, language = 'fr') {
+/** POST /api/cv-matching/generate-ats-cloud — génère CV ATS via OpenRouter / Claude / OpenAI (NON sauvegardé) */
+export function generateATSCloudCV(sourceCvId, jobId, language = 'fr', signal = null) {
   return api.postAI('/cv-matching/generate-ats-cloud', {
     source_cv_id: sourceCvId,
     job_id:       jobId,
     language,
-  })
+  }, { signal })
 }
 
 /** GET /api/cv-matching/cloud-status — vérifie si un provider Cloud est configuré */
