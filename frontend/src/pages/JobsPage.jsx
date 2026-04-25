@@ -217,141 +217,213 @@ function ScoreBatchModal({ cvs, onConfirm, onCancel, loading }) {
 const SOURCES_FILTER = ['', 'indeed', 'linkedin', 'glassdoor', 'ziprecruiter', 'jobup', 'jobsch', 'jobteaser', 'adzuna']
 
 function ResetModal({ onConfirm, onConfirmCriteria, onCancel, loading }) {
-  const [tab,        setTab]        = useState('recent')   // 'recent' | 'criteria'
+  const [tab,        setTab]        = useState('criteria') // 'criteria' | 'recent'
   const [keepRecent, setKeepRecent] = useState(20)
 
   // Critères
-  const [maxScore,   setMaxScore]   = useState('')
-  const [beforeDate, setBeforeDate] = useState('')
-  const [srcFilter,  setSrcFilter]  = useState('')
-  const [preview,    setPreview]    = useState(null)   // { would_delete }
-  const [previewing, setPreviewing] = useState(false)
+  const [maxScore,    setMaxScore]    = useState('')
+  const [minScore,    setMinScore]    = useState('')
+  const [beforeDate,  setBeforeDate]  = useState('')
+  const [afterDate,   setAfterDate]   = useState('')
+  const [srcFilter,   setSrcFilter]   = useState('')
+  const [statusFilter,setStatusFilter]= useState('')
+  const [noScore,     setNoScore]     = useState(false)
+  const [preview,     setPreview]     = useState(null)
+  const [previewing,  setPreviewing]  = useState(false)
 
-  const hasAnyCriteria = maxScore !== '' || beforeDate !== '' || srcFilter !== ''
+  const resetCriteria = () => {
+    setMaxScore(''); setMinScore(''); setBeforeDate(''); setAfterDate('')
+    setSrcFilter(''); setStatusFilter(''); setNoScore(false); setPreview(null)
+  }
+
+  const hasAnyCriteria = maxScore !== '' || minScore !== '' || beforeDate !== '' ||
+    afterDate !== '' || srcFilter !== '' || statusFilter !== '' || noScore
+
+  const buildCriteria = () => ({
+    maxScore:     maxScore    !== '' ? parseFloat(maxScore)    : null,
+    minScore:     minScore    !== '' ? parseFloat(minScore)    : null,
+    beforeDate:   beforeDate  !== '' ? beforeDate               : null,
+    afterDate:    afterDate   !== '' ? afterDate                : null,
+    source:       srcFilter   !== '' ? srcFilter                : null,
+    status:       statusFilter!== '' ? statusFilter             : null,
+    noScore:      noScore     || null,
+    keepSelected: true,
+  })
 
   const handlePreview = async () => {
     setPreviewing(true); setPreview(null)
     try {
-      const r = await purgeJobsByCriteria({
-        maxScore:   maxScore   !== '' ? parseFloat(maxScore)   : null,
-        beforeDate: beforeDate !== '' ? beforeDate              : null,
-        source:     srcFilter  !== '' ? srcFilter               : null,
-        keepSelected: true, dryRun: true,
-      })
+      const r = await purgeJobsByCriteria({ ...buildCriteria(), dryRun: true })
       setPreview(r)
     } catch { setPreview(null) }
     finally { setPreviewing(false) }
   }
 
-  const handleCriteriaConfirm = () => {
-    onConfirmCriteria({
-      maxScore:   maxScore   !== '' ? parseFloat(maxScore)   : null,
-      beforeDate: beforeDate !== '' ? beforeDate              : null,
-      source:     srcFilter  !== '' ? srcFilter               : null,
-    })
-  }
-
   return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modal} style={{ maxWidth: 520 }}>
-        <div className={styles.modalIcon}>
-          <AlertTriangle size={24} strokeWidth={2} style={{ color: 'var(--error)' }} />
+    <div className={styles.modalOverlay} onClick={onCancel}>
+      <div className={styles.purgeModal} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className={styles.purgeHeader}>
+          <div className={styles.purgeHeaderLeft}>
+            <div className={styles.purgeHeaderIcon}>
+              <Trash2 size={18} strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className={styles.purgeTitle}>Suppression en masse</h3>
+              <p className={styles.purgeSub}>Les offres avec un statut actif (À postuler, Postulé, Entretien) sont toujours protégées.</p>
+            </div>
+          </div>
+          <button className={styles.purgeCloseBtn} onClick={onCancel}><X size={16} strokeWidth={2} /></button>
         </div>
-        <h3 className={styles.modalTitle}>Nettoyer les offres</h3>
 
         {/* Onglets */}
         <div className={styles.resetTabs}>
-          <button
-            className={`${styles.resetTab} ${tab === 'recent' ? styles.resetTabActive : ''}`}
-            onClick={() => setTab('recent')}>
-            Garder N récentes
-          </button>
-          <button
-            className={`${styles.resetTab} ${tab === 'criteria' ? styles.resetTabActive : ''}`}
+          <button className={`${styles.resetTab} ${tab === 'criteria' ? styles.resetTabActive : ''}`}
             onClick={() => setTab('criteria')}>
-            Supprimer par critères
+            🎯 Par critères
+          </button>
+          <button className={`${styles.resetTab} ${tab === 'recent' ? styles.resetTabActive : ''}`}
+            onClick={() => setTab('recent')}>
+            📦 Garder les N plus récentes
           </button>
         </div>
 
-        {tab === 'recent' && (
-          <>
-            <p className={styles.modalText}>
-              Conserve les <em>N</em> offres les plus récentes. Les offres sélectionnées (statut ≠ "À voir") sont toujours protégées.
-            </p>
-            <div className={styles.modalField}>
-              <label className={styles.modalLabel}>
-                Garder les{' '}
-                <input
-                  type="number" min={0} max={500}
-                  value={keepRecent}
-                  onChange={e => setKeepRecent(Math.max(0, parseInt(e.target.value) || 0))}
-                  className={styles.modalInput}
-                />
-                {' '}offres les plus récentes <span style={{ opacity: 0.6 }}>(0 = tout supprimer)</span>
-              </label>
-            </div>
-            <div className={styles.modalActions}>
-              <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
-              <button className={styles.modalConfirm} onClick={() => onConfirm(keepRecent)} disabled={loading}>
-                {loading ? <><Loader size={13} strokeWidth={2} style={{ animation: 'spin 0.9s linear infinite', display: 'inline-block', marginRight: 5 }} /> Suppression…</> : 'Confirmer'}
-              </button>
-            </div>
-          </>
-        )}
-
+        {/* ── Onglet critères ── */}
         {tab === 'criteria' && (
-          <>
-            <p className={styles.modalText}>
-              Supprime les offres correspondant aux critères ci-dessous. Les offres sélectionnées (statut ≠ "À voir") sont protégées.
-            </p>
+          <div className={styles.purgeBody}>
             <div className={styles.criteriaGrid}>
-              <div className={styles.criteriaField}>
-                <label className={styles.criteriaLabel}>Score IA inférieur à (%)</label>
-                <input className={styles.criteriaInput} type="number" min={0} max={100} step={5}
-                  placeholder="Ex : 50 (vide = ignorer)"
-                  value={maxScore} onChange={e => { setMaxScore(e.target.value); setPreview(null) }} />
-                <p className={styles.criteriaHint}>Supprime les offres scorées EN DESSOUS de ce seuil</p>
+
+              {/* Score */}
+              <div className={styles.criteriaSection}>
+                <p className={styles.criteriaSectionTitle}>Score IA</p>
+                <div className={styles.criteriaRow}>
+                  <div className={styles.criteriaField}>
+                    <label className={styles.criteriaLabel}>Score inférieur à (%)</label>
+                    <input className={styles.criteriaInput} type="number" min={0} max={100} step={5}
+                      placeholder="Ex : 50"
+                      value={maxScore} onChange={e => { setMaxScore(e.target.value); setPreview(null) }} />
+                    <p className={styles.criteriaHint}>Supprime les offres scorées sous ce seuil</p>
+                  </div>
+                  <div className={styles.criteriaField}>
+                    <label className={styles.criteriaLabel}>Score supérieur à (%)</label>
+                    <input className={styles.criteriaInput} type="number" min={0} max={100} step={5}
+                      placeholder="Ex : 90"
+                      value={minScore} onChange={e => { setMinScore(e.target.value); setPreview(null) }} />
+                    <p className={styles.criteriaHint}>Supprime les offres scorées au-dessus</p>
+                  </div>
+                </div>
+                <label className={styles.criteriaCheckLabel}>
+                  <input type="checkbox" checked={noScore}
+                    onChange={e => { setNoScore(e.target.checked); setPreview(null) }} />
+                  Supprimer les offres sans score IA
+                </label>
               </div>
-              <div className={styles.criteriaField}>
-                <label className={styles.criteriaLabel}>Scrapées avant le</label>
-                <input className={styles.criteriaInput} type="date"
-                  value={beforeDate} onChange={e => { setBeforeDate(e.target.value); setPreview(null) }} />
-                <p className={styles.criteriaHint}>Supprime les offres plus anciennes que cette date</p>
+
+              {/* Date */}
+              <div className={styles.criteriaSection}>
+                <p className={styles.criteriaSectionTitle}>Date de scraping</p>
+                <div className={styles.criteriaRow}>
+                  <div className={styles.criteriaField}>
+                    <label className={styles.criteriaLabel}>Scrapées avant le</label>
+                    <input className={styles.criteriaInput} type="date"
+                      value={beforeDate} onChange={e => { setBeforeDate(e.target.value); setPreview(null) }} />
+                    <p className={styles.criteriaHint}>Supprime les offres plus anciennes</p>
+                  </div>
+                  <div className={styles.criteriaField}>
+                    <label className={styles.criteriaLabel}>Scrapées après le</label>
+                    <input className={styles.criteriaInput} type="date"
+                      value={afterDate} onChange={e => { setAfterDate(e.target.value); setPreview(null) }} />
+                    <p className={styles.criteriaHint}>Supprime les offres plus récentes</p>
+                  </div>
+                </div>
               </div>
-              <div className={styles.criteriaField}>
-                <label className={styles.criteriaLabel}>Source spécifique</label>
-                <select className={styles.criteriaInput}
-                  value={srcFilter} onChange={e => { setSrcFilter(e.target.value); setPreview(null) }}>
-                  <option value="">Toutes les sources</option>
-                  {SOURCES_FILTER.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <p className={styles.criteriaHint}>Limite la suppression à une source</p>
+
+              {/* Source & Statut */}
+              <div className={styles.criteriaSection}>
+                <p className={styles.criteriaSectionTitle}>Source &amp; Statut</p>
+                <div className={styles.criteriaRow}>
+                  <div className={styles.criteriaField}>
+                    <label className={styles.criteriaLabel}>Source</label>
+                    <select className={styles.criteriaInput}
+                      value={srcFilter} onChange={e => { setSrcFilter(e.target.value); setPreview(null) }}>
+                      <option value="">Toutes les sources</option>
+                      {SOURCES_FILTER.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div className={styles.criteriaField}>
+                    <label className={styles.criteriaLabel}>Statut</label>
+                    <select className={styles.criteriaInput}
+                      value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPreview(null) }}>
+                      <option value="">Tous les statuts</option>
+                      <option value="new">À voir (non traités)</option>
+                      <option value="rejected">Rejetés</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* Prévisualisation */}
             {preview && (
               <div className={`${styles.previewBox} ${preview.would_delete === 0 ? styles.previewBoxEmpty : styles.previewBoxWarn}`}>
                 {preview.would_delete === 0
-                  ? '✓ Aucune offre ne correspond à ces critères.'
-                  : `⚠ ${preview.would_delete} offre${preview.would_delete !== 1 ? 's' : ''} sera${preview.would_delete !== 1 ? 'ont' : ''} supprimée${preview.would_delete !== 1 ? 's' : ''}.`
+                  ? <><CheckCheck size={13} strokeWidth={2} /> Aucune offre ne correspond à ces critères.</>
+                  : <><AlertTriangle size={13} strokeWidth={2} /> <strong>{preview.would_delete} offre{preview.would_delete !== 1 ? 's' : ''}</strong> sera{preview.would_delete !== 1 ? 'ont' : ''} supprimée{preview.would_delete !== 1 ? 's' : ''}. Cette action est irréversible.</>
                 }
               </div>
             )}
 
-            <div className={styles.modalActions}>
+            <div className={styles.purgeActions}>
               <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
-              <button className={`btn-ghost ${styles.previewBtn}`}
+              <button className="btn-ghost" onClick={resetCriteria} disabled={loading || !hasAnyCriteria}>
+                Réinitialiser
+              </button>
+              <button className={styles.previewBtn}
                 onClick={handlePreview}
                 disabled={!hasAnyCriteria || previewing || loading}>
-                {previewing ? 'Calcul…' : '🔍 Simuler'}
+                {previewing
+                  ? <><Loader size={12} className={styles.spin} strokeWidth={2} /> Calcul…</>
+                  : <><Search size={12} strokeWidth={2} /> Simuler</>}
               </button>
               <button className={styles.modalConfirm}
-                onClick={handleCriteriaConfirm}
+                onClick={() => onConfirmCriteria(buildCriteria())}
                 disabled={!hasAnyCriteria || loading}>
-                {loading ? 'Suppression…' : 'Confirmer'}
+                {loading
+                  ? <><Loader size={12} className={styles.spin} strokeWidth={2} /> Suppression…</>
+                  : <><Trash2 size={12} strokeWidth={2} /> Supprimer</>}
               </button>
             </div>
-          </>
+          </div>
+        )}
+
+        {/* ── Onglet récentes ── */}
+        {tab === 'recent' && (
+          <div className={styles.purgeBody}>
+            <p className={styles.modalText}>
+              Conserve uniquement les <em>N</em> offres les plus récentes et supprime toutes les autres.<br />
+              Les offres avec un statut actif sont toujours protégées.
+            </p>
+            <div className={styles.recentRow}>
+              <span className={styles.recentLabel}>Garder les</span>
+              <input
+                type="number" min={0} max={500}
+                value={keepRecent}
+                onChange={e => setKeepRecent(Math.max(0, parseInt(e.target.value) || 0))}
+                className={styles.recentInput}
+              />
+              <span className={styles.recentLabel}>offres les plus récentes</span>
+              <span className={styles.recentHint}>(0 = tout supprimer)</span>
+            </div>
+            <div className={styles.purgeActions}>
+              <button className="btn-ghost" onClick={onCancel} disabled={loading}>Annuler</button>
+              <button className={styles.modalConfirm} onClick={() => onConfirm(keepRecent)} disabled={loading}>
+                {loading
+                  ? <><Loader size={12} className={styles.spin} strokeWidth={2} /> Suppression…</>
+                  : <><Trash2 size={12} strokeWidth={2} /> Confirmer</>}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -483,11 +555,12 @@ export default function JobsPage() {
     finally { setResetting(false) }
   }
 
-  const handleResetByCriteria = async ({ maxScore, beforeDate, source }) => {
+  const handleResetByCriteria = async ({ maxScore, minScore, beforeDate, afterDate, source, status, noScore }) => {
     setResetting(true)
     try {
       const result = await purgeJobsByCriteria({
-        maxScore, beforeDate, source, keepSelected: true, dryRun: false,
+        maxScore, minScore, beforeDate, afterDate, source, status, noScore,
+        keepSelected: true, dryRun: false,
       })
       setShowReset(false)
       setResetMsg(`✓ ${result.deleted} offre${result.deleted !== 1 ? 's' : ''} supprimée${result.deleted !== 1 ? 's' : ''} · ${result.remaining} conservée${result.remaining !== 1 ? 's' : ''}`)
@@ -567,8 +640,8 @@ export default function JobsPage() {
           <button className="btn-ghost" onClick={refetch} disabled={loading} title="Rafraîchir">
             <RefreshCw size={13} strokeWidth={2} className={loading ? styles.spin : ''} />
           </button>
-          <button className={styles.resetBtn} onClick={() => setShowReset(true)}>
-            <Trash2 size={13} strokeWidth={2} /> Réinitialiser
+          <button className={styles.purgeMassBtn} onClick={() => setShowReset(true)}>
+            <Trash2 size={13} strokeWidth={2} /> Suppression en masse
           </button>
         </div>
       </div>

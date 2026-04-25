@@ -4,6 +4,7 @@ import {
   CheckCircle, XCircle, AlertCircle, AlertTriangle, X,
   Clock, Calendar, Shield, Wifi, WifiOff, ExternalLink,
   ChevronDown, ChevronUp, Info, FileText, Search,
+  Brain, RefreshCw,
 } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchCVList } from '../api/cvStore.js'
@@ -116,6 +117,10 @@ function LaunchConfirmModal({ config, onConfirm, onCancel }) {
             <div className={styles.modalInfoRow}>
               <FileText size={12} strokeWidth={2} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />
               <span>CV de scoring : <strong>{config.cv_name}</strong></span>
+            </div>
+            <div className={styles.modalInfoRow}>
+              <Brain size={12} strokeWidth={2} style={{ color: 'var(--tertiary)', flexShrink: 0 }} />
+              <span>Moteur de scoring : <strong>{config.or_model ? `OpenRouter · ${config.or_model}` : 'Ollama (local)'}</strong></span>
             </div>
           </div>
           <p className={styles.modalFootnote}>
@@ -298,6 +303,14 @@ export default function AutomationPage() {
   const [proxyText,   setProxyText]   = useState('')
   const [proxyOpen,   setProxyOpen]   = useState(false)
   const [saving,      setSaving]      = useState(false)
+
+  // OpenRouter scoring
+  const [aiProvider,      setAiProvider]      = useState('ollama')   // 'ollama' | 'openrouter'
+  const [orModel,         setOrModel]         = useState('')
+  const [orModels,        setOrModels]        = useState([])
+  const [orLoadingModels, setOrLoadingModels] = useState(false)
+  const [orConfigured,    setOrConfigured]    = useState(false)
+
   const [saveErr,     setSaveErr]     = useState(null)
 
   // État global
@@ -306,6 +319,23 @@ export default function AutomationPage() {
   const [showModal,   setShowModal]   = useState(false)
   const [loading,     setLoading]     = useState(true)
   const pollRef = useRef(null)
+
+  const loadOrModels = async () => {
+    setOrLoadingModels(true)
+    try {
+      const data = await fetch('/api/settings/openrouter/models').then(r => r.json())
+      setOrModels(Array.isArray(data) ? data : [])
+    } catch { setOrModels([]) }
+    finally { setOrLoadingModels(false) }
+  }
+
+  const loadOrStatus = async () => {
+    try {
+      const data = await fetch('/api/settings/openrouter').then(r => r.json())
+      setOrConfigured(!!(data?.configured))
+      if (data?.configured) loadOrModels()
+    } catch { setOrConfigured(false) }
+  }
 
   const validProxyCount = countValidProxies(proxyText)
   const location        = buildLocation(country, city)
@@ -329,6 +359,7 @@ export default function AutomationPage() {
       }
     }
     init()
+    loadOrStatus()
   }, [])
 
   // Polling quand un run est actif
@@ -366,6 +397,8 @@ export default function AutomationPage() {
     if (cfg.start_date) setStartDate(cfg.start_date)
     if (cfg.end_date)   setEndDate(cfg.end_date)
     if (cfg.proxies?.length) setProxyText(cfg.proxies.join('\n'))
+    if (cfg.or_model) { setAiProvider('openrouter'); setOrModel(cfg.or_model) }
+    else { setAiProvider('ollama') }
     if (cfg.location) {
       // Essayer de découper "Ville, Pays"
       const parts = cfg.location.split(',').map(s => s.trim())
@@ -395,6 +428,7 @@ export default function AutomationPage() {
         run_minute: runMinute,
         start_date: startDate || null,
         end_date:   endDate   || null,
+        or_model:   aiProvider === 'openrouter' && orModel ? orModel : null,
       }
       const res = await saveAutomationConfig(payload)
       setConfig(res.config)
@@ -438,6 +472,7 @@ export default function AutomationPage() {
   const isActive  = config?.enabled
   const isRunning = runStatus?.status === 'scraping' || runStatus?.status === 'scoring'
   const canSave   = keywords.trim().length > 0 && selCvId && !saving && !isRunning
+    && (aiProvider !== 'openrouter' || (orModel.trim().length > 0 && orConfigured))
 
   if (loading) {
     return (
@@ -460,6 +495,7 @@ export default function AutomationPage() {
             start_date: startDate,
             end_date:   endDate,
             cv_name:    selectedCv?.name,
+            or_model:   aiProvider === 'openrouter' && orModel ? orModel : null,
           }}
           onConfirm={handleConfirm}
           onCancel={() => setShowModal(false)}
@@ -641,6 +677,81 @@ export default function AutomationPage() {
           )}
         </div>
 
+        {/* Moteur de scoring IA */}
+        <div className={styles.fieldRow}>
+          <label className={styles.label}>
+            <Brain size={12} strokeWidth={2} style={{ color: 'var(--tertiary)' }} />
+            Moteur de scoring IA
+          </label>
+          <div className={styles.aiProviderToggle}>
+            <button
+              type="button"
+              className={`${styles.aiProviderBtn} ${aiProvider === 'ollama' ? styles.aiProviderBtnActive : ''}`}
+              onClick={() => setAiProvider('ollama')}
+              disabled={isRunning}
+            >
+              🤖 Ollama (local)
+            </button>
+            <button
+              type="button"
+              className={`${styles.aiProviderBtn} ${aiProvider === 'openrouter' ? styles.aiProviderBtnActiveOR : ''}`}
+              onClick={() => { setAiProvider('openrouter'); if (!orModels.length && orConfigured) loadOrModels() }}
+              disabled={isRunning}
+            >
+              <Zap size={11} strokeWidth={2} /> OpenRouter
+            </button>
+          </div>
+
+          {aiProvider === 'openrouter' && (
+            orConfigured ? (
+              <div className={styles.orModelRow}>
+                {orModels.length > 0 ? (
+                  <select
+                    className={styles.orModelSelect}
+                    value={orModel}
+                    onChange={e => setOrModel(e.target.value)}
+                    disabled={isRunning}
+                  >
+                    {orModels.map(m => <option key={m.id} value={m.id}>{m.name || m.id}</option>)}
+                    {orModel && !orModels.find(m => m.id === orModel) && (
+                      <option value={orModel}>{orModel}</option>
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className={styles.orModelInput}
+                    placeholder="Ex : deepseek/deepseek-r1:free"
+                    value={orModel}
+                    onChange={e => setOrModel(e.target.value)}
+                    disabled={isRunning || orLoadingModels}
+                  />
+                )}
+                <button
+                  type="button"
+                  className={styles.orRefreshBtn}
+                  onClick={loadOrModels}
+                  disabled={orLoadingModels || isRunning}
+                  title="Rafraîchir la liste des modèles"
+                >
+                  <RefreshCw size={11} strokeWidth={2} className={orLoadingModels ? styles.spin : ''} />
+                </button>
+              </div>
+            ) : (
+              <p className={styles.orNotConfigured}>
+                <AlertTriangle size={11} strokeWidth={2} />
+                OpenRouter non configuré —{' '}
+                <a href="/settings" className={styles.orLink}>ajoutez votre clé API dans Paramètres</a>
+              </p>
+            )
+          )}
+          {aiProvider === 'ollama' && (
+            <p className={styles.aiProviderHint}>
+              Utilise Ollama en local. Assurez-vous qu'Ollama est démarré lors des runs automatiques.
+            </p>
+          )}
+        </div>
+
         {/* Horaire */}
         <div className={styles.fieldRow}>
           <label className={styles.label}>
@@ -803,7 +914,7 @@ export default function AutomationPage() {
               <span className={styles.infoStepNum}>3</span>
               <div>
                 <strong>Scoring automatique</strong>
-                <p>Une fois le scraping terminé, Ollama score chaque nouvelle offre contre votre CV actif (max 20 offres par run).</p>
+                <p>Une fois le scraping terminé, le moteur IA configuré (Ollama ou OpenRouter) score chaque nouvelle offre contre votre CV actif (max 20 offres par run).</p>
               </div>
             </div>
             <div className={styles.infoStep}>

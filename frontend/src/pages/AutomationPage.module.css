@@ -605,3 +605,82 @@
   font-family: var(--font-body);
 }
 .modalConfirmBtn:hover { opacity: 0.88; }
+
+/* ── Moteur de scoring IA ── */
+.aiProviderToggle {
+  display: flex;
+  gap: 0;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  width: fit-content;
+}
+.aiProviderBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 600;
+  color: var(--outline);
+  background: none; border: none; cursor: pointer;
+  border-radius: calc(var(--radius-md) - 2px);
+  transition: color 0.15s, background 0.15s;
+  font-family: var(--font-body);
+}
+.aiProviderBtn:hover:not(:disabled) { color: var(--on-surface); }
+.aiProviderBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.aiProviderBtnActive {
+  background: rgba(123,208,255,0.15) !important;
+  color: var(--primary) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.aiProviderBtnActiveOR {
+  background: rgba(245,158,11,0.15) !important;
+  color: #f59e0b !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.aiProviderHint {
+  font-size: 10px; color: var(--outline); line-height: 1.5; font-style: italic;
+}
+
+.orModelRow {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+}
+.orModelSelect, .orModelInput {
+  flex: 1;
+  background: var(--surface-container-high);
+  border: none;
+  border-bottom: 2px solid var(--surface-container-highest);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 8px 12px;
+  font-size: 13px; color: var(--on-surface);
+  outline: none; transition: border-color 0.15s;
+  font-family: var(--font-body);
+}
+.orModelSelect:focus, .orModelInput:focus { border-bottom-color: #f59e0b; }
+.orModelSelect:disabled, .orModelInput:disabled { opacity: 0.5; }
+
+.orRefreshBtn {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--radius-md);
+  color: #f59e0b; cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.orRefreshBtn:hover:not(:disabled) { background: rgba(245,158,11,0.16); }
+.orRefreshBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.orNotConfigured {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: #f59e0b;
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.15);
+  border-radius: var(--radius-md);
+  padding: 7px 11px; margin-top: 4px;
+}
+.orLink {
+  color: #f59e0b; text-decoration: underline; text-decoration-color: rgba(245,158,11,0.4);
+  transition: text-decoration-color 0.15s;
+}
+.orLink:hover { text-decoration-color: #f59e0b; }

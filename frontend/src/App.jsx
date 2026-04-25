@@ -13,6 +13,7 @@ import CVMatchingPage         from './pages/CVMatchingPage.jsx'
 import BoardPage              from './pages/BoardPage.jsx'
 import HistoryPage            from './pages/HistoryPage.jsx'
 import SettingsPage           from './pages/SettingsPage.jsx'
+import CompaniesPage          from './pages/CompaniesPage.jsx'
 
 // ── Appliquer le thème sauvegardé au démarrage ────────────────────────────────
 function applyTheme(theme, customColor) {
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="history"            element={<HistoryPage />} />
         <Route path="automation"         element={<AutomationPage />} />
         <Route path="settings"           element={<SettingsPage />} />
+        <Route path="companies"          element={<CompaniesPage />} />
       </Route>
     </Routes>
   )

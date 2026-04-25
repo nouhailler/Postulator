@@ -128,8 +128,13 @@ async def chat_with_fallback(
 
 
 def _extract_json(text: str) -> str:
-    """Extrait le JSON d'une réponse pouvant contenir du texte autour."""
+    """
+    Extrait et répare le JSON d'une réponse pouvant contenir du texte autour
+    ou être tronquée (max_tokens atteint).
+    """
     text = text.strip()
+
+    # 1. Bloc ```json ... ```
     if "```" in text:
         parts = text.split("```")
         for part in parts:
@@ -137,16 +142,94 @@ def _extract_json(text: str) -> str:
             if p.startswith("json"):
                 p = p[4:].strip()
             if p.startswith("{") or p.startswith("["):
-                return p
-    if text.startswith("{") or text.startswith("["):
+                text = p
+                break
+
+    # 2. Trouver l'objet JSON le plus probable
+    if not (text.startswith("{") or text.startswith("[")):
+        for char in ("{", "["):
+            start = text.find(char)
+            if start != -1:
+                text = text[start:]
+                break
+
+    # 3. Tenter parse direct
+    try:
+        json.loads(text)
         return text
-    for char, end_char in [("{", "}"), ("[", "]")]:
-        start = text.find(char)
-        if start != -1:
-            end = text.rfind(end_char)
-            if end > start:
-                return text[start:end + 1]
+    except json.JSONDecodeError:
+        pass
+
+    # 4. JSON tronqué : chercher la dernière accolade/crochet fermant valide
+    for end_char in ("}", "]"):
+        pos = text.rfind(end_char)
+        if pos != -1:
+            candidate = text[:pos + 1]
+            try:
+                json.loads(candidate)
+                return candidate
+            except json.JSONDecodeError:
+                pass
+
+    # 5. Réparer un JSON tronqué en fermant les structures ouvertes
+    repaired = _repair_truncated_json(text)
+    if repaired:
+        return repaired
+
     return text
+
+
+def _repair_truncated_json(text: str) -> str:
+    """
+    Tente de réparer un JSON tronqué en fermant les structures ouvertes.
+    Stratégie : fermer les chaînes ouvertes puis ajouter les accolades/crochets manquants.
+    """
+    try:
+        # Compter les structures ouvertes
+        stack = []
+        in_string = False
+        escape_next = False
+        result = []
+
+        for ch in text:
+            if escape_next:
+                escape_next = False
+                result.append(ch)
+                continue
+            if ch == '\\' and in_string:
+                escape_next = True
+                result.append(ch)
+                continue
+            if ch == '"':
+                in_string = not in_string
+                result.append(ch)
+                continue
+            if in_string:
+                result.append(ch)
+                continue
+            if ch in ('{', '['):
+                stack.append('}' if ch == '{' else ']')
+            elif ch in ('}', ']'):
+                if stack and stack[-1] == ch:
+                    stack.pop()
+            result.append(ch)
+
+        # Fermer la chaîne si elle était ouverte
+        if in_string:
+            result.append('"')
+
+        # Supprimer la virgule finale si présente avant la fermeture
+        s = ''.join(result).rstrip()
+        if s.endswith(','):
+            s = s[:-1]
+
+        # Fermer les structures dans l'ordre inverse
+        s = s + ''.join(reversed(stack))
+
+        json.loads(s)
+        return s
+    except Exception:
+        return ""
 
 
 def _clean_html(text: str) -> str:
@@ -198,16 +281,22 @@ class OpenRouterService:
     # ── Scoring CV ↔ offre ────────────────────────────────────────────────────
 
     SCORING_PROMPT = """\
-Tu es un recruteur. Score ce CV par rapport à cette offre.
+Tu es un recruteur expert. Analyse la correspondance entre ce CV et cette offre d'emploi.
 
-CV (résumé):
+CV (extrait):
 {cv_text}
 
 Offre: {job_title} chez {company}
 {job_description}
 
-Réponds UNIQUEMENT en JSON, sans texte autour:
-{{"score":<entier 0-100>,"strengths":["...","..."],"gaps":["..."],"recommendation":"<une phrase>"}}"""
+Réponds UNIQUEMENT avec un objet JSON valide et complet, sans aucun texte avant ou après.
+Le JSON doit contenir exactement ces 4 clés :
+- "score" : entier entre 0 et 100
+- "strengths" : tableau de 3 à 5 points forts (strings)
+- "gaps" : tableau de 2 à 4 points de développement (strings)
+- "recommendation" : une phrase de recommandation (string)
+
+JSON:"""
 
     async def score_job(
         self,
@@ -216,16 +305,18 @@ Réponds UNIQUEMENT en JSON, sans texte autour:
         company:         str,
         job_description: str,
     ) -> dict:
-        cv_short   = cv_text[:1500].strip()
-        desc_clean = _clean_html(job_description)[:800].strip()
+        cv_short   = cv_text[:2000].strip()
+        desc_clean = _clean_html(job_description)[:1000].strip()
         prompt = self.SCORING_PROMPT.format(
             cv_text=cv_short, job_title=job_title,
             company=company,  job_description=desc_clean,
         )
         logger.info(f"[OpenRouter] score_job — {len(prompt)} chars → {self.model}")
         try:
-            raw = await self._chat(prompt, max_tokens=300, temperature=0.1, json_mode=True)
-            logger.debug(f"[OpenRouter] réponse brute : {raw[:300]}")
+            # max_tokens augmenté à 800 pour éviter la troncature JSON
+            # json_mode=False : certains modèles gratuits l'ignorent ou échouent avec
+            raw = await self._chat(prompt, max_tokens=800, temperature=0.1, json_mode=False)
+            logger.debug(f"[OpenRouter] réponse brute : {raw[:400]}")
             raw = _extract_json(raw)
             result = json.loads(raw)
             result["score"] = max(0, min(100, int(result.get("score", 50))))

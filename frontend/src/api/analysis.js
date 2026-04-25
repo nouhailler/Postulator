@@ -17,6 +17,15 @@ export async function scoreJobSync(cvId, jobId, model) {
   })
 }
 
+/** POST /api/analysis/score-openrouter — score via OpenRouter avec modèle au choix */
+export async function scoreJobOpenRouter(cvId, jobId, orModel) {
+  return api.postAI('/analysis/score-openrouter', {
+    cv_id:    cvId,
+    job_id:   jobId,
+    or_model: orModel,
+  })
+}
+
 /** POST /api/analysis/summarize-jobs — résumé IA des N dernières offres (max 10) */
 export async function summarizeJobs(limit = 10) {
   return api.post('/analysis/summarize-jobs', { limit })

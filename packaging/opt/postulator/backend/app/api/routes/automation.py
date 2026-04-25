@@ -60,6 +60,7 @@ class AutomationConfig(BaseModel):
     run_minute:    int            = 0
     start_date:    Optional[str]  = None
     end_date:      Optional[str]  = None
+    or_model:       Optional[str]  = None
     created_at:    Optional[str]  = None
     updated_at:    Optional[str]  = None
 
@@ -367,8 +368,24 @@ async def _run_scoring(cfg: dict) -> None:
     from app.core.config import get_settings
     from sqlalchemy import select, desc
 
-    settings = get_settings()
-    cv_id    = cfg["cv_id"]
+    settings  = get_settings()
+    cv_id     = cfg["cv_id"]
+    or_model  = cfg.get("or_model") or None
+
+    # Charger la clé OpenRouter si nécessaire
+    openrouter_key = None
+    if or_model:
+        from app.services.openrouter_service import load_openrouter_config
+        async with AsyncSessionLocal() as db:
+            or_cfg = await load_openrouter_config(db)
+        if not or_cfg:
+            raise RuntimeError(
+                "OpenRouter non configuré — ajoutez votre clé API dans Paramètres."
+            )
+        openrouter_key = or_cfg.api_key
+        logger.info(f"[Automation-Score] Utilisation d'OpenRouter · modèle : {or_model}")
+    else:
+        logger.info(f"[Automation-Score] Utilisation d'Ollama · modèle : {settings.ollama_model}")
 
     async with AsyncSessionLocal() as db:
         cv = await db.get(CV, cv_id)
@@ -386,6 +403,8 @@ async def _run_scoring(cfg: dict) -> None:
     _run_state["score_total"] = len(jobs)
     _run_state["score_done"]  = 0
 
+    provider_label = f"OpenRouter · {or_model}" if or_model else f"Ollama · {settings.ollama_model}"
+
     for job in jobs:
         if _run_state.get("cancel_requested"):
             break
@@ -397,7 +416,12 @@ async def _run_scoring(cfg: dict) -> None:
                     _run_state["score_done"] += 1
                     continue
                 svc = CVService(db)
-                res = await svc.score_against_job(cv, job_obj, model=settings.ollama_model)
+                res = await svc.score_against_job(
+                    cv, job_obj,
+                    model=settings.ollama_model,
+                    openrouter_key=openrouter_key,
+                    openrouter_model=or_model,
+                )
                 await db.commit()
                 score = res.get("score") or res.get("ai_score") or 0
                 _run_state["score_results"].append({
@@ -415,7 +439,8 @@ async def _run_scoring(cfg: dict) -> None:
         _run_state["score_done"] += 1
         cv_name = cfg.get("cv_name") or f"CV #{cv_id}"
         _run_state["message"] = (
-            f"Scoring avec {cv_name} — {_run_state['score_done']}/{_run_state['score_total']} offre(s)…"
+            f"Scoring ({provider_label}) avec {cv_name}"
+            f" — {_run_state['score_done']}/{_run_state['score_total']} offre(s)…"
         )
 
 

@@ -4,13 +4,13 @@ import { useOllamaStatus } from '../contexts/OllamaStatusContext.jsx'
 import {
   Upload, Star, Trash2, Brain, CheckCircle, ChevronDown,
   Loader, AlertCircle, Clock, Save, CheckCheck,
-  FileText, ArrowDownToLine, TriangleAlert, Eye,
+  FileText, ArrowDownToLine, TriangleAlert, Eye, Zap, RefreshCw,
 } from 'lucide-react'
 import { useAsync }     from '../hooks/useAsync.js'
 import { fetchCVs, uploadCV, deleteCV, updateCV, analyzeCV, importCVFromStore, previewCVPdf } from '../api/cvs.js'
 import { fetchCVList }  from '../api/cvStore.js'
 import { fetchJobs }    from '../api/jobs.js'
-import { scoreJobSync } from '../api/analysis.js'
+import { scoreJobSync, scoreJobOpenRouter } from '../api/analysis.js'
 import { saveMatch }    from '../api/history.js'
 import styles           from './AnalysisPage.module.css'
 
@@ -191,11 +191,48 @@ export default function AnalysisPage() {
   const [saving,       setSaving]       = useState(false)
   const [saved,        setSaved]        = useState(false)
 
+  // ── OpenRouter ────────────────────────────────────────────────────────────
+  const [orConfigured,    setOrConfigured]    = useState(false)
+  const [orModels,        setOrModels]        = useState([])
+  const [orModel,         setOrModel]         = useState('')
+  const [orLoadingModels, setOrLoadingModels] = useState(false)
+  const [scoringOR,       setScoringOR]       = useState(false)
+  const [scoreResultOR,   setScoreResultOR]   = useState(null)
+  const [scoreErrorOR,    setScoreErrorOR]    = useState(null)
+  const [savingOR,        setSavingOR]        = useState(false)
+  const [savedOR,         setSavedOR]         = useState(false)
+
+  useEffect(() => {
+    // Charger statut + modèle courant OpenRouter
+    fetch('/api/settings/openrouter')
+      .then(r => r.json())
+      .then(d => {
+        setOrConfigured(d.configured)
+        if (d.model) setOrModel(d.model)
+      })
+      .catch(() => {})
+    // Charger liste des modèles gratuits
+    loadOrModels()
+  }, [])
+
+  const loadOrModels = async () => {
+    setOrLoadingModels(true)
+    try {
+      const data = await fetch('/api/settings/openrouter/models').then(r => r.json())
+      if (Array.isArray(data) && data.length > 0) {
+        setOrModels(data)
+        // Pré-sélectionner le premier modèle si aucun n'est défini
+        setOrModel(prev => prev || data[0].id)
+      }
+    } catch { /* silence */ }
+    finally { setOrLoadingModels(false) }
+  }
+
   useEffect(() => { if (jobIdFromUrl) setSelectedJob(jobIdFromUrl) }, [jobIdFromUrl])
 
   const cameFromJobs   = !!jobIdFromUrl
   const preselectedJob = jobs?.find(j => String(j.id) === String(selectedJob))
-  useEffect(() => { setSaved(false) }, [selectedJob, scoreResult])
+  useEffect(() => { setSaved(false); setSavedOR(false) }, [selectedJob])
 
   // ── Upload fichier ────────────────────────────────────────────────────────
   const handleFileSelect = useCallback(async (file) => {
@@ -314,6 +351,34 @@ export default function AnalysisPage() {
       setScoreError('Erreur sauvegarde : ' + (err.detail ?? err.message))
     } finally { setSaving(false) }
   }, [scoreResult, defaultCV, selectedJob, saved])
+
+  // ── Score via OpenRouter ──────────────────────────────────────────────────
+  const handleScoreOR = useCallback(async () => {
+    if (!defaultCV || !selectedJob || !orModel) return
+    setScoringOR(true); setScoreResultOR(null); setScoreErrorOR(null); setSavedOR(false)
+    try {
+      const result = await scoreJobOpenRouter(defaultCV.id, parseInt(selectedJob, 10), orModel)
+      setScoreResultOR(result)
+    } catch (err) {
+      setScoreErrorOR(err.detail ?? err.message ?? 'Erreur OpenRouter')
+    } finally { setScoringOR(false) }
+  }, [defaultCV, selectedJob, orModel])
+
+  const handleSaveOR = useCallback(async () => {
+    if (!scoreResultOR || !defaultCV || !selectedJob || savedOR) return
+    setSavingOR(true)
+    try {
+      await saveMatch({
+        cv_id: defaultCV.id, job_id: parseInt(selectedJob, 10),
+        score: scoreResultOR.score, strengths: scoreResultOR.strengths ?? [],
+        gaps: scoreResultOR.gaps ?? [], recommendation: scoreResultOR.recommendation ?? '',
+        ollama_model: orModel,
+      })
+      setSavedOR(true)
+    } catch (err) {
+      setScoreErrorOR('Erreur sauvegarde : ' + (err.detail ?? err.message))
+    } finally { setSavingOR(false) }
+  }, [scoreResultOR, defaultCV, selectedJob, savedOR, orModel])
 
   const importedNames = new Set((cvs ?? []).map(c => c.name))
 
@@ -476,8 +541,9 @@ export default function AnalysisPage() {
                   </div>
               }
             </div>
+            {/* ── Bouton Ollama ── */}
             <button className={`btn-primary ${styles.scoreBtn}`}
-              onClick={handleScore} disabled={!defaultCV || !selectedJob || scoring}>
+              onClick={handleScore} disabled={!defaultCV || !selectedJob || scoring || scoringOR}>
               {scoring ? <Loader size={14} className={styles.spin} strokeWidth={2.5} /> : <Brain size={14} strokeWidth={2.5} />}
               {scoring ? 'Analyse en cours…' : 'Analyser le match'}
             </button>
@@ -497,17 +563,116 @@ export default function AnalysisPage() {
                 <span>{scoreError}</span>
               </div>
             )}
+
+            {/* ── Séparateur ── */}
+            <div className={styles.orSeparator}>
+              <span className={styles.orSeparatorLine} />
+              <span className={styles.orSeparatorLabel}>ou via OpenRouter</span>
+              <span className={styles.orSeparatorLine} />
+            </div>
+
+            {/* ── Sélecteur de modèle OpenRouter ── */}
+            <div className={styles.orModelRow}>
+              <label className={styles.orModelLabel}>
+                <Zap size={12} strokeWidth={2} style={{ color: '#f97316' }} />
+                Modèle OpenRouter
+              </label>
+              <div className={styles.orModelInputWrap}>
+                {orModels.length > 0 ? (
+                  <select
+                    className={styles.orModelSelect}
+                    value={orModel}
+                    onChange={e => setOrModel(e.target.value)}
+                    disabled={scoringOR}
+                  >
+                    {orModels.map(m => (
+                      <option key={m.id} value={m.id}>{m.name || m.id}</option>
+                    ))}
+                    {orModel && !orModels.find(m => m.id === orModel) && (
+                      <option value={orModel}>{orModel}</option>
+                    )}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className={styles.orModelInput}
+                    value={orModel}
+                    onChange={e => setOrModel(e.target.value)}
+                    placeholder="deepseek/deepseek-r1:free"
+                    disabled={scoringOR}
+                  />
+                )}
+                <button
+                  className={styles.orRefreshBtn}
+                  onClick={loadOrModels}
+                  disabled={orLoadingModels || scoringOR}
+                  title="Rafraîchir les modèles depuis OpenRouter">
+                  {orLoadingModels
+                    ? <Loader size={13} className={styles.spin} strokeWidth={2} />
+                    : <RefreshCw size={13} strokeWidth={2} />}
+                </button>
+              </div>
+              {orModels.length > 0 && (
+                <p className={styles.orModelCount}>{orModels.length} modèles gratuits disponibles</p>
+              )}
+            </div>
+
+            {/* ── Bouton OpenRouter ── */}
+            <button
+              className={styles.scoreBtnOR}
+              onClick={handleScoreOR}
+              disabled={!defaultCV || !selectedJob || !orModel || scoringOR || scoring}
+              title={!orConfigured ? 'Configurez OpenRouter dans Paramètres' : ''}
+            >
+              {scoringOR
+                ? <><Loader size={14} className={styles.spin} strokeWidth={2.5} /> Analyse en cours…</>
+                : <><Zap size={14} strokeWidth={2.5} /> Analyser le match via OpenRouter</>}
+            </button>
+            {!orConfigured && orModel && (
+              <p className={styles.orNotConfigured}>
+                <AlertCircle size={11} strokeWidth={2} /> Clé OpenRouter non configurée —{' '}
+                <a href="/settings" className={styles.orLink}>Paramètres → OpenRouter</a>
+              </p>
+            )}
+            {scoringOR && (
+              <div className={styles.scoringWait} style={{ borderColor: 'rgba(249,115,22,0.2)', background: 'rgba(249,115,22,0.04)' }}>
+                <div className={styles.scoringWaitRow}>
+                  <span className={styles.scoringWaitMsg}>
+                    <Zap size={11} strokeWidth={2} style={{ color: '#f97316' }} />
+                    OpenRouter · {orModel?.split('/')[1] ?? orModel} analyse le match…
+                  </span>
+                  <ElapsedTimer running={scoringOR} />
+                </div>
+              </div>
+            )}
+            {scoreErrorOR && (
+              <div className={styles.scoreErrorBox}>
+                <AlertCircle size={13} strokeWidth={2} style={{ flexShrink: 0 }} />
+                <span>{scoreErrorOR}</span>
+              </div>
+            )}
           </div>
 
+          {/* Résultat Ollama */}
           {scoreResult && (
             <ScoreResult result={scoreResult} onSave={handleSave} saving={saving} saved={saved} />
+          )}
+
+          {/* Résultat OpenRouter */}
+          {scoreResultOR && (
+            <div className={styles.orResultWrapper}>
+              <div className={styles.orResultBadge}>
+                <Zap size={11} strokeWidth={2} /> OpenRouter · {scoreResultOR.model_used?.split('/')[1] ?? scoreResultOR.model_used}
+              </div>
+              <ScoreResult result={scoreResultOR} onSave={handleSaveOR} saving={savingOR} saved={savedOR} />
+            </div>
           )}
 
           <div className={styles.infoBox}>
             <p className={styles.infoTitle}>⚡ Mode synchrone</p>
             <p className={styles.infoText}>
-              Modèle actif : <code>{defaultCV ? 'modèle configuré' : 'aucun CV actif'}</code> · Timeout : 5 min.<br />
-              Résultats sauvegardables dans l'historique après analyse.
+              <strong>Ollama</strong> : modèle local — 1 à 5 min selon le matériel.<br />
+              <strong>OpenRouter</strong> : modèles cloud gratuits — résultat en 10–30 s · Configurez votre clé dans Paramètres.
             </p>
           </div>
         </div>

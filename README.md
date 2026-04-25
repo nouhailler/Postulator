@@ -3,7 +3,7 @@
 > Agrégateur de recherche d'emploi open source avec IA locale (Ollama) ou cloud gratuite (OpenRouter).  
 > Vos données restent sur votre machine — aucune information personnelle n'est envoyée sans votre accord.
 
-**Version 1.5.4** · [GitHub](https://github.com/nouhailler/Postulator) · [Releases](https://github.com/nouhailler/Postulator/releases)
+**Version 1.6.0** · [GitHub](https://github.com/nouhailler/Postulator) · [Releases](https://github.com/nouhailler/Postulator/releases)
 
 ---
 
@@ -17,6 +17,7 @@
 | **Offres Intelligence** | Chat IA sur n'importe quelle offre — fetch URL automatique, 20 questions suggérées, historique Q&A |
 | **Analyse de l'offre** ✨ | Analyse sémantique offre ↔ contenu de poste, correspondances surlignées en rouge, conversation multi-tour |
 | **Scrapers** | Collecte depuis 8 sources (4 internationales + 4 suisses), proxies résidentiels, résumé IA |
+| **Entreprises** 🏢 | Scraping ciblé depuis les pages carrières d'entreprises — découverte d'URL intelligente (IA + DDG + sonde), logs temps réel, détection ATS |
 | **Automatisation** ⚡ | Recherche quotidienne planifiée (Indeed + LinkedIn) + scoring automatique avec votre CV |
 | **CV Intelligence** | Scoring CV ↔ offre, extraction de compétences, score en masse |
 | **CV Matching** | Génération d'un CV adapté à une offre, diff visuel, export .txt/.md/.docx, mode ATS local ou Cloud |
@@ -28,7 +29,7 @@
 
 ## Stack technique
 
-**Backend** : FastAPI · SQLAlchemy async · SQLite · Celery + Redis · APScheduler  
+**Backend** : FastAPI · SQLAlchemy async · SQLite · Celery + Redis · APScheduler · Playwright  
 **Frontend** : React 18 · Vite · CSS Modules  
 **IA locale** : Ollama (100% local — aucune donnée envoyée sur internet)  
 **IA cloud gratuite** : OpenRouter (modèles :free — DeepSeek R1, Llama 4, Gemma 3, Qwen3…)  
@@ -82,8 +83,8 @@ ollama pull deepseek-r1:32b  # ~20 t/s  — raisonnement avancé
 
 ```bash
 # Télécharger la dernière release
-wget https://github.com/nouhailler/Postulator/releases/latest/download/postulator_1.5.4_amd64.deb
-sudo dpkg -i postulator_1.5.4_amd64.deb
+wget https://github.com/nouhailler/Postulator/releases/latest/download/postulator_1.6.0_amd64.deb
+sudo dpkg -i postulator_1.6.0_amd64.deb
 sudo apt-get install -f   # résoudre les dépendances si nécessaire
 ```
 
@@ -208,6 +209,38 @@ OpenRouter donne accès à des dizaines de modèles IA gratuits (suffix `:free`)
 
 ---
 
+## Entreprises — scraping ciblé
+
+La page `/companies` permet de scraper directement les pages carrières d'entreprises cibles, sans passer par un agrégateur.
+
+### Ajouter une entreprise
+
+Deux modes au choix :
+
+**🦆 Recherche DuckDuckGo** — pour trouver l'URL vous-même :
+1. Choisissez un mot-clé (chips prédéfinis : *careers, jobs, emplois, recrutement…*)
+2. Prévisualisez la requête exacte envoyée à DDG
+3. Consultez les résultats, ouvrez-les dans un onglet [Voir], validez avec [✅]
+4. Cliquez "Lancer le scraping" sur l'URL validée
+
+**⚡ Découverte automatique** — pipeline IA complet :
+1. Sonde directe des 10 variantes d'URL (`careers.company.com`, `/jobs`, `/careers`, `/emplois`…)
+2. Interrogation LLM (Ollama ou OpenRouter) pour suggestion d'URL
+3. Validation HTTP avec détection Cloudflare
+4. Recherche DuckDuckGo + sonde des domaines trouvés
+5. Détection ATS (Greenhouse, Lever, Workday, SmartRecruiters…)
+
+Les **logs en temps réel** sont visibles sur chaque carte d'entreprise — cliquez "Logs" pour voir chaque étape du pipeline.
+
+### Notes techniques
+
+- **Cloudflare** : Un 403 signifie que la page *existe* mais bloque les robots. Postulator le détecte via les headers HTTP (`cf-ray`, `cf-mitigated`) et retourne quand même l'URL la plus pertinente.
+- **Playwright** : Installé pour contourner les protections JavaScript (~70% de succès). Pour les sites Cloudflare Enterprise (ex. Nestlé), des proxies résidentiels sont nécessaires.
+- **DDG** : Utilise le package `ddgs` (successeur officiel de `duckduckgo_search`). Les noms avec accents sont normalisés automatiquement (*Nestlé → Nestle*).
+- **Playwright install** : `playwright install chromium` (à lancer une fois après `pip install playwright`).
+
+---
+
 ## Analyse de l'offre — fonctionnement
 
 La page `/job-analysis` permet une **analyse sémantique approfondie** d'une offre par rapport à un contenu de poste décrit librement.
@@ -275,16 +308,19 @@ Les questions/réponses sont **sauvegardées en BDD** et accessibles via le pann
 postulator/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/       # FastAPI routes (13 modules)
+│   │   ├── api/routes/       # FastAPI routes (14 modules)
 │   │   │   ├── job_analysis.py   # Analyse sémantique offre ↔ poste (v1.5.4)
 │   │   │   ├── settings.py       # Config OpenRouter API (v1.5.4)
+│   │   │   ├── companies.py      # Entreprises cibles + découverte URL (v1.6.0)
 │   │   │   └── …
 │   │   ├── models/
 │   │   │   ├── openrouter_config.py  # Config OpenRouter (id=1) (v1.5.4)
+│   │   │   ├── company.py            # Company (careers_url, ats_type…) (v1.6.0)
 │   │   │   └── …
 │   │   ├── scrapers/         # 8 scrapers sources
 │   │   ├── services/
-│   │   │   ├── openrouter_service.py  # chat_with_fallback() (v1.5.4)
+│   │   │   ├── openrouter_service.py      # chat_with_fallback() (v1.5.4)
+│   │   │   ├── company_scraper_service.py # discover + scrape + DDG (v1.6.0)
 │   │   │   └── …
 │   │   └── workers/          # Celery tasks
 │   ├── scripts/              # Migrations SQLite
@@ -293,8 +329,9 @@ postulator/
 │   └── .env                  # Configuration locale (jamais commité)
 └── frontend/
     └── src/
-        ├── pages/            # 12 pages React
+        ├── pages/            # 13 pages React
         │   ├── JobAnalysisPage.jsx   # Analyse de l'offre (v1.5.4)
+        │   ├── CompaniesPage.jsx     # Entreprises cibles (v1.6.0)
         │   └── …
         ├── components/       # Composants réutilisables
         ├── api/              # Clients API
@@ -316,6 +353,7 @@ python scripts/migrate_add_ats_fields.py        # v1.3.x
 python scripts/migrate_add_proxies_tried.py     # v1.4.x
 python scripts/migrate_add_job_questions.py     # v1.4.0
 python scripts/migrate_add_openrouter_config.py # v1.5.4
+python scripts/migrate_add_companies.py         # v1.6.0
 ```
 
 > Sur une installation fraîche, ces tables sont créées automatiquement au démarrage.
@@ -323,6 +361,15 @@ python scripts/migrate_add_openrouter_config.py # v1.5.4
 ---
 
 ## Changelog
+
+### v1.6.0 (avril 2026)
+- **Nouvelle page : Entreprises** — scraping ciblé des pages carrières d'entreprises avec découverte automatique de l'URL
+- **Pipeline de découverte intelligent** — sonde 10 variantes d'URL par domaine, LLM-first, DuckDuckGo normalisé (accents), détection ATS, logs temps réel
+- **Modal DDG** — recherche manuelle avec chips de mots-clés, aperçu requête, validation URL, lancement scraping direct
+- **Détection Cloudflare** — analyse des headers HTTP (`cf-ray`, `cf-mitigated`) ; un 403 = URL valide bloquée aux robots, pas une 404
+- **Migration DDG** — passage de `duckduckgo_search` à `ddgs` (nouveau nom officiel) avec normalisation NFKD des accents
+- **Playwright** — installé et intégré pour contourner les protections JavaScript (~70% de succès)
+- **Aide contextuelle** — panel d'aide dédié à la page Entreprises
 
 ### v1.5.4 (avril 2026)
 - **OpenRouter** — intégration complète : scoring, analyse, chat, génération CV utilisent OpenRouter si configuré, sinon Ollama. Fallback automatique sur les modèles gratuits suivants en cas de rate limit ou erreur

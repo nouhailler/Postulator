@@ -126,6 +126,19 @@ export const HELP_CONTENT = {
     ],
   },
 
+  '/companies': {
+    title: 'Entreprises — Scraping ciblé',
+    intro: 'Gérez une liste d\'entreprises cibles et scrapez leurs offres directement depuis leur page carrières — sans passer par un agrégateur.',
+    sections: [
+      { title: 'Ajouter une entreprise', icon: '➕', content: 'Cliquez "+ Entreprise". Deux options : "Rechercher avec DuckDuckGo" pour trouver manuellement l\'URL carrières (recherche par mot-clé avec aperçu des résultats), ou "Découvrir automatiquement" pour que l\'IA trouve et valide l\'URL toute seule.' },
+      { title: 'Découverte automatique', icon: '🔍', content: 'Le pipeline IA teste d\'abord les URL courantes (/jobs, /careers, /emplois…), consulte DuckDuckGo pour des résultats ciblés, puis demande à l\'IA de choisir la meilleure URL. Les logs en temps réel montrent chaque étape. Cliquez "Logs" sur une carte pour voir le détail.' },
+      { title: 'Recherche DDG manuelle', icon: '🦆', content: 'Choisissez un mot-clé parmi les chips prédéfinies (careers, jobs, emplois…) ou tapez le vôtre. L\'aperçu montre la requête exacte envoyée. Cliquez [Voir] pour ouvrir un résultat dans un onglet, [✅] pour le valider comme URL carrières, puis "Lancer le scraping".' },
+      { title: 'Scraping', icon: '⚡', content: 'Une fois l\'URL carrières configurée, cliquez le bouton ▶ pour scraper les offres. Le scraping tourne en arrière-plan. "Tout scraper" lance toutes les entreprises actives en parallèle. Les nouvelles offres apparaissent dans la page Offres.' },
+      { title: 'Cloudflare / CAPTCHA', icon: '🛡️', content: 'Certains sites (ex. Nestlé, grandes multinationales) sont protégés par Cloudflare Bot Management. L\'URL est trouvée correctement mais le scraping retourne 403. Solution : proxies résidentiels dans la configuration. Playwright est utilisé pour contourner ~70% des protections JS.' },
+      { title: 'Configuration IA', icon: '🤖', content: 'Cliquez l\'icône ⚙ pour configurer le provider IA (Ollama local ou OpenRouter cloud) et les proxies utilisés pendant la découverte. Si OpenRouter est configuré dans Paramètres, sélectionnez-le ici pour de meilleurs résultats.' },
+    ],
+  },
+
   '/automation': {
     title: 'Automatisation — Recherche quotidienne',
     intro: 'Recherche automatique quotidienne sur Indeed + LinkedIn avec scoring IA intégré. Paramétrez une fois, Postulator travaille pour vous.',

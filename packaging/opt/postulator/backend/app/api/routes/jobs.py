@@ -189,8 +189,12 @@ async def purge_jobs(
 async def purge_jobs_by_criteria(
     db:            DBSession,
     max_score:     Optional[float] = Query(None, description="Supprimer les offres dont le score IA est INFÉRIEUR à ce seuil (%)"),
+    min_score:     Optional[float] = Query(None, description="Supprimer les offres dont le score IA est SUPÉRIEUR à ce seuil (%)"),
     before_date:   Optional[str]   = Query(None, description="Supprimer les offres scrapées AVANT cette date (YYYY-MM-DD)"),
+    after_date:    Optional[str]   = Query(None, description="Supprimer les offres scrapées APRÈS cette date (YYYY-MM-DD)"),
     source:        Optional[str]   = Query(None, description="Supprimer uniquement les offres de cette source"),
+    status:        Optional[str]   = Query(None, description="Supprimer uniquement les offres avec ce statut"),
+    no_score:      bool            = Query(False, description="Supprimer les offres sans score IA"),
     keep_selected: bool            = Query(True,  description="Protéger les offres dont le statut n'est pas 'new'"),
     dry_run:       bool            = Query(False,  description="Simulation : renvoie le nombre qui serait supprimé sans agir"),
 ) -> dict:
@@ -199,27 +203,43 @@ async def purge_jobs_by_criteria(
 
     Critères disponibles (cumulables) :
     - max_score    : supprime les offres avec ai_score < max_score (et ai_score non nul)
+    - min_score    : supprime les offres avec ai_score > min_score (et ai_score non nul)
     - before_date  : supprime les offres scrapées avant cette date
+    - after_date   : supprime les offres scrapées après cette date
     - source       : limite la suppression à une source spécifique
+    - status       : limite la suppression à un statut spécifique
+    - no_score     : supprime les offres sans score IA (ai_score IS NULL)
     - keep_selected: protège les offres dont le statut != 'new' (défaut : true)
 
-    Au moins un critère parmi max_score / before_date / source est requis.
+    Au moins un critère est requis.
     dry_run=true permet de simuler sans supprimer.
     """
-    if max_score is None and before_date is None and source is None:
+    if (max_score is None and min_score is None and before_date is None
+            and after_date is None and source is None and status is None
+            and not no_score):
         raise HTTPException(
             status_code=422,
-            detail="Au moins un critère est requis : max_score, before_date ou source."
+            detail="Au moins un critère est requis."
         )
 
-    # Construire les conditions de suppression
+    from sqlalchemy import and_, or_
+
+    # Construire les conditions de suppression (OR entre critères de même nature,
+    # puis AND global — ici toutes les conditions sont en AND pour cibler précisément)
     conditions = []
 
     if max_score is not None:
-        # Supprime les offres scorées EN DESSOUS du seuil (ai_score non null)
         conditions.append(
             (Job.ai_score.isnot(None)) & (Job.ai_score < max_score)
         )
+
+    if min_score is not None:
+        conditions.append(
+            (Job.ai_score.isnot(None)) & (Job.ai_score > min_score)
+        )
+
+    if no_score:
+        conditions.append(Job.ai_score.is_(None))
 
     if before_date is not None:
         try:
@@ -228,21 +248,29 @@ async def purge_jobs_by_criteria(
             raise HTTPException(status_code=422, detail="Format de date invalide — attendu YYYY-MM-DD.")
         conditions.append(Job.scraped_at < dt)
 
+    if after_date is not None:
+        try:
+            dt_after = datetime.strptime(after_date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Format de date invalide — attendu YYYY-MM-DD.")
+        conditions.append(Job.scraped_at > dt_after)
+
     if source is not None:
         conditions.append(Job.source == source)
+
+    if status is not None:
+        conditions.append(Job.status == status)
 
     # Construire la requête de sélection des IDs à supprimer
     stmt = select(Job.id)
     if len(conditions) == 1:
         stmt = stmt.where(conditions[0])
     else:
-        # Intersection : toutes les conditions doivent être vraies (AND)
-        from sqlalchemy import and_
         stmt = stmt.where(and_(*conditions))
 
-    # Protéger les offres sélectionnées (statut != 'new')
+    # Protéger les offres sélectionnées (statut actif : to_apply, applied, interview)
     if keep_selected:
-        stmt = stmt.where(Job.status == "new")
+        stmt = stmt.where(Job.status.not_in(["to_apply", "applied", "interview"]))
 
     result = await db.execute(stmt)
     ids_to_delete = [row[0] for row in result.fetchall()]

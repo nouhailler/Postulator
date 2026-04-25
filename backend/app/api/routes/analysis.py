@@ -51,6 +51,13 @@ class ScoreBatchRequest(BaseModel):
     status_filter: str = "new"   # ne scorer que les offres "new" par défaut
 
 
+class ScoreORRequest(BaseModel):
+    """Score CV ↔ offre via OpenRouter avec un modèle choisi par l'utilisateur."""
+    cv_id:    int
+    job_id:   int
+    or_model: str   # identifiant du modèle OpenRouter (ex: deepseek/deepseek-r1:free)
+
+
 # ── Routes scoring existantes ─────────────────────────────────────────────────
 
 @router.post("/score", status_code=202)
@@ -93,6 +100,47 @@ async def score_sync(payload: CVAnalysisRequest, db: DBSession) -> dict:
         openrouter_model=or_cfg.model if or_cfg else None,
     )
     await db.commit()
+    return result
+
+
+# ── Score OpenRouter — modèle choisi par l'utilisateur ───────────────────────
+
+@router.post("/score-openrouter")
+async def score_openrouter(payload: ScoreORRequest, db: DBSession) -> dict:
+    """
+    Score synchrone CV ↔ offre via OpenRouter avec le modèle choisi par l'utilisateur.
+    La clé API est chargée depuis la BDD (configurée dans Paramètres).
+    Retourne le même format que score-sync + model_used.
+    """
+    from app.models.cv import CV
+    from app.models.job import Job
+    from app.services.cv_service import CVService
+    from app.services.openrouter_service import load_openrouter_config
+
+    cv  = await db.get(CV,  payload.cv_id)
+    job = await db.get(Job, payload.job_id)
+    if not cv:
+        raise HTTPException(status_code=404, detail=f"CV {payload.cv_id} introuvable.")
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {payload.job_id} introuvable.")
+
+    or_cfg = await load_openrouter_config(db)
+    if not or_cfg:
+        raise HTTPException(
+            status_code=400,
+            detail="OpenRouter non configuré. Ajoutez votre clé API dans Paramètres → OpenRouter.",
+        )
+
+    svc    = CVService(db)
+    result = await svc.score_against_job(
+        cv, job,
+        model=None,
+        openrouter_key=or_cfg.api_key,
+        openrouter_model=payload.or_model,
+    )
+    await db.commit()
+    result["model_used"]    = payload.or_model
+    result["provider_used"] = "openrouter"
     return result
 
 

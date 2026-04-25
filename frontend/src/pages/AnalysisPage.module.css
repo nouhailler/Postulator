@@ -163,6 +163,94 @@
 .infoText { font-size: 11px; color: var(--on-surface-variant); line-height: 1.7; }
 .infoText code { font-size: 10px; background: var(--surface-container); padding: 1px 5px; border-radius: 3px; }
 
+/* ── OpenRouter scoring ── */
+.orSeparator {
+  display: flex; align-items: center; gap: 8px;
+  margin: 14px 0 12px;
+}
+.orSeparatorLine { flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+.orSeparatorLabel { font-size: 10px; color: var(--outline); white-space: nowrap; font-style: italic; }
+
+.orModelRow { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+.orModelLabel {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--outline);
+  display: flex; align-items: center; gap: 5px;
+}
+.orModelInputWrap { display: flex; gap: 6px; align-items: center; }
+.orModelSelect {
+  flex: 1;
+  background: var(--surface-container);
+  border: 1px solid rgba(249,115,22,0.2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12px; color: var(--on-surface);
+  font-family: var(--font-body);
+  outline: none; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.orModelSelect:focus { border-color: rgba(249,115,22,0.5); }
+.orModelSelect option { background: var(--surface-container); }
+.orModelInput {
+  flex: 1;
+  background: var(--surface-container);
+  border: 1px solid rgba(249,115,22,0.2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12px; color: var(--on-surface);
+  font-family: var(--font-body);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.orModelInput:focus { border-color: rgba(249,115,22,0.5); }
+.orModelInput::placeholder { color: var(--outline); }
+.orRefreshBtn {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  background: var(--surface-container);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--outline); cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+.orRefreshBtn:hover:not(:disabled) { color: var(--on-surface); border-color: rgba(255,255,255,0.2); }
+.orRefreshBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.orModelCount { font-size: 10px; color: rgba(249,115,22,0.7); font-style: italic; }
+
+.scoreBtnOR {
+  width: 100%; justify-content: center; margin-top: 6px;
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.08));
+  border: 1.5px solid rgba(249,115,22,0.5);
+  border-radius: var(--radius-md);
+  color: #f97316;
+  font-size: 14px; font-weight: 700;
+  padding: 10px 0; cursor: pointer;
+  font-family: var(--font-headline);
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.scoreBtnOR:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(249,115,22,0.25), rgba(249,115,22,0.15));
+  border-color: rgba(249,115,22,0.8);
+}
+.scoreBtnOR:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.orNotConfigured {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--outline); font-style: italic; margin-top: 4px;
+}
+.orLink { color: #f97316; text-decoration: underline; }
+
+.orResultWrapper { position: relative; }
+.orResultBadge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(249,115,22,0.1);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 10px; font-weight: 700; color: #f97316;
+  margin-bottom: 8px;
+}
+
 /* ── Modal prévisualisation PDF ── */
 .modalOverlay {
   position: fixed; inset: 0; z-index: 1000;

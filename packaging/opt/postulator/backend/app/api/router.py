@@ -1,6 +1,7 @@
 """app/api/router.py"""
 from fastapi import APIRouter
 from app.api.routes.alerts             import router as alerts_router
+from app.api.routes.companies          import router as companies_router
 from app.api.routes.analysis           import router as analysis_router
 from app.api.routes.automation         import router as automation_router
 from app.api.routes.cv_matching        import router as cv_matching_router
@@ -32,3 +33,4 @@ api_router.include_router(alerts_router)
 api_router.include_router(esco_router)
 api_router.include_router(automation_router)
 api_router.include_router(settings_router)
+api_router.include_router(companies_router)

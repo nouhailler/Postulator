@@ -1,5 +1,5 @@
 # CONTEXT.md – Postulator
-> Dernière mise à jour : session du 22 avril 2026 — **v1.5.4**
+> Dernière mise à jour : session du 25 avril 2026 — **v1.6.0**
 > À lire **en début de chaque session Claude** pour reprendre sans perte de temps.
 
 ---
@@ -12,7 +12,7 @@
 - Logo : carré dégradé teal/bleu avec "P" — "Postulator · Job Intelligence Platform"
 - Chemin : `/home/patrick/Documents/Claude/Projects/Postulator/`
 - Repo : `https://github.com/nouhailler/postulator`
-- Version courante : **1.5.4**
+- Version courante : **1.6.0**
 
 ---
 
@@ -51,6 +51,7 @@ npm run dev   # → http://localhost:5173
 | CV Intelligence | `/analysis` | Brain |
 | CV Matching | `/cv-matching` | Sparkles |
 | **Analyse de l'offre** | **`/job-analysis`** | **ScanSearch** |
+| **Entreprises** | **`/companies`** | **Building2** |
 | Pipeline | `/board` | Kanban |
 | Historique | `/history` | History |
 | Paramètres | `/settings` | Settings |
@@ -71,6 +72,7 @@ app/
 │   ├── job.py                 ← +ai_summary (résumé IA / JSON score batch)
 │   ├── job_question.py        ← Q&A Offres Intelligence (job_id, question, answer, model, duration_ms)
 │   ├── openrouter_config.py   ← Config OpenRouter (id=1, api_key, model, updated_at) ← v1.5.4
+│   ├── company.py             ← Company (name, domain, careers_url, ats_type, scrape_status…) ← v1.6.0
 │   ├── cv.py · scrape_log.py · stored_cv.py · generated_cv.py
 │   ├── match_history.py · user_profile.py · search_profiles.py
 ├── api/routes/
@@ -81,6 +83,7 @@ app/
 │   ├── jobs_intelligence.py   ← POST /chat + GET /questions/{job_id} — OpenRouter prioritaire ← v1.5.4
 │   ├── job_analysis.py        ← POST /api/job-analysis/analyze — analyse sémantique multi-tour ← v1.5.4
 │   ├── settings.py            ← GET/POST /api/settings/openrouter + /ping + /models ← v1.5.4
+│   ├── companies.py           ← CRUD + /discover + /scrape + /scrape-all + /ddg-search ← v1.6.0
 │   ├── scrapers.py            ← run + run-with-proxies + logs/{id} (détail proxy)
 │   │                            payload + exclude_internships ← v1.5.3
 │   ├── analysis.py            ← score-sync + summarize-jobs + score-batch + score-batch/status
@@ -102,6 +105,9 @@ app/
 │   │                            4 types d'avertissements (isolés, courts, garbled, trop court)
 │   ├── scraper_service.py     ← run_search() + exclude_internships ← v1.5.3
 │   ├── openrouter_service.py  ← chat_with_fallback() + OpenRouterService + FREE_MODELS_FALLBACK ← v1.5.4
+│   ├── company_scraper_service.py ← discover_careers_url() + scrape_company() + save_jobs_to_db() ← v1.6.0
+│   │                               PROBE_TOP10, _probe_url(), _probe_direct(), _ddg_sync*,
+│   │                               _normalize_search_query(), _playwright_html(), _ddgs_import()
 │   │                            fallback auto sur 8 modèles gratuits (429/503/content=null)
 │   ├── ollama_service.py · email_service.py
 └── workers/
@@ -111,13 +117,13 @@ app/
 ### Frontend
 ```
 src/
-├── App.jsx                    ← 12 routes + init thème depuis localStorage au démarrage ← v1.5.4
+├── App.jsx                    ← 13 routes + init thème depuis localStorage au démarrage ← v1.5.4
 ├── styles/
 │   └── design-system.css      ← :root (dark) + [data-theme="light"] complet ← v1.5.3
 ├── contexts/
 │   └── OllamaStatusContext.jsx ← Context global statut Ollama (v1.4.0)
 ├── data/
-│   ├── helpContent.js         ← aide contextuelle toutes pages (+ /job-analysis v1.5.4)
+│   ├── helpContent.js         ← aide contextuelle toutes pages (+ /companies v1.6.0)
 │   └── esco_dictionary.json   ← 265 métiers + 212 compétences (offline)
 ├── api/
 │   ├── client.js              ← postAI timeout 10min + support signal AbortController externe
@@ -125,9 +131,10 @@ src/
 │   ├── jobs.js                ← +purgeJobsByCriteria({maxScore, beforeDate, source, dryRun}) ← v1.5.3
 │   ├── automation.js · jobsIntelligence.js · history.js · alerts.js
 │   ├── analysis.js · scrapers.js · cvStore.js · cvMatching.js · profile.js
+│   ├── companies.js           ← CRUD + ddgSearch() + discoverCompanyUrl() + scrapeCompany() ← v1.6.0
 ├── components/
 │   ├── layout/
-│   │   ├── SideBar.jsx        ← 12 items nav dont Analyse de l'offre (ScanSearch) ← v1.5.4
+│   │   ├── SideBar.jsx        ← 13 items nav dont Entreprises (Building2) ← v1.6.0
 │   │   ├── HelpPanel.jsx      ← bouton ? + panneau aide contextuelle
 │   │   ├── OllamaBanner.jsx   ← bannière teal sticky sous TopBar (v1.4.0)
 │   │   └── TopBar · AppLayout ← AppLayout wrap OllamaStatusProvider (v1.4.0)
@@ -149,6 +156,9 @@ src/
     ├── AnalysisPage           ← modal preview PDF avant import (avertissements + aperçu texte) ← v1.5.3
     ├── SettingsPage           ← +section OpenRouter (clé API, modèle, test ping, liste modèles) ← v1.5.4
     │                            +section Apparence : Dark/Light/Custom + color picker ← v1.5.3
+    ├── CompaniesPage          ← entreprises cibles, découverte URL (logs temps réel), DDG modal ← v1.6.0
+    │                            AddCompanyModal 2 étapes (DDG chips / auto-discover)
+    │                            LogPanel auto-scroll, AtsBadge, StatusBadge, config IA/proxies
     ├── CVMatchingPage · HistoryPage
 ```
 
@@ -161,6 +171,7 @@ src/
 | `jobs` | Offres scrapées (+company_url, +ai_summary) |
 | `job_questions` | Q&A Offres Intelligence par offre (v1.4.0) |
 | `openrouter_config` | Config OpenRouter (id=1, api_key, model, updated_at) ← v1.5.4 |
+| `companies` | Entreprises cibles (name, domain, careers_url, ats_type, scrape_status…) ← v1.6.0 |
 | `cvs` | CVs uploadés (CV Intelligence) |
 | `stored_cvs` | CVs nommés/datés (page CV) |
 | `generated_cvs` | CVs générés (+source_cv_text pour diff, +is_ats, +ats_*) |
@@ -177,6 +188,7 @@ python scripts/migrate_add_ats_fields.py
 python scripts/migrate_add_proxies_tried.py
 python scripts/migrate_add_job_questions.py      # v1.4.0 — à lancer une fois
 python scripts/migrate_add_openrouter_config.py  # v1.5.4 — à lancer une fois
+python scripts/migrate_add_companies.py          # v1.6.0 — à lancer une fois
 ```
 
 ---
@@ -207,6 +219,17 @@ python scripts/migrate_add_openrouter_config.py  # v1.5.4 — à lancer une fois
 | GET `/api/history` | Filtres: min_score, **max_score**, **date_from**, **date_to** |
 | GET `/api/alerts/status` | État SMTP + score_threshold |
 | POST `/api/alerts/test` | Test SMTP |
+| GET `/api/companies` | Liste des entreprises cibles ← v1.6.0 |
+| POST `/api/companies` | Créer une entreprise ← v1.6.0 |
+| PATCH `/api/companies/{id}` | Mettre à jour une entreprise ← v1.6.0 |
+| DELETE `/api/companies/{id}` | Supprimer une entreprise ← v1.6.0 |
+| POST `/api/companies/{id}/discover` | Lancer la découverte d'URL (async) ← v1.6.0 |
+| POST `/api/companies/{id}/scrape` | Scraper les offres (async) ← v1.6.0 |
+| POST `/api/companies/scrape-all` | Scraper toutes les entreprises actives ← v1.6.0 |
+| GET `/api/companies/run-status` | État des runs en cours (in-memory) ← v1.6.0 |
+| GET `/api/companies/config` | Config globale (proxies, ai_provider) ← v1.6.0 |
+| POST `/api/companies/config` | Sauvegarder config globale ← v1.6.0 |
+| POST `/api/companies/ddg-search` | Recherche DuckDuckGo avec diagnostics ← v1.6.0 |
 | POST `/api/cv-matching/generate-ats` | Génération CV ATS Ollama |
 | POST `/api/cv-matching/generate-ats-cloud` | Génération CV ATS Cloud (Claude ou OpenAI) |
 | GET  `/api/cv-matching/cloud-status` | Provider Cloud disponible + modèle utilisé |
@@ -418,7 +441,108 @@ MISTRAL_API_KEY=      # modèle français (mistral-small-latest)
 
 ---
 
-## 18. Backlog
+## 18. Page Entreprises (v1.6.0)
+
+**Route** : `/companies` | **Composant** : `CompaniesPage.jsx`  
+**Backend** : `app/api/routes/companies.py` + `app/services/company_scraper_service.py`  
+**Config** : `companies_config.json` (racine backend)
+
+### Modèle `Company` (`app/models/company.py`)
+```
+id, name, domain, careers_url, ats_type, ats_slug
+scrape_status (pending/discovering/discovered/scraping/done/error)
+last_scraped_at, jobs_found, error_msg, enabled, notes, created_at
+```
+
+### Pipeline de découverte d'URL (`discover_careers_url`)
+1. **Sonde directe** — si `domain` fourni, tester les 10 variantes de `PROBE_TOP10`
+2. **LLM first** — demander directement à l'IA l'URL carrières probable
+3. **Validation HTTP** — si LLM propose une URL, la sonder (ok / captcha / notfound)
+4. **DDG queries** — recherches mot à mot (`careers` en premier, accent-normalisé)
+5. **Sonde domaines DDG** — extraire les domaines des résultats, tester les variantes
+6. **Détection ATS** — chercher des patterns Greenhouse/Lever/Workday/… dans les résultats
+7. **LLM depuis résultats DDG** — demander à l'IA de choisir le meilleur candidat
+8. **Heuristique** — premier résultat avec un mot-clé carrière
+
+### `PROBE_TOP10` — variantes testées par domaine
+```python
+PROBE_TOP10 = [
+    ("subdomain", "careers"),   # careers.company.com
+    ("subdomain", "jobs"),      # jobs.company.com
+    ("path", "/jobs"),          # www.company.com/jobs
+    ("path", "/careers"),       # www.company.com/careers
+    ("path", "/en/careers"),
+    ("path", "/emplois"),
+    ("path", "/en/jobs"),
+    ("path", "/recrutement"),
+    ("path", "/offres-emploi"),
+    ("subdomain", "talent"),    # talent.company.com
+]
+```
+
+### Détection Cloudflare / WAF
+- `_probe_url()` retourne `"ok"` / `"captcha"` / `"notfound"` / `"error"`
+- 403 **toujours** = `"captcha"` (Cloudflare block = la page EXISTE, accès robot refusé)
+- Headers testés : `cf-mitigated`, `cf-ray`, `x-sucuri-id`, `x-ddos-guard`
+- `_probe_direct()` teste les **10 variantes sans s'arrêter** au premier CAPTCHA — retourne la plus haute priorité
+
+### DDG — normalisation
+- `_normalize_search_query(name)` : `unicodedata.normalize("NFKD")` → strip combining chars
+- `Nestlé` → `Nestle` (DDG retourne 0 résultats avec accents)
+- `_ddg_sync_full(query, n)` → `(list[dict], error)` avec title/url/snippet (pour modale DDG)
+- `_ddg_sync(query, n)` → `(list[str], error)` juste les URLs (pour auto-découverte)
+
+### Package DDG
+- **`ddgs>=1.0.0`** (nouveau nom officiel, ex-`duckduckgo_search`) — utilise `primp` pour TLS fingerprinting
+- `_ddgs_import()` — tente `ddgs` en premier, fallback sur `duckduckgo_search`
+
+### Playwright (anti-Cloudflare)
+- **`playwright>=1.50.0`** — installé + `playwright install chromium`
+- Utilisé dans `_playwright_html()` pour contourner les protections JS/CF (~70% de succès)
+- Sites enterprise Cloudflare (ex. Nestlé) nécessitent des proxies résidentiels
+
+### Endpoints `POST /companies/ddg-search`
+```json
+{ "company_name": "Nestlé", "keyword": "careers" }
+→ {
+    "query": "Nestle careers",
+    "results": [{"title": "...", "url": "...", "snippet": "..."}],
+    "debug": { "ddg_module": "ddgs (nouveau) OK", "duration_ms": 450, "results_count": 7, ... }
+  }
+```
+
+### Logs en temps réel
+- `log_cb(level, msg)` dans `_do_discover()` — appende dans `_run_status[id]["logs"]`
+- Niveaux : `ok` (teal) · `error` (rouge) · `warn` (ambre) · `debug` (gris) · `info` (blanc)
+- `LogPanel` composant React — auto-scroll, toggle, ouverture automatique au démarrage discover
+
+### Frontend — AddCompanyModal (2 étapes)
+- **Étape 1** : Formulaire + 2 boutons options
+  - 🦆 "Rechercher avec DuckDuckGo" → étape 2 DDG
+  - ⚡ "Découvrir automatiquement" → crée entreprise + lance discover immédiatement
+- **Étape 2 DDG** :
+  - Chips de mots-clés : `careers` · `jobs` · `emplois` · `recrutement` · `offres emploi` · `hiring` · `vacancies` · `join us`
+  - Saisie personnalisée + aperçu requête exacte envoyée à DDG
+  - Liste résultats avec [Voir] (ouvre dans onglet) et [✅] (valide URL)
+  - Barre inférieure "URL validée" + bouton "Lancer le scraping"
+
+### Fichier config `companies_config.json`
+```json
+{
+  "proxies": ["IP:PORT:USER:PASS"],
+  "ai_provider": "ollama",
+  "or_model": "deepseek/deepseek-r1:free"
+}
+```
+
+### Migration BDD
+```bash
+python scripts/migrate_add_companies.py  # v1.6.0 — à lancer une fois
+```
+
+---
+
+## 19. Backlog
 
 ### Priorité haute
 - `sudo apt install pandoc` (export DOCX réel)
