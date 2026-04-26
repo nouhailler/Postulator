@@ -105,8 +105,8 @@ export default function DashboardPage() {
         </h2>
         <button
           className="btn-ghost"
-          onClick={() => navigate('/scrapers')}
-          title="Lancer un nouveau scraping"
+          onClick={() => navigate('/board')}
+          title="Ouvrir le pipeline de candidatures"
         >
           Launch Pipeline →
         </button>
