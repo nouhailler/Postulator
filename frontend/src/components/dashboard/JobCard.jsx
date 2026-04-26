@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, ExternalLink, Brain, MapPin, Clock, Zap, Building2 } from 'lucide-react'
+import { X, ExternalLink, Brain, MapPin, Clock, Zap, Building2, CheckCircle, AlertTriangle, Lightbulb } from 'lucide-react'
 import styles from './JobCard.module.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -8,6 +8,85 @@ function scoreMeta(score) {
   if (score >= 90) return { cls: styles.scoreTeal, barCls: styles.barTeal,  label: `${score}%`, hint: 'Excellent match' }
   if (score >= 80) return { cls: styles.scoreBlue, barCls: styles.barBlue,  label: `${score}%`, hint: 'Bon match' }
   return              { cls: styles.scoreDefault, barCls: styles.barDefault, label: `${score}%`, hint: 'Match partiel' }
+}
+
+/** Tente de parser le ai_summary : JSON structuré ou texte brut */
+function parseAISummary(raw) {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object') return { type: 'structured', data: parsed }
+  } catch {}
+  return { type: 'text', data: raw }
+}
+
+// ── Section Analyse IA ────────────────────────────────────────────────────────
+
+function AISummarySection({ raw }) {
+  const result = parseAISummary(raw)
+  if (!result) return null
+
+  // Affichage structuré (JSON avec strengths / gaps / recommendation)
+  if (result.type === 'structured') {
+    const { strengths = [], gaps = [], recommendation } = result.data
+    return (
+      <div className={styles.modalAI}>
+        <div className={styles.modalAITitle}>
+          <Brain size={12} strokeWidth={2} />
+          Analyse IA
+        </div>
+
+        {strengths.length > 0 && (
+          <div className={styles.aiBlock}>
+            <p className={styles.aiBlockLabel}>
+              <CheckCircle size={11} strokeWidth={2.5} style={{ color: '#3cddc7' }} />
+              Points forts
+            </p>
+            <ul className={styles.aiList}>
+              {strengths.map((s, i) => (
+                <li key={i} className={styles.aiListItemGreen}>{s}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {gaps.length > 0 && (
+          <div className={styles.aiBlock}>
+            <p className={styles.aiBlockLabel}>
+              <AlertTriangle size={11} strokeWidth={2.5} style={{ color: '#f59e0b' }} />
+              Points d'attention
+            </p>
+            <ul className={styles.aiList}>
+              {gaps.map((g, i) => (
+                <li key={i} className={styles.aiListItemAmber}>{g}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {recommendation && (
+          <div className={styles.aiBlock}>
+            <p className={styles.aiBlockLabel}>
+              <Lightbulb size={11} strokeWidth={2.5} style={{ color: '#7bd0ff' }} />
+              Recommandation
+            </p>
+            <p className={styles.aiReco}>{recommendation}</p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Affichage texte brut
+  return (
+    <div className={styles.modalAI}>
+      <div className={styles.modalAITitle}>
+        <Brain size={12} strokeWidth={2} />
+        Analyse IA
+      </div>
+      <p className={styles.modalAIText}>{result.data}</p>
+    </div>
+  )
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -33,7 +112,7 @@ function JobModal({ job, onClose }) {
         {/* ── Bandeau score ── */}
         <div className={`${styles.scoreBanner} ${scoreCls}`}>
           <div className={styles.scoreBannerLeft}>
-            <span className={styles.scoreBig}>{job.score}%</span>
+            <span className={`${styles.scoreBig} ${scoreCls}`}>{job.score}%</span>
             <span className={styles.scoreHint}>{hint}</span>
           </div>
           <div className={styles.scoreBarWrap}>
@@ -47,7 +126,7 @@ function JobModal({ job, onClose }) {
           <div className={styles.modalMeta}>
             <h2 className={styles.modalTitle}>{job.title}</h2>
             <p className={styles.modalCompany}>
-              <Building2 size={11} strokeWidth={2} style={{ opacity: 0.5 }} />
+              <Building2 size={11} strokeWidth={2} style={{ opacity: 0.5, flexShrink: 0 }} />
               {job.company}
             </p>
           </div>
@@ -74,13 +153,7 @@ function JobModal({ job, onClose }) {
 
         {/* ── Analyse IA ── */}
         {job.ai_summary ? (
-          <div className={styles.modalAI}>
-            <div className={styles.modalAITitle}>
-              <Brain size={12} strokeWidth={2} />
-              Analyse IA
-            </div>
-            <p className={styles.modalAIText}>{job.ai_summary}</p>
-          </div>
+          <AISummarySection raw={job.ai_summary} />
         ) : (
           <div className={styles.modalNoAI}>
             <Zap size={13} strokeWidth={2} />
@@ -91,7 +164,7 @@ function JobModal({ job, onClose }) {
         {/* ── Tags techniques ── */}
         {job.tags?.length > 0 && (
           <div className={styles.modalTagsWrap}>
-            <p className={styles.modalTagsLabel}>Technologies</p>
+            <p className={styles.modalTagsLabel}>Technologies détectées</p>
             <div className={styles.modalTags}>
               {job.tags.map(t => <span key={t} className="chip">{t}</span>)}
             </div>

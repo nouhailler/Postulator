@@ -287,7 +287,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--tertiary);
-  margin-bottom: 10px;
+  margin-bottom: 14px;
 }
 
 .modalAIText {
@@ -295,6 +295,71 @@
   color: var(--on-surface-variant);
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+/* ── Blocs structurés (strengths / gaps / recommendation) ── */
+.aiBlock {
+  margin-bottom: 14px;
+}
+.aiBlock:last-child { margin-bottom: 0; }
+
+.aiBlockLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  margin-bottom: 7px;
+  letter-spacing: 0.02em;
+}
+
+.aiList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0;
+  margin: 0;
+}
+
+.aiListItemGreen,
+.aiListItemAmber {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--on-surface-variant);
+  padding-left: 16px;
+  position: relative;
+}
+
+.aiListItemGreen::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #3cddc7;
+  font-weight: 700;
+  font-size: 11px;
+  top: 1px;
+}
+
+.aiListItemAmber::before {
+  content: '·';
+  position: absolute;
+  left: 2px;
+  color: #f59e0b;
+  font-weight: 900;
+  font-size: 18px;
+  top: -4px;
+}
+
+.aiReco {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--on-surface-variant);
+  background: rgba(123, 208, 255, 0.05);
+  border-left: 2px solid rgba(123, 208, 255, 0.3);
+  padding: 8px 12px;
+  border-radius: 0 6px 6px 0;
 }
 
 .modalNoAI {
