@@ -164,8 +164,13 @@ async def import_pdf(
     if not raw_text.strip():
         raise HTTPException(status_code=422, detail="Impossible d'extraire le texte du PDF.")
 
-    # Parser via Ollama
-    sections = await _parse_cv_with_ollama(raw_text, model or settings.ollama_model, settings.ollama_base_url)
+    # Parser via OpenRouter (priorité) ou Ollama
+    from app.services.openrouter_service import load_openrouter_config
+    or_cfg = await load_openrouter_config(db)
+    if or_cfg:
+        sections = await _parse_cv_with_openrouter(raw_text, or_cfg.api_key, or_cfg.model or "")
+    else:
+        sections = await _parse_cv_with_ollama(raw_text, model or settings.ollama_model, settings.ollama_base_url)
 
     # Créer le StoredCV
     cv = StoredCV(
@@ -192,12 +197,14 @@ def _extract_pdf_text(path: Path) -> str:
         return ""
 
 
-async def _parse_cv_with_ollama(raw_text: str, model: str, base_url: str) -> dict:
-    """
-    Envoie le texte brut du CV à Ollama et demande de remplir
-    chaque section en JSON structuré.
-    """
-    prompt = f"""Tu es un expert en analyse de CV. Extrais les informations du CV ci-dessous
+_ALLOWED_SECTIONS = {
+    "full_name","title","email","phone","location","linkedin_url",
+    "github_url","website_url","summary","experiences","education",
+    "skills","languages","certifications","projects","interests",
+}
+
+def _cv_parse_prompt(raw_text: str) -> str:
+    return f"""Tu es un expert en analyse de CV. Extrais les informations du CV ci-dessous
 et retourne un objet JSON avec exactement ces clés (chaînes de texte, null si absent).
 Ne traduis pas, conserve la langue d'origine.
 
@@ -224,6 +231,56 @@ CV à analyser :
 
 Réponds UNIQUEMENT avec l'objet JSON, sans texte autour, sans markdown."""
 
+def _parse_json_sections(raw: str) -> dict:
+    if "```" in raw:
+        parts = raw.split("```")
+        for p in parts:
+            p = p.strip()
+            if p.startswith("json"): p = p[4:].strip()
+            if p.startswith("{"): raw = p; break
+    start = raw.find("{")
+    end   = raw.rfind("}")
+    if start != -1 and end > start:
+        raw = raw[start:end+1]
+    data = json.loads(raw)
+    return {k: (v if isinstance(v, str) else None) for k, v in data.items() if k in _ALLOWED_SECTIONS}
+
+
+async def _parse_cv_with_openrouter(raw_text: str, api_key: str, model: str) -> dict:
+    """Envoie le texte du CV à OpenRouter pour extraction JSON structuré."""
+    prompt = _cv_parse_prompt(raw_text)
+    try:
+        import httpx
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://postulator.app",
+            "X-Title": "Postulator",
+        }
+        body = {
+            "model": model or "openai/gpt-4o-mini",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+            "max_tokens": 2000,
+        }
+        async with httpx.AsyncClient(timeout=120) as client:
+            resp = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=body,
+            )
+            resp.raise_for_status()
+            raw = resp.json()["choices"][0]["message"]["content"].strip()
+        return _parse_json_sections(raw)
+    except Exception as e:
+        from loguru import logger
+        logger.error(f"[CVStore] OpenRouter parse error: {e}")
+        return {}
+
+
+async def _parse_cv_with_ollama(raw_text: str, model: str, base_url: str) -> dict:
+    """Envoie le texte brut du CV à Ollama et demande de remplir chaque section en JSON structuré."""
+    prompt = _cv_parse_prompt(raw_text)
     try:
         import httpx
         import ollama as ol
@@ -238,23 +295,7 @@ Réponds UNIQUEMENT avec l'objet JSON, sans texte autour, sans markdown."""
             options={"temperature": 0.1, "num_predict": 1500},
         )
         raw = response["response"].strip()
-        # Nettoyer le JSON
-        if "```" in raw:
-            parts = raw.split("```")
-            for p in parts:
-                p = p.strip()
-                if p.startswith("json"): p = p[4:].strip()
-                if p.startswith("{"): raw = p; break
-        start = raw.find("{")
-        end   = raw.rfind("}")
-        if start != -1 and end > start:
-            raw = raw[start:end+1]
-        data = json.loads(raw)
-        # Filtrer uniquement les clés attendues
-        allowed = {"full_name","title","email","phone","location","linkedin_url",
-                   "github_url","website_url","summary","experiences","education",
-                   "skills","languages","certifications","projects","interests"}
-        return {k: (v if isinstance(v, str) else None) for k, v in data.items() if k in allowed}
+        return _parse_json_sections(raw)
     except Exception as e:
         from loguru import logger
         logger.error(f"[CVStore] Ollama parse error: {e}")

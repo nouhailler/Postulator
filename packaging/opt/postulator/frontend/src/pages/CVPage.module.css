@@ -36,6 +36,174 @@
 .importNameInput::placeholder { color: var(--outline); }
 .importNameInput:focus { border-bottom-color: var(--primary); }
 
+/* ── Sélecteur moteur IA ── */
+.aiProviderRow {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: var(--surface-container);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.aiProviderLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--outline);
+}
+
+.aiProviderBtns {
+  display: flex;
+  gap: 4px;
+}
+
+.aiProviderBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  background: none;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px;
+  color: var(--outline);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.aiProviderBtn:hover:not(.aiProviderDisabled) {
+  background: rgba(255,255,255,0.05);
+  color: var(--on-surface);
+}
+.aiProviderActive {
+  background: rgba(60,221,199,0.12);
+  border-color: rgba(60,221,199,0.3);
+  color: var(--tertiary) !important;
+}
+.aiProviderActiveOr {
+  background: rgba(251,191,36,0.12);
+  border-color: rgba(251,191,36,0.3);
+  color: #fbbf24 !important;
+}
+.aiProviderDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.aiProviderHint {
+  font-size: 10px;
+  color: var(--outline);
+  font-style: italic;
+  text-align: right;
+}
+
+/* ── Box importation en cours ── */
+.importingBox {
+  background: rgba(123,208,255,0.06);
+  border: 1px solid rgba(123,208,255,0.15);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.importingTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.importingIcon {
+  width: 32px;
+  height: 32px;
+  background: rgba(123,208,255,0.10);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.importingText { flex: 1; min-width: 0; }
+
+.importingTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin-bottom: 2px;
+}
+
+.importingDesc {
+  font-size: 10px;
+  color: var(--outline);
+}
+
+.importingElapsed {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.elapsedNum {
+  font-family: var(--font-headline);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+  min-width: 28px;
+  text-align: right;
+}
+
+.elapsedUnit {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--outline);
+}
+
+/* Barre de progression animée */
+.importingBar {
+  height: 3px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.importingBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--tertiary));
+  border-radius: 3px;
+  animation: indeterminate 1.6s ease-in-out infinite;
+  transform-origin: left;
+}
+
+@keyframes indeterminate {
+  0%   { transform: translateX(-100%) scaleX(0.4); }
+  50%  { transform: translateX(60%)   scaleX(0.6); }
+  100% { transform: translateX(200%)  scaleX(0.4); }
+}
+
+.importingNote {
+  font-size: 10px;
+  color: var(--outline);
+  font-style: italic;
+  line-height: 1.4;
+}
+
 .importProgress { margin-bottom: 10px; }
 .errorBox {
   display: flex; align-items: center; gap: 6px;

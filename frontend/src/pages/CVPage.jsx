@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Plus, Upload, Trash2, Save, ChevronDown, ChevronUp,
-  FileText, Loader, AlertCircle, CheckCheck, Edit3, Eye
+  FileText, Loader, AlertCircle, CheckCheck, Edit3, Zap, Bot, Timer
 } from 'lucide-react'
 import { useAsync }  from '../hooks/useAsync.js'
 import { fetchCVList, fetchCVDetail, createCV, updateCV, deleteCV, importPDF } from '../api/cvStore.js'
@@ -211,7 +211,16 @@ export default function CVPage() {
   const [importError, setImportError] = useState(null)
   const [importName,  setImportName]  = useState('')
   const [elapsed,     setElapsed]     = useState(0)
+  const [aiProvider,  setAiProvider]  = useState('auto') // 'auto' | 'ollama' | 'openrouter'
+  const [orConfigured, setOrConfigured] = useState(false)
   const fileInputRef  = useRef()
+
+  // Vérifier si OpenRouter est configuré au montage
+  useEffect(() => {
+    fetch('/api/settings/openrouter').then(r => r.json())
+      .then(d => setOrConfigured(!!(d?.configured)))
+      .catch(() => setOrConfigured(false))
+  }, [])
 
   // Chrono import
   useEffect(() => {
@@ -285,12 +294,9 @@ export default function CVPage() {
               onClick={() => fileInputRef.current?.click()}
               disabled={importing}
               style={{ flex: 1, justifyContent: 'center', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}
-              title="Importer un PDF et laisser Ollama remplir les sections"
+              title="Importer un PDF et laisser l'IA remplir les sections"
             >
-              {importing
-                ? <><Loader size={12} className={styles.spin} strokeWidth={2} /> {elapsed}s…</>
-                : <><Upload size={12} strokeWidth={2} /> Importer PDF</>
-              }
+              <Upload size={12} strokeWidth={2} /> Importer PDF
             </button>
             <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }}
               onChange={e => handleImport(e.target.files[0])} />
@@ -304,11 +310,69 @@ export default function CVPage() {
             onChange={e => setImportName(e.target.value)}
           />
 
+          {/* Sélecteur moteur IA */}
+          {!importing && (
+            <div className={styles.aiProviderRow}>
+              <span className={styles.aiProviderLabel}>Moteur IA :</span>
+              <div className={styles.aiProviderBtns}>
+                <button
+                  className={`${styles.aiProviderBtn} ${aiProvider === 'auto' ? styles.aiProviderActive : ''}`}
+                  onClick={() => setAiProvider('auto')}
+                  title="Utilise OpenRouter si configuré, sinon Ollama"
+                >
+                  Auto
+                </button>
+                <button
+                  className={`${styles.aiProviderBtn} ${aiProvider === 'ollama' ? styles.aiProviderActive : ''}`}
+                  onClick={() => setAiProvider('ollama')}
+                >
+                  <Bot size={10} strokeWidth={2} /> Ollama
+                </button>
+                <button
+                  className={`${styles.aiProviderBtn} ${aiProvider === 'openrouter' ? styles.aiProviderActiveOr : ''} ${!orConfigured ? styles.aiProviderDisabled : ''}`}
+                  onClick={() => orConfigured && setAiProvider('openrouter')}
+                  title={orConfigured ? 'Utiliser OpenRouter' : 'OpenRouter non configuré — allez dans Paramètres'}
+                >
+                  <Zap size={10} strokeWidth={2} /> OpenRouter
+                </button>
+              </div>
+              {aiProvider === 'openrouter' && orConfigured && (
+                <span className={styles.aiProviderHint}>Rapide · cloud</span>
+              )}
+              {aiProvider === 'ollama' && (
+                <span className={styles.aiProviderHint}>Local · lent</span>
+              )}
+              {aiProvider === 'auto' && (
+                <span className={styles.aiProviderHint}>{orConfigured ? 'OpenRouter détecté' : 'Ollama local'}</span>
+              )}
+            </div>
+          )}
+
+          {/* Message d'import en cours */}
           {importing && (
-            <div className={styles.importProgress}>
-              <div style={{ height: 3, background: 'linear-gradient(90deg,var(--primary),var(--tertiary))', borderRadius: 2, marginBottom: 6 }} />
-              <p style={{ fontSize: 11, color: 'var(--outline)', fontStyle: 'italic' }}>
-                Ollama analyse le PDF et remplit les sections… Vérifiez ensuite chaque section.
+            <div className={styles.importingBox}>
+              <div className={styles.importingTop}>
+                <div className={styles.importingIcon}>
+                  <Timer size={15} strokeWidth={1.5} style={{ color: 'var(--primary)' }} />
+                </div>
+                <div className={styles.importingText}>
+                  <p className={styles.importingTitle}>Importation en cours…</p>
+                  <p className={styles.importingDesc}>
+                    {aiProvider === 'openrouter' || (aiProvider === 'auto' && orConfigured)
+                      ? 'OpenRouter analyse le PDF'
+                      : 'Ollama analyse le PDF'}
+                  </p>
+                </div>
+                <div className={styles.importingElapsed}>
+                  <span className={styles.elapsedNum}>{elapsed}</span>
+                  <span className={styles.elapsedUnit}>s</span>
+                </div>
+              </div>
+              <div className={styles.importingBar}>
+                <div className={styles.importingBarFill} />
+              </div>
+              <p className={styles.importingNote}>
+                Remplissage automatique de toutes les sections. Vérifiez ensuite le résultat.
               </p>
             </div>
           )}
