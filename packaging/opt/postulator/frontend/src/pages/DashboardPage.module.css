@@ -1,9 +1,9 @@
 .page {
   position: relative;
-  padding-bottom: 64px;
+  padding-bottom: 80px;
 }
 
-/* ---- En-tête ---- */
+/* ── En-tête ── */
 .pageHeader {
   display: flex;
   align-items: flex-start;
@@ -30,6 +30,8 @@
   gap: 10px;
   margin-top: 4px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 @keyframes spin {
@@ -40,7 +42,7 @@
   animation: spin 1s linear infinite;
 }
 
-/* ---- Bannières ---- */
+/* ── Bannières ── */
 .offlineBanner {
   display: flex;
   align-items: center;
@@ -81,7 +83,7 @@
   margin-bottom: 18px;
 }
 
-/* ---- KPI Grid ---- */
+/* ── KPI Grid ── */
 .kpiGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -93,19 +95,24 @@
   .kpiGrid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ---- Graphique + Logs ---- */
+/* ── Ingestion + Logs ── */
 .midRow {
   display: grid;
   grid-template-columns: 1fr 300px;
   gap: 14px;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
 }
 
 @media (max-width: 900px) {
   .midRow { grid-template-columns: 1fr; }
 }
 
-/* ---- Section Matches ---- */
+/* ── Scoring Chart ── */
+.scoringRow {
+  margin-bottom: 28px;
+}
+
+/* ── Section Matches ── */
 .matchesHeader {
   display: flex;
   align-items: center;
@@ -128,7 +135,7 @@
   color: var(--outline);
 }
 
-/* ---- Jobs Grid ---- */
+/* ── Jobs Grid ── */
 .jobsGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -143,7 +150,7 @@
   .jobsGrid { grid-template-columns: 1fr; }
 }
 
-/* ---- FAB ---- */
+/* ── FAB ── */
 .fab {
   position: fixed;
   bottom: 28px;
@@ -152,7 +159,7 @@
   height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary), var(--tertiary));
-  color: var(--on-primary);
+  color: #0d1421;
   border: none;
   display: flex;
   align-items: center;

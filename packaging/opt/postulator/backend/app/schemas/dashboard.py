@@ -6,8 +6,16 @@ from pydantic import BaseModel
 
 
 class VelocityPoint(BaseModel):
-    day: str     # "LUN", "MAR"… ou "S-4"…
+    day: str        # "LUN", "MAR"… ou "18/04"…
+    date: str = "" # ISO "2026-04-18" — utilisé pour le tooltip riche
     jobs: int
+
+
+class ScoringPoint(BaseModel):
+    day: str
+    date: str = ""
+    count: int          # offres avec ai_score >= 80
+    avg_score: float    # score moyen de ces offres (0 si count=0)
 
 
 class SourceStat(BaseModel):
@@ -34,5 +42,8 @@ class DashboardKpi(BaseModel):
 class DashboardOverview(BaseModel):
     kpi: DashboardKpi
     velocity_7d: list[VelocityPoint]
+    velocity_30d: list[VelocityPoint]
+    scoring_7d: list[ScoringPoint]
+    scoring_30d: list[ScoringPoint]
     source_stats: list[SourceStat]
     recent_logs: list[LogEntry]

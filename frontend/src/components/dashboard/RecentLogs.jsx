@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import styles from './RecentLogs.module.css'
 
 const DOT_CLASS = {
@@ -6,11 +7,9 @@ const DOT_CLASS = {
   system:  styles.dotSystem,
 }
 
-/**
- * @param {{ logs: {id,type,message,meta}[] }} props
- * Les logs viennent maintenant du hook useDashboard.
- */
 export default function RecentLogs({ logs = [] }) {
+  const navigate = useNavigate()
+
   return (
     <div className={styles.card}>
       <p className={styles.title}>Recent Logs</p>
@@ -31,8 +30,11 @@ export default function RecentLogs({ logs = [] }) {
         </ul>
       )}
 
-      <button className={`btn-ghost ${styles.auditBtn}`}>
-        View Audit Trail
+      <button
+        className={`btn-ghost ${styles.auditBtn}`}
+        onClick={() => navigate('/jobs')}
+      >
+        View Audit Trail →
       </button>
     </div>
   )

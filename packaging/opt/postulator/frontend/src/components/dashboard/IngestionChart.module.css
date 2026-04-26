@@ -9,6 +9,7 @@
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 18px;
+  gap: 12px;
 }
 
 .title {
@@ -25,7 +26,17 @@
   margin-top: 3px;
 }
 
-.periods { display: flex; gap: 4px; }
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.periods {
+  display: flex;
+  gap: 4px;
+}
 
 .periodBtn {
   background: none;
@@ -48,6 +59,37 @@
 
 .periodBtn:not(.active):hover { color: var(--on-surface-variant); }
 
+/* Navigation prev/next */
+.navBtns {
+  display: flex;
+  gap: 2px;
+}
+
+.navBtn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  color: var(--outline);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: var(--surface-container);
+  color: var(--on-surface);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.navBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .empty {
   height: 160px;
   display: flex;
@@ -57,20 +99,21 @@
   color: var(--outline);
 }
 
+/* Tooltip */
 .tooltip {
-  background: var(--surface-container-highest);
+  background: var(--surface-container-highest, #1e2840);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md);
   padding: 8px 12px;
+  min-width: 150px;
 }
 
-.tooltipLabel {
+.tooltipDate {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--outline);
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+  text-transform: capitalize;
 }
 
 .tooltipValue {

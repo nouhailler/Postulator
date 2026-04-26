@@ -1,13 +1,17 @@
-import { Plus, RefreshCw } from 'lucide-react'
-import { useDashboard }   from '../hooks/useDashboard.js'
-import KpiCard            from '../components/dashboard/KpiCard.jsx'
-import IngestionChart     from '../components/dashboard/IngestionChart.jsx'
-import RecentLogs         from '../components/dashboard/RecentLogs.jsx'
-import JobCard            from '../components/dashboard/JobCard.jsx'
-import OllamaStatus       from '../components/dashboard/OllamaStatus.jsx'
-import styles             from './DashboardPage.module.css'
+import { RefreshCw, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useDashboard }  from '../hooks/useDashboard.js'
+import KpiCard           from '../components/dashboard/KpiCard.jsx'
+import IngestionChart    from '../components/dashboard/IngestionChart.jsx'
+import ScoringChart      from '../components/dashboard/ScoringChart.jsx'
+import RecentLogs        from '../components/dashboard/RecentLogs.jsx'
+import JobCard           from '../components/dashboard/JobCard.jsx'
+import OllamaStatus      from '../components/dashboard/OllamaStatus.jsx'
+import styles            from './DashboardPage.module.css'
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
+
   const {
     loading,
     error,
@@ -15,6 +19,8 @@ export default function DashboardPage() {
     kpiCards,
     velocity7d,
     velocity30d,
+    scoring7d,
+    scoring30d,
     logs,
     topMatches,
     refetch,
@@ -23,28 +29,24 @@ export default function DashboardPage() {
   return (
     <div className={styles.page}>
 
-      {/* ---- En-tête ---- */}
+      {/* ── En-tête ── */}
       <div className={styles.pageHeader}>
         <div>
           <h1 className={`${styles.pageTitle} font-headline tracking-tight`}>
             Systems Overview
           </h1>
           <p className={styles.pageSub}>
-            Autonomous intelligence active. Monitoring 14 global job sources.
+            Autonomous intelligence active. Monitoring global job sources.
           </p>
         </div>
 
         <div className={styles.headerRight}>
-          {/* Indicateur Ollama */}
           <OllamaStatus />
-
-          {/* Bouton rafraîchir */}
           <button
             className="btn-ghost"
             onClick={refetch}
             disabled={loading}
             title="Rafraîchir"
-            aria-label="Rafraîchir le tableau de bord"
           >
             <RefreshCw
               size={13}
@@ -55,7 +57,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ---- Bannière offline (backend non démarré) ---- */}
+      {/* ── Bannière offline ── */}
       {isOffline && (
         <div className={styles.offlineBanner}>
           <span className={styles.offlineDot} />
@@ -71,32 +73,43 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ---- Bannière erreur (autre type) ---- */}
+      {/* ── Bannière erreur ── */}
       {error && !isOffline && (
         <div className={styles.errorBanner}>
           Erreur : {error.message ?? 'Impossible de charger les données.'}
         </div>
       )}
 
-      {/* ---- KPI Grid ---- */}
+      {/* ── KPI Grid ── */}
       <div className={styles.kpiGrid}>
         {kpiCards.map(kpi => (
           <KpiCard key={kpi.id} {...kpi} loading={loading && !isOffline} />
         ))}
       </div>
 
-      {/* ---- Graphique + Logs ---- */}
+      {/* ── Ingestion + Logs ── */}
       <div className={styles.midRow}>
         <IngestionChart velocity7d={velocity7d} velocity30d={velocity30d} />
         <RecentLogs logs={logs} />
       </div>
 
-      {/* ---- High-Confidence Matches ---- */}
+      {/* ── Scoring Chart ── */}
+      <div className={styles.scoringRow}>
+        <ScoringChart scoring7d={scoring7d} scoring30d={scoring30d} />
+      </div>
+
+      {/* ── High-Confidence Matches ── */}
       <div className={styles.matchesHeader}>
         <h2 className={`${styles.matchesTitle} font-headline tracking-tight`}>
           High-Confidence Matches
         </h2>
-        <button className="btn-ghost">Launch Pipeline →</button>
+        <button
+          className="btn-ghost"
+          onClick={() => navigate('/scrapers')}
+          title="Lancer un nouveau scraping"
+        >
+          Launch Pipeline →
+        </button>
       </div>
 
       {topMatches.length === 0 && !loading ? (
@@ -111,9 +124,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ---- FAB ---- */}
-      <button className={styles.fab} title="Nouvelle recherche">
-        <Plus size={20} strokeWidth={2.5} />
+      {/* ── FAB : Lancer un scraping ── */}
+      <button
+        className={styles.fab}
+        title="Lancer un nouveau scraping"
+        onClick={() => navigate('/scrapers')}
+      >
+        <Search size={18} strokeWidth={2.5} />
       </button>
 
     </div>

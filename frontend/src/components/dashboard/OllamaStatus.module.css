@@ -1,4 +1,11 @@
-.wrap {
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pill {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -11,9 +18,10 @@
   position: relative;
   overflow: hidden;
   transition: background 0.3s;
+  white-space: nowrap;
 }
 
-/* Shimmer de fond quand online */
+/* Shimmer animation */
 @keyframes shimmer-bg {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
@@ -25,7 +33,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(60, 221, 199, 0.12) 50%,
+    rgba(60, 221, 199, 0.10) 50%,
     transparent 100%
   );
   animation: shimmer-bg 2.5s ease-in-out infinite;
@@ -40,10 +48,25 @@
 }
 
 .label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   white-space: nowrap;
 }
 
-/* États */
+.modelChip {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── États Ollama ── */
 .online {
   background: rgba(60, 221, 199, 0.08);
   color: var(--tertiary);
@@ -64,3 +87,25 @@
   color: var(--outline);
 }
 .checking .dot { background: var(--outline); }
+
+/* ── OpenRouter ── */
+.orActive {
+  background: rgba(251, 191, 36, 0.10);
+  color: #fbbf24;
+}
+.orActive .dot {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+}
+.orActive .shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(251, 191, 36, 0.10) 50%,
+    transparent 100%
+  );
+}
+.orActive .modelChip {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+}
