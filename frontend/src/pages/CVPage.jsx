@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Plus, Upload, Trash2, Save, ChevronDown, ChevronUp,
-  FileText, Loader, AlertCircle, CheckCheck, Edit3, Zap, Bot, Timer
+  FileText, Loader, AlertCircle, CheckCheck, Edit3, Zap, Bot, Timer,
+  CheckSquare, Square, X,
 } from 'lucide-react'
 import { useAsync }  from '../hooks/useAsync.js'
 import { fetchCVList, fetchCVDetail, createCV, updateCV, deleteCV, importPDF } from '../api/cvStore.js'
@@ -211,8 +212,12 @@ export default function CVPage() {
   const [importError, setImportError] = useState(null)
   const [importName,  setImportName]  = useState('')
   const [elapsed,     setElapsed]     = useState(0)
-  const [aiProvider,  setAiProvider]  = useState('auto') // 'auto' | 'ollama' | 'openrouter'
+  const [aiProvider,   setAiProvider]   = useState('auto') // 'auto' | 'ollama' | 'openrouter'
   const [orConfigured, setOrConfigured] = useState(false)
+  // Mode sélection multiple
+  const [selectMode,   setSelectMode]   = useState(false)
+  const [selected,     setSelected]     = useState(new Set()) // Set d'ids
+  const [deleting,     setDeleting]     = useState(false)
   const fileInputRef  = useRef()
 
   // Vérifier si OpenRouter est configuré au montage
@@ -253,14 +258,14 @@ export default function CVPage() {
     const name = importName.trim() || file.name.replace(/\.[^.]+$/, '') + ` — ${new Date().toLocaleDateString('fr-FR')}`
     setImporting(true); setImportError(null)
     try {
-      const cv = await importPDF(file, name, null)
+      const cv = await importPDF(file, name, { provider: aiProvider })
       await refetchList()
       setSelectedId(cv.id)
       setImportName('')
     } catch (err) {
       setImportError(err.message)
     } finally { setImporting(false) }
-  }, [importName, refetchList])
+  }, [importName, aiProvider, refetchList])
 
   const handleSaved = (updated) => {
     setCurrentCV(updated)
@@ -273,6 +278,48 @@ export default function CVPage() {
     refetchList()
   }
 
+  // Suppression rapide depuis la liste (un seul CV)
+  const handleDeleteOne = async (e, id) => {
+    e.stopPropagation()
+    if (!window.confirm('Supprimer ce CV ?')) return
+    await deleteCV(id)
+    if (selectedId === id) { setSelectedId(null); setCurrentCV(null) }
+    refetchList()
+  }
+
+  // Suppression multiple
+  const toggleSelect = (e, id) => {
+    e.stopPropagation()
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selected.size === cvList?.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(cvList.map(c => c.id)))
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selected.size === 0) return
+    if (!window.confirm(`Supprimer ${selected.size} CV${selected.size > 1 ? 's' : ''} ? Cette action est irréversible.`)) return
+    setDeleting(true)
+    try {
+      await Promise.all([...selected].map(id => deleteCV(id)))
+      if (selected.has(selectedId)) { setSelectedId(null); setCurrentCV(null) }
+      setSelected(new Set())
+      setSelectMode(false)
+      await refetchList()
+    } finally { setDeleting(false) }
+  }
+
+  const exitSelectMode = () => { setSelectMode(false); setSelected(new Set()) }
+
   return (
     <div className={styles.page}>
       <div className={styles.layout}>
@@ -282,7 +329,44 @@ export default function CVPage() {
           <div className={styles.sidebarHeader}>
             <h2 className={`${styles.sideTitle} font-headline`}>Mes CVs</h2>
             <span className={styles.cvCount}>{cvList?.length ?? 0}</span>
+            {cvList?.length > 0 && !selectMode && (
+              <button
+                className={styles.selectModeBtn}
+                onClick={() => setSelectMode(true)}
+                title="Sélectionner plusieurs CVs pour les supprimer"
+              >
+                <CheckSquare size={12} strokeWidth={2} /> Sélectionner
+              </button>
+            )}
+            {selectMode && (
+              <button className={styles.cancelSelectBtn} onClick={exitSelectMode} title="Annuler">
+                <X size={12} strokeWidth={2.5} />
+              </button>
+            )}
           </div>
+
+          {/* ── Barre de sélection multiple ── */}
+          {selectMode && (
+            <div className={styles.selectBar}>
+              <button className={styles.selectAllBtn} onClick={toggleSelectAll}>
+                {selected.size === cvList?.length
+                  ? <CheckSquare size={12} strokeWidth={2} />
+                  : <Square size={12} strokeWidth={2} />}
+                {selected.size === cvList?.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+              {selected.size > 0 && (
+                <button
+                  className={styles.deleteSelectedBtn}
+                  onClick={handleDeleteSelected}
+                  disabled={deleting}
+                >
+                  {deleting
+                    ? <><Loader size={11} strokeWidth={2} className={styles.spin} /> Suppression…</>
+                    : <><Trash2 size={11} strokeWidth={2} /> Supprimer ({selected.size})</>}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Boutons d'action */}
           <div className={styles.sideActions}>
@@ -391,20 +475,52 @@ export default function CVPage() {
                 <p>Aucun CV. Créez-en un ou importez un PDF.</p>
               </div>
             ) : (
-              cvList.map(cv => (
-                <button
-                  key={cv.id}
-                  className={`${styles.cvItem} ${selectedId === cv.id ? styles.cvItemActive : ''}`}
-                  onClick={() => setSelectedId(cv.id)}
-                >
-                  <div className={styles.cvItemName}>{cv.name}</div>
-                  <div className={styles.cvItemMeta}>
-                    {cv.full_name && <span>{cv.full_name}</span>}
-                    <span>{new Date(cv.created_at).toLocaleDateString('fr-FR')}</span>
-                    {cv.source_pdf && <span className={styles.pdfTag}>PDF</span>}
+              cvList.map(cv => {
+                const isChecked = selected.has(cv.id)
+                return (
+                  <div
+                    key={cv.id}
+                    className={`${styles.cvItem}
+                      ${selectedId === cv.id && !selectMode ? styles.cvItemActive : ''}
+                      ${isChecked ? styles.cvItemChecked : ''}
+                      ${selectMode ? styles.cvItemSelectMode : ''}`}
+                    onClick={() => selectMode ? toggleSelect({ stopPropagation: () => {} }, cv.id) : setSelectedId(cv.id)}
+                  >
+                    {/* Checkbox en mode sélection */}
+                    {selectMode && (
+                      <button
+                        className={`${styles.checkbox} ${isChecked ? styles.checkboxChecked : ''}`}
+                        onClick={e => toggleSelect(e, cv.id)}
+                        title={isChecked ? 'Désélectionner' : 'Sélectionner'}
+                      >
+                        {isChecked
+                          ? <CheckSquare size={13} strokeWidth={2.5} />
+                          : <Square size={13} strokeWidth={2} />}
+                      </button>
+                    )}
+
+                    <div className={styles.cvItemContent}>
+                      <div className={styles.cvItemName}>{cv.name}</div>
+                      <div className={styles.cvItemMeta}>
+                        {cv.full_name && <span>{cv.full_name}</span>}
+                        <span>{new Date(cv.created_at).toLocaleDateString('fr-FR')}</span>
+                        {cv.source_pdf && <span className={styles.pdfTag}>PDF</span>}
+                      </div>
+                    </div>
+
+                    {/* Corbeille au survol (hors mode sélection) */}
+                    {!selectMode && (
+                      <button
+                        className={styles.itemDeleteBtn}
+                        onClick={e => handleDeleteOne(e, cv.id)}
+                        title="Supprimer ce CV"
+                      >
+                        <Trash2 size={11} strokeWidth={2} />
+                      </button>
+                    )}
                   </div>
-                </button>
-              ))
+                )
+              })
             )}
           </div>
         </div>

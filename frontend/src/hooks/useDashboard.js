@@ -122,7 +122,7 @@ export function useDashboard() {
     loading: matchesLoading,
     error: matchesError,
     refetch: refetchMatches,
-  } = useAsync(() => fetchTopMatches({ limit: 6, minScore: 80 }), [], {
+  } = useAsync(() => fetchTopMatches({ limit: 6, minScore: 60 }), [], {
     refetchInterval: 60_000,
     fallback: null,
   })
@@ -141,7 +141,9 @@ export function useDashboard() {
   const logs = overview?.recent_logs?.length ? overview.recent_logs : mockLogs
 
   const topMatches = matchesRaw?.length
-    ? matchesRaw.map(adaptJob)
+    ? [...matchesRaw]
+        .sort((a, b) => new Date(b.scraped_at ?? 0) - new Date(a.scraped_at ?? 0))
+        .map(adaptJob)
     : mockMatches
 
   const refetch = useCallback(() => {

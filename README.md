@@ -3,7 +3,7 @@
 > Agrégateur de recherche d'emploi open source avec IA locale (Ollama) ou cloud gratuite (OpenRouter).  
 > Vos données restent sur votre machine — aucune information personnelle n'est envoyée sans votre accord.
 
-**Version 1.6.0** · [GitHub](https://github.com/nouhailler/Postulator) · [Releases](https://github.com/nouhailler/Postulator/releases)
+**Version 1.8.0** · [GitHub](https://github.com/nouhailler/Postulator) · [Releases](https://github.com/nouhailler/Postulator/releases)
 
 ---
 
@@ -14,7 +14,7 @@
 | **Overview** | Tableau de bord : KPIs temps réel, graphique d'ingestion 7 jours, top matches IA |
 | **CV** | Gestion de vos CVs par sections, import PDF avec extraction intelligente |
 | **Offres** | Liste filtrée des offres scrapées (lieu, source, score, statut, remote…) |
-| **Offres Intelligence** | Chat IA sur n'importe quelle offre — fetch URL automatique, 20 questions suggérées, historique Q&A |
+| **Offres Intelligence** | Chat IA sur n'importe quelle offre — fetch URL automatique, 20 questions suggérées, historique Q&A, cache réponses (badge "Mémoire") |
 | **Analyse de l'offre** ✨ | Analyse sémantique offre ↔ contenu de poste, correspondances surlignées en rouge, conversation multi-tour |
 | **Scrapers** | Collecte depuis 8 sources (4 internationales + 4 suisses), proxies résidentiels, résumé IA |
 | **Entreprises** 🏢 | Scraping ciblé depuis les pages carrières d'entreprises — découverte d'URL intelligente (IA + DDG + sonde), logs temps réel, détection ATS |
@@ -22,7 +22,7 @@
 | **CV Intelligence** | Scoring CV ↔ offre, extraction de compétences, score en masse |
 | **CV Matching** | Génération d'un CV adapté à une offre, diff visuel, export .txt/.md/.docx, mode ATS local ou Cloud |
 | **Pipeline** | Kanban de suivi des candidatures (drag & drop) |
-| **Historique** | Résultats d'analyses sauvegardés, filtres date/score |
+| **Historique** | Résultats d'analyses sauvegardés, filtres date/score — deux panneaux : Analyses CV + CV Générés |
 | **Paramètres** | Configuration SMTP, Ollama, OpenRouter, Adzuna API, Cloud AI (Claude / OpenAI / Mistral), thèmes |
 
 ---
@@ -83,8 +83,8 @@ ollama pull deepseek-r1:32b  # ~20 t/s  — raisonnement avancé
 
 ```bash
 # Télécharger la dernière release
-wget https://github.com/nouhailler/Postulator/releases/latest/download/postulator_1.6.0_amd64.deb
-sudo dpkg -i postulator_1.6.0_amd64.deb
+wget https://github.com/nouhailler/Postulator/releases/latest/download/postulator_1.8.0_amd64.deb
+sudo dpkg -i postulator_1.8.0_amd64.deb
 sudo apt-get install -f   # résoudre les dépendances si nécessaire
 ```
 
@@ -298,7 +298,7 @@ Le bouton **CV ATS CLOUD** dans la page CV Matching génère un CV optimisé ATS
 2. **Fetch de la page web** — si pas de description, le backend récupère automatiquement le contenu de l'URL
 3. **Titre seul** — en dernier recours, l'IA est explicitement informée de la limitation
 
-Les questions/réponses sont **sauvegardées en BDD** et accessibles via le panneau historique sous la fiche offre.
+Les questions/réponses sont **sauvegardées en BDD** et accessibles via le panneau historique sous la fiche offre. Si la même question a déjà été posée pour la même offre, la réponse est servie instantanément depuis le cache (badge **"Mémoire"** avec icône BookMarked).
 
 ---
 
@@ -361,6 +361,24 @@ python scripts/migrate_add_companies.py         # v1.6.0
 ---
 
 ## Changelog
+
+### v1.8.0 (avril 2026)
+- **Cache Q&A Offres Intelligence** — avant chaque appel IA, vérification en BDD si la même question pour la même offre a déjà été posée → réponse instantanée avec badge "Mémoire" (icône BookMarked)
+- **CV Intelligence "Analyser"** — fallback automatique vers Ollama quand OpenRouter est épuisé (rate limit quotidien) ; utilise le modèle Ollama configuré
+- **CV multi-sélection** — sélecteur animé avec checkboxes, suppression en masse de CVs
+- **Import PDF** — récupération JSON partielle sur réponses tronquées : regex extrait les champs complets d'un JSON incomplet (jusqu'à 12/16 sections récupérées avec les modèles gratuits)
+- **Offres — scoring enrichi** — tous les CVs importés (cv-store) proposés ; timer horloge en temps réel pendant le scoring ; badge provider Ollama/OpenRouter
+- **Scrapers** — bouton "Lancer Résumé IA" standalone avec indicateur OpenRouter (badge "OR"), indépendant du toggle Résumé IA auto
+- **Proxies résidentiels** — persistés automatiquement dans `localStorage` avec clé partagée `postulator_proxies` entre Scrapers et Automatisation
+- **Offres Intelligence** — panneau historique ouvert par défaut, persistance Q&A corrigée (`db.commit()`)
+- **Historique** — second panneau "CV Générés" avec les CVs générés via CV Matching, affichage markdown expandable
+- **Overview** — renommé "Matches supérieur à 60%" (était "High-Confidence Matches"), seuil abaissé de 80 à 60%, tri par date de scraping
+
+### v1.7.0 (avril 2026)
+- **Annulation scraping mid-run** — bouton Annuler disponible pendant un scraping en cours
+- **Logs temps réel par run** — visualisation des logs de scraping en direct
+- **OpenRouter pour CV ATS Cloud** — support OpenRouter comme provider pour la génération de CVs ATS Cloud
+- **Annulation analyse CV** — bouton Annuler dans CV Intelligence pendant une analyse
 
 ### v1.6.0 (avril 2026)
 - **Nouvelle page : Entreprises** — scraping ciblé des pages carrières d'entreprises avec découverte automatique de l'URL

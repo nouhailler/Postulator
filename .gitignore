@@ -66,3 +66,10 @@ dist/*.deb
 automation_config.json
 backend/.env
 backend/postulator.db
+
+# Claude Code session files
+.claude/
+
+# Local runtime config (proxies, AI provider)
+backend/companies_config.json
+packaging/opt/postulator/backend/companies_config.json

@@ -259,7 +259,7 @@ Question : {payload.question}"""
             duration_ms=duration_ms,
         )
         db.add(record)
-        await db.flush()
+        await db.commit()
 
         return ChatResponse(
             answer=answer,

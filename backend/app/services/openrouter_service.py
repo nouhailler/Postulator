@@ -347,7 +347,7 @@ CV:
         prompt   = self.SKILLS_PROMPT.format(cv_text=cv_short)
         logger.info(f"[OpenRouter] extract_skills → {self.model}")
         try:
-            raw = await self._chat(prompt, max_tokens=300, temperature=0.0, json_mode=True)
+            raw = await self._chat(prompt, max_tokens=300, temperature=0.0, json_mode=False)
             raw = _extract_json(raw)
             result = json.loads(raw)
             if isinstance(result, list):

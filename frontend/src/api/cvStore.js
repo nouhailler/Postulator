@@ -13,11 +13,12 @@ export const updateCV      = (id, data)   => {
 }
 export const deleteCV      = (id)         => api.delete(`/cv-store/${id}`)
 
-/** Import PDF → parse Ollama */
-export async function importPDF(file, name, model) {
+/** Import PDF → parse via IA (Ollama ou OpenRouter selon provider) */
+export async function importPDF(file, name, { model = null, provider = 'auto' } = {}) {
   const form = new FormData()
   form.append('file', file)
   form.append('name', name)
+  form.append('provider', provider)
   if (model) form.append('model', model)
   const BASE_URL = (import.meta.env.VITE_API_URL ?? '') + '/api'
   const res = await fetch(`${BASE_URL}/cv-store/import-pdf`, {

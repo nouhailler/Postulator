@@ -474,13 +474,23 @@ export default function ScrapersPage() {
 
   // Proxy
   const [proxyOpen, setProxyOpen] = useState(true)
-  const [proxyText, setProxyText] = useState(DEFAULT_PROXIES)
+  const [proxyText, setProxyText] = useState(() => localStorage.getItem('postulator_proxies') ?? DEFAULT_PROXIES)
   const validProxyCount = countValidProxies(proxyText)
 
   // Toggle résumé IA post-scraping
   const [autoSummarize, setAutoSummarize] = useState(false)
   const [summarizing,   setSummarizing]   = useState(false)
   const [summarizeMsg,  setSummarizeMsg]  = useState(null)  // {done, total, errors}
+
+  // OpenRouter
+  const [orConfigured, setOrConfigured] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings/openrouter')
+      .then(r => r.json())
+      .then(d => { if (d.configured) setOrConfigured(true) })
+      .catch(() => {})
+  }, [])
 
   // Modale
   const [showNoProxyModal, setShowNoProxyModal] = useState(false)
@@ -517,6 +527,7 @@ export default function ScrapersPage() {
       }
     }
   }, [status])
+  useEffect(() => { localStorage.setItem('postulator_proxies', proxyText) }, [proxyText])
   useEffect(() => { setCity('') }, [country])
 
   const toggleSource = id => setSources(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id])
@@ -931,8 +942,38 @@ export default function ScrapersPage() {
                 <span className={styles.toggleThumb} />
               </div>
               <Sparkles size={11} strokeWidth={2} style={{ color: autoSummarize ? 'var(--tertiary)' : 'var(--outline)', flexShrink: 0 }} />
-              <span style={{ color: autoSummarize ? 'var(--tertiary)' : undefined }}>Résumé IA</span>
+              <span style={{ color: autoSummarize ? 'var(--tertiary)' : undefined }}>Résumé IA auto</span>
             </label>
+            <button
+              className={styles.summarizeNowBtn}
+              disabled={summarizing}
+              title="Générer les résumés IA pour les 10 dernières offres en base"
+              onClick={() => {
+                if (summarizing) return
+                setSummarizing(true)
+                setSummarizeMsg(null)
+                summarizeJobs(10)
+                  .then(() => {
+                    const poll = setInterval(async () => {
+                      try {
+                        const st = await getSummarizeStatus()
+                        if (!st.running) {
+                          clearInterval(poll)
+                          setSummarizing(false)
+                          setSummarizeMsg({ done: st.done, total: st.total, errors: st.errors })
+                          setTimeout(() => setSummarizeMsg(null), 8000)
+                        }
+                      } catch { clearInterval(poll); setSummarizing(false) }
+                    }, 3000)
+                  })
+                  .catch(() => setSummarizing(false))
+              }}
+            >
+              {summarizing
+                ? <><Loader size={11} className={styles.spin} strokeWidth={2} /> Résumé IA en cours…</>
+                : <><Sparkles size={11} strokeWidth={2} /> Lancer Résumé IA{orConfigured && <span className={styles.orBadgeInline}>OR</span>}</>
+              }
+            </button>
           </div>
           <div className={styles.actionBtns}>
             {status !== 'idle' && (

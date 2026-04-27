@@ -106,17 +106,21 @@ async def import_from_store(store_id: int, db: DBSession) -> CVRead:
     if not stored:
         raise HTTPException(status_code=404, detail=f"StoredCV {store_id} introuvable.")
 
-    # Vérifier si un CV avec ce nom existe déjà → éviter les doublons
+    # Construire le texte brut à partir de toutes les sections du StoredCV
+    raw_text = _build_raw_text(stored)
+
+    # Vérifier si un CV avec ce nom existe déjà → upsert par nom
     existing = (await db.execute(
         select(CV).where(CV.name == stored.name)
     )).scalar_one_or_none()
 
     if existing:
-        # On le renvoie tel quel (l'utilisateur peut cliquer "Activer" ensuite)
+        # Mettre à jour raw_text si vide (le StoredCV a peut-être été enrichi)
+        if not existing.raw_text and raw_text:
+            existing.raw_text = raw_text
+            await db.commit()
+            await db.refresh(existing)
         return existing
-
-    # Construire le texte brut à partir de toutes les sections du StoredCV
-    raw_text = _build_raw_text(stored)
 
     # Créer l'entrée CV (sans fichier physique — raw_text directement)
     from datetime import datetime

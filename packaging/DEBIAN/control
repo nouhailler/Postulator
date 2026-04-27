@@ -1,5 +1,5 @@
 Package: postulator
-Version: 1.6.0
+Version: 1.8.0
 Architecture: all
 Maintainer: Patrick Nouhailler <patrick@nouhailler.fr>
 Installed-Size: 1348
@@ -11,19 +11,18 @@ Priority: optional
 Homepage: https://github.com/nouhailler/postulator
 Description: Agregateur de recherche d'emploi open source avec IA locale
  Postulator collecte automatiquement des offres d'emploi depuis Indeed,
- LinkedIn, Glassdoor, ZipRecruiter et Google Jobs. Il analyse la
- correspondance avec votre CV via Ollama (IA 100% locale) et genere des
- CVs adaptes a chaque offre — sans envoyer de donnees dans le cloud.
+ LinkedIn, Glassdoor, ZipRecruiter et sources suisses. Il analyse la
+ correspondance avec votre CV via Ollama (IA 100% locale) ou OpenRouter
+ (cloud gratuit) et genere des CVs adaptes a chaque offre.
  .
- Fonctionnalites v1.5.4 :
-  - OpenRouter : integration complete des modeles IA gratuits en cloud
-    (DeepSeek R1, Llama 4, Gemma 3, Qwen3...) — remplace Ollama si configure
-  - Fallback automatique : si un modele est indisponible (rate limit, erreur),
-    essai silencieux du modele suivant parmi tous les modeles gratuits
-  - Page "Analyse de l'offre" : analyse semantique offre vs contenu de poste,
-    surlignage des correspondances en rouge, conversation multi-tour,
-    modale plein ecran pour lire les reponses confortablement
-  - Parametres OpenRouter : liste dynamique des modeles gratuits depuis l'API,
-    select avec refresh, test de connexion (ping), sauvegarde en base
-  - Offres Intelligence : badge dynamique Ollama/OpenRouter
-  - Migration BDD : table openrouter_config
+ Nouveautes v1.8.0 :
+  - Cache Q&A : les reponses IA sont mises en cache par offre/question
+    — badge "Memoire" pour les reponses servies depuis la BDD
+  - Fallback Ollama dans CV Intelligence quand OpenRouter est epuise
+    (rate limit quotidien sur tous les modeles gratuits)
+  - CV multi-selection : suppression en masse avec checkboxes animees
+  - Import PDF : recuperation JSON partielle sur reponses tronquees
+  - Offres scoring : tous les CVs importes + timer + badge provider
+  - Proxies residentiels partages entre Scrapers et Automatisation
+  - Historique : onglet "CV Generes" avec contenu markdown expandable
+  - Overview : seuil Matches abaisse a 60%, tri par date de scraping

@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import httpx
 from fastapi import UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +22,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.cv import CV
 from app.models.job import Job
 from app.services.ollama_service import OllamaService
+
+
+async def _best_ollama_model() -> Optional[str]:
+    """Retourne le meilleur modèle Ollama disponible pour l'extraction de skills."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get("http://localhost:11434/api/tags")
+            if resp.status_code != 200:
+                return None
+            names = [m["name"] for m in resp.json().get("models", [])]
+            # Préférer qwen2.5 > llama > mistral > phi
+            for prefix in ("qwen2.5", "llama", "mistral", "phi"):
+                for n in names:
+                    if n.startswith(prefix):
+                        return n
+            return names[0] if names else None
+    except Exception:
+        return None
 
 UPLOAD_DIR = Path("uploads/cvs")
 ALLOWED_TYPES = {
@@ -147,6 +166,11 @@ class CVService:
             from app.services.openrouter_service import OpenRouterService
             svc_or = OpenRouterService(openrouter_key, openrouter_model or "")
             skills = await svc_or.extract_skills(cv.raw_text or "")
+            # Fallback Ollama si OpenRouter échoue (rate limit, modèles indisponibles…)
+            if not skills:
+                logger.warning("[CVService] OpenRouter skills vide → fallback Ollama")
+                svc = OllamaService(model=model)  # model=None → settings.ollama_model (déjà warmé)
+                skills = await svc.extract_skills(cv.raw_text or "")
         else:
             svc = OllamaService(model=model)
             skills = await svc.extract_skills(cv.raw_text or "")

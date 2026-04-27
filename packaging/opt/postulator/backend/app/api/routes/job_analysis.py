@@ -45,6 +45,7 @@ class AnalyzeResponse(BaseModel):
     provider:    str   # "openrouter" | "ollama"
     desc_source: str   # "database" | "fetched" | "none"
     history_id:  Optional[int] = None  # id de l'entrée sauvegardée en BDD
+    cached:      bool = False          # True si réponse issue du cache BDD
 
 
 class AnalysisHistoryItem(BaseModel):
@@ -166,11 +167,55 @@ async def analyze_job(
     from app.models.job import Job
     from app.services.openrouter_service import load_openrouter_config
 
+    from app.models.job_analysis import JobAnalysis
+
     job = await db.get(Job, payload.job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Offre {payload.job_id} introuvable.")
     if not payload.criteria.strip():
         raise HTTPException(status_code=422, detail="Le contenu de poste ne peut pas être vide.")
+
+    # ── Vérifier le cache BDD ─────────────────────────────────────────────────
+    cached_entry = None
+    if payload.question:
+        # Question de suivi : chercher même question pour ce job
+        q_norm = payload.question.strip().lower()
+        cached_result = await db.execute(
+            select(JobAnalysis)
+            .where(JobAnalysis.job_id == payload.job_id)
+            .where(JobAnalysis.question.isnot(None))
+            .order_by(JobAnalysis.created_at.desc())
+        )
+        for row in cached_result.scalars().all():
+            if row.question and row.question.strip().lower() == q_norm:
+                cached_entry = row
+                break
+    else:
+        # Analyse initiale : chercher mêmes critères pour ce job
+        c_norm = payload.criteria.strip().lower()
+        cached_result = await db.execute(
+            select(JobAnalysis)
+            .where(JobAnalysis.job_id == payload.job_id)
+            .where(JobAnalysis.criteria.isnot(None))
+            .order_by(JobAnalysis.created_at.desc())
+        )
+        for row in cached_result.scalars().all():
+            if row.criteria and row.criteria.strip().lower() == c_norm:
+                cached_entry = row
+                break
+
+    if cached_entry:
+        from loguru import logger
+        logger.info(f"[JobAnalysis] Cache hit job={payload.job_id} id={cached_entry.id}")
+        return AnalyzeResponse(
+            answer      = cached_entry.answer,
+            duration_ms = cached_entry.duration_ms,
+            model       = cached_entry.model or "",
+            provider    = cached_entry.provider or "cache",
+            desc_source = cached_entry.desc_source or "database",
+            history_id  = cached_entry.id,
+            cached      = True,
+        )
 
     # ── Obtenir la description ────────────────────────────────────────────────
     desc_source = "none"
@@ -248,7 +293,6 @@ async def analyze_job(
         duration_ms = int((time.monotonic() - t0) * 1000)
 
         # ── Sauvegarder en BDD ────────────────────────────────────────────────
-        from app.models.job_analysis import JobAnalysis
         entry = JobAnalysis(
             job_id      = payload.job_id,
             criteria    = payload.criteria.strip() if not payload.question else None,

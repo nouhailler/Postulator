@@ -300,7 +300,7 @@ export default function AutomationPage() {
   const [runMinute,   setRunMinute]   = useState(0)
   const [startDate,   setStartDate]   = useState('')
   const [endDate,     setEndDate]     = useState('')
-  const [proxyText,   setProxyText]   = useState('')
+  const [proxyText,   setProxyText]   = useState(() => localStorage.getItem('postulator_proxies') ?? '')
   const [proxyOpen,   setProxyOpen]   = useState(false)
   const [saving,      setSaving]      = useState(false)
 
@@ -386,6 +386,9 @@ export default function AutomationPage() {
 
   // Nettoyer le polling au démontage
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current) }, [])
+
+  // Persister les proxies dans localStorage
+  useEffect(() => { localStorage.setItem('postulator_proxies', proxyText) }, [proxyText])
 
   function applyConfig(cfg) {
     setConfig(cfg)

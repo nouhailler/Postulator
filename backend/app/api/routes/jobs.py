@@ -81,14 +81,17 @@ async def list_jobs(
 async def top_matches(
     db:        DBSession,
     limit:     int   = Query(10, ge=1, le=50),
-    min_score: float = Query(80.0, ge=0, le=100),
+    min_score: float = Query(60.0, ge=0, le=100),
+    order_by:  str   = Query("date", description="date | score"),
 ) -> list[JobSummary]:
-    stmt = (
-        select(Job)
-        .where(Job.ai_score >= min_score)
-        .order_by(Job.ai_score.desc())
-        .limit(limit)
-    )
+    stmt = select(Job).where(Job.ai_score >= min_score)
+
+    if order_by == "score":
+        stmt = stmt.order_by(desc(Job.ai_score))
+    else:  # "date" (default)
+        stmt = stmt.order_by(desc(Job.scraped_at), desc(Job.ai_score))
+
+    stmt = stmt.limit(limit)
     result = await db.execute(stmt)
     return result.scalars().all()
 

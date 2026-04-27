@@ -163,3 +163,49 @@
 .metaChip { font-size: 11px; color: var(--on-surface-variant); background: var(--surface-container-high); padding: 3px 10px; border-radius: var(--radius-sm); }
 .metaLink { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--primary); text-decoration: none; margin-left: auto; }
 .metaLink:hover { text-decoration: underline; }
+
+/* ── Onglets ── */
+.tabBar {
+  display: flex; gap: 4px; margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 0;
+}
+.tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--outline); font-size: 13px; font-weight: 600;
+  padding: 8px 14px 10px; cursor: pointer;
+  font-family: var(--font-body);
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.tab:hover { color: var(--on-surface-variant); }
+.tabActive  { color: var(--primary); border-bottom-color: var(--primary); }
+.tabCount {
+  background: var(--surface-container);
+  color: var(--outline);
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 10px;
+  min-width: 18px; text-align: center;
+}
+.tabActive .tabCount { background: rgba(123,208,255,0.12); color: var(--primary); }
+
+/* ── Langue badge ── */
+.langBadge {
+  font-size: 11px; font-weight: 600;
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  padding: 2px 8px; border-radius: var(--radius-sm);
+}
+
+/* ── Markdown CV généré ── */
+.cvMarkdownWrap {
+  max-height: 480px; overflow-y: auto;
+  padding: 16px 20px;
+}
+.cvMarkdown {
+  font-family: var(--font-body); font-size: 12px; line-height: 1.6;
+  color: var(--on-surface-variant);
+  white-space: pre-wrap; word-break: break-word;
+  margin: 0;
+}

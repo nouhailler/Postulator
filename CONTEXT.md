@@ -1,5 +1,5 @@
 # CONTEXT.md – Postulator
-> Dernière mise à jour : session du 25 avril 2026 — **v1.6.0**
+> Dernière mise à jour : session du 27 avril 2026 — **v1.8.0**
 > À lire **en début de chaque session Claude** pour reprendre sans perte de temps.
 
 ---
@@ -12,7 +12,7 @@
 - Logo : carré dégradé teal/bleu avec "P" — "Postulator · Job Intelligence Platform"
 - Chemin : `/home/patrick/Documents/Claude/Projects/Postulator/`
 - Repo : `https://github.com/nouhailler/postulator`
-- Version courante : **1.6.0**
+- Version courante : **1.8.0**
 
 ---
 
@@ -103,8 +103,10 @@ app/
 │   ├── cv_service.py          ← _clean_pdf_block(), _extract_pdf() → (text, warnings) ← v1.5.3
 │   │                            PyMuPDF blocs, suppression bullets, jonction lignes fragmentées
 │   │                            4 types d'avertissements (isolés, courts, garbled, trop court)
+│   │                            _best_ollama_model() + fallback Ollama dans analyze() ← v1.8.0
 │   ├── scraper_service.py     ← run_search() + exclude_internships ← v1.5.3
 │   ├── openrouter_service.py  ← chat_with_fallback() + OpenRouterService + FREE_MODELS_FALLBACK ← v1.5.4
+│   │                            json_mode=False dans extract_skills (json_mode=True incompatible array) ← v1.8.0
 │   ├── company_scraper_service.py ← discover_careers_url() + scrape_company() + save_jobs_to_db() ← v1.6.0
 │   │                               PROBE_TOP10, _probe_url(), _probe_direct(), _ddg_sync*,
 │   │                               _normalize_search_query(), _playwright_html(), _ddgs_import()
@@ -145,21 +147,27 @@ src/
 └── pages/
     ├── DashboardPage · CVPage · BoardPage
     ├── AutomationPage         ← config quotidienne, opérateurs AND/OR, proxies, rapport run (v1.5.1)
+    │                            proxies persistés dans localStorage (clé partagée) ← v1.8.0
     ├── JobsPage               ← filtres: texte, source, lieu (ILIKE), statut, score, remote
     │                            score en masse, icône ✨ si ai_summary, pagination
     │                            ResetModal 2 onglets : "Garder N récentes" / "Supprimer par critères" ← v1.5.3
+    │                            scoring : tous CVs cv-store + timer + badge provider ← v1.8.0
     ├── JobsIntelligencePage   ← combobox offres, chat IA, historique Q&A accordion — OpenRouter prioritaire ← v1.5.4
+│                                panneau historique ouvert par défaut ← v1.8.0
     ├── JobAnalysisPage        ← analyse sémantique offre vs contenu poste, surlignage ==match== en rouge ← v1.5.4
     │                            multi-tour conversation, timer, provider badge, follow-up questions
+    │                            cache Q&A : badge "Mémoire" (BookMarked) si réponse déjà en BDD ← v1.8.0
     ├── ScrapersPage           ← 8 sources groupées, 24 pays, toggle Résumé IA, proxies
     │                            défaut 7 jours, mode date précise, toggle Exclure les stages ← v1.5.3
+    │                            bouton "Lancer Résumé IA" standalone + badge OR ← v1.8.0
     ├── AnalysisPage           ← modal preview PDF avant import (avertissements + aperçu texte) ← v1.5.3
     ├── SettingsPage           ← +section OpenRouter (clé API, modèle, test ping, liste modèles) ← v1.5.4
     │                            +section Apparence : Dark/Light/Custom + color picker ← v1.5.3
     ├── CompaniesPage          ← entreprises cibles, découverte URL (logs temps réel), DDG modal ← v1.6.0
     │                            AddCompanyModal 2 étapes (DDG chips / auto-discover)
     │                            LogPanel auto-scroll, AtsBadge, StatusBadge, config IA/proxies
-    ├── CVMatchingPage · HistoryPage
+    ├── CVMatchingPage
+    ├── HistoryPage            ← 2 onglets : "Analyses CV" + "CV Générés" (markdown expandable) ← v1.8.0
 ```
 
 ---
@@ -333,12 +341,17 @@ Barre de filtres : **texte** · **source** · **lieu** (ILIKE) · **statut** · 
   - Les offres sélectionnées (`status != 'new'`) toujours protégées
 
 Score en masse : modal (sélection CV + nb offres), polling toutes les 4s, résultats dans AlertsDrawer.
+- **v1.8.0** : tous les CVs de cv-store proposés (bridge `importCVFromStore`), timer temps réel, badge provider Ollama/OR.
 
 ---
 
-## 11. Page Historique — filtres v1.3.0
+## 11. Page Historique — v1.8.0
 
-Barre de filtres : **texte** (client-side: CV/offre/entreprise) · **Du/Au** (date_from/date_to, backend) · **Score min–max %** (backend)
+Deux onglets :
+- **Analyses CV** — historique des analyses CV↔offre avec filtres : texte · Du/Au · Score min–max %
+- **CV Générés** ← v1.8.0 — CVs générés via CV Matching (date, titre offre, entreprise, CV source, langue) ; contenu markdown expandable ; suppression individuelle
+
+Barre de filtres (onglet Analyses) : **texte** (client-side: CV/offre/entreprise) · **Du/Au** (date_from/date_to, backend) · **Score min–max %** (backend)
 
 Bouton ✕ "Réinitialiser" visible uniquement si filtre actif.
 
@@ -438,6 +451,9 @@ MISTRAL_API_KEY=      # modèle français (mistral-small-latest)
 8. Tri offres inter-pages : toujours `sort_by=scraped_at&sort_order=desc&limit=200`
 9. `OllamaStatusProvider` est dans `AppLayout` — toute page utilisant `useOllamaStatus` doit être enfant de ce layout
 10. **PDF PyMuPDF** : `_extract_pdf()` retourne un `tuple[str, list[str]]` (texte, avertissements) — ne pas oublier le dépacking dans `parse()`
+11. **`db.flush()` vs `db.commit()`** : `flush()` écrit dans la transaction mais ne persiste PAS en BDD — toujours `await db.commit()` pour les Q&A et tout ce qui doit survivre au redémarrage ← v1.8.0
+12. **`json_mode=True` incompatible avec array** : OpenRouter avec `json_mode=True` force `{"type":"json_object"}` → si le prompt attend un tableau `[...]`, le modèle retourne `{}` ou `null` → toujours `json_mode=False` pour les prompts retournant un tableau ← v1.8.0
+13. **Proxies résidentiels** : clé localStorage partagée `postulator_proxies` entre ScrapersPage et AutomationPage — modification dans l'une se reflète dans l'autre ← v1.8.0
 
 ---
 
@@ -554,9 +570,10 @@ python scripts/migrate_add_companies.py  # v1.6.0 — à lancer une fois
 - Scraper Wellfound
 - Jobup.ch et Jobs.ch : tester avec Claude Code + accès shell pour valider les parsers
 - Sauvegarder en BDD la description fetchée (Offres Intelligence) pour éviter re-fetch
-- Instrumenter `ScrapersPage` avec `useOllamaStatus` pour le résumé IA Celery (affichage différé via polling)
+- ~~Instrumenter `ScrapersPage` avec `useOllamaStatus` pour le résumé IA Celery~~ → bouton standalone ajouté (v1.8.0) ✅
 - Automatisation : notification email après chaque run (résultat du rapport par email)
 - Automatisation : étendre aux 8 sources (actuellement Indeed + LinkedIn uniquement)
+- Renouveler les modèles gratuits dans `FREE_MODELS_FALLBACK` (deepseek-r1 et llama-4-maverick retournent 404)
 
 ### Priorité basse
 - Export JSON Resume (format ATS)
@@ -631,3 +648,24 @@ GET    /api/automation/status   → état run courant + score_results
 POST   /api/automation/run-now  → déclencher manuellement
 POST   /api/automation/cancel   → annuler le run en cours (cancel_requested flag)
 ```
+
+---
+
+## 20. v1.8.0 — Améliorations UX & Résilience IA (27 avril 2026)
+
+### Résilience IA
+- **Fallback Ollama dans CV Intelligence** : `cv_service.analyze()` appelle OpenRouter en priorité ; si la liste de compétences retournée est vide (rate limit quotidien épuisé sur tous les modèles gratuits), fallback automatique sur `OllamaService(model=None)` (utilise le modèle configuré dans `.env`, déjà warmé au démarrage). Log : `[CVService] OpenRouter skills vide → fallback Ollama`.
+- **`json_mode=False` dans `extract_skills`** : le mode `json_mode=True` force `{"type":"json_object"}` dans l'API OpenRouter, incompatible avec un prompt attendant un tableau JSON → modèles retournent `{}` ou contenu null. Fixé : `json_mode=False`.
+- **Récupération JSON partielle PDF** : si un modèle gratuit tronque sa réponse JSON, un regex extrait les paires clé-valeur complètes avant la coupure (`re.compile(r'"([a-z_]+)"\s*:\s*"((?:[^"\\]|\\.)*?)"')`).
+
+### Cache Q&A
+- **Offres Intelligence / Analyse de l'offre** : avant chaque appel IA, la BDD est interrogée pour la même question (normalisée `.strip().lower()`) et le même `job_id`. Si trouvé → retour immédiat avec `cached: True`. Frontend affiche le badge "Mémoire" (icône `BookMarked`).
+- **Fix persistance** : `db.flush()` → `db.commit()` dans `jobs_intelligence.py` — les Q&A sont maintenant réellement persistées après chaque réponse.
+
+### UX
+- **CV multi-sélection** : mode sélection avec checkboxes animées, suppression en masse, bouton "Tout sélectionner".
+- **Overview** : widget "Matches supérieur à 60%" (seuil 80→60%), tri par `scraped_at DESC`.
+- **Historique** : second onglet "CV Générés" — liste des CVs générés via CV Matching avec contenu markdown expandable et suppression individuelle.
+- **Proxies partagés** : `localStorage.postulator_proxies` partagé entre ScrapersPage et AutomationPage — modification dans l'une se reflète immédiatement dans l'autre à la prochaine ouverture.
+- **Scrapers** : bouton "Lancer Résumé IA" standalone (indépendant du toggle auto) + badge "OR" si OpenRouter configuré.
+- **Offres scoring** : tous les CVs `stored_cvs` proposés (bridge `importCVFromStore`), timer horloge en temps réel, badge provider Ollama/OpenRouter.

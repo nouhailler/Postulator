@@ -195,7 +195,6 @@ class OllamaService:
                 model=self.model,
                 prompt=prompt,
                 stream=False,
-                format="json",          # ← obligatoire depuis Ollama ≥ 0.5
                 keep_alive=KEEP_ALIVE_SEC,
                 options={
                     "temperature": 0.0,
@@ -205,8 +204,12 @@ class OllamaService:
             raw = response["response"].strip()
             logger.debug(f"[Ollama] skills brut : {raw[:300]}")
 
-            raw = _extract_json(raw)
-            result = json.loads(raw)
+            cleaned = _extract_json(raw)
+
+            try:
+                result = json.loads(cleaned)
+            except json.JSONDecodeError:
+                result = None
 
             if isinstance(result, list):
                 skills = [str(s) for s in result if s]
@@ -217,9 +220,7 @@ class OllamaService:
                 for key in ("skills", "competences", "competencies", "technologies"):
                     if key in result and isinstance(result[key], list):
                         return [str(s) for s in result[key] if s]
-            return []
 
-        except json.JSONDecodeError:
             # Fallback regex si le format JSON est quand même imparfait
             items = re.findall(r'"([^"]{2,50})"', raw)
             logger.info(f"[Ollama] fallback regex : {len(items)} items")

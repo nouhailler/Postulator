@@ -31,6 +31,23 @@
 .modalConfirm:hover { background: rgba(255,180,171,0.25); }
 .modalConfirm:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ── Barre de statut scoring en cours ── */
+.scoringStatusBar {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 14px;
+  background: rgba(60,221,199,0.07);
+  border: 1px solid rgba(60,221,199,0.2);
+  border-radius: var(--radius-md);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tertiary);
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+.scoringStatusIcon { flex-shrink: 0; animation: spin 2s linear infinite; }
+.scoringStatusText { white-space: nowrap; }
+
 /* ── Filtres ── */
 .filtersBar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
 .searchWrap { position: relative; flex: 1; min-width: 160px; }

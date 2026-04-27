@@ -143,12 +143,14 @@ async def import_pdf(
     file: UploadFile = File(...),
     name: str = Form(...),
     model: Optional[str] = Form(None),
+    provider: Optional[str] = Form(None),  # 'auto' | 'ollama' | 'openrouter'
 ) -> StoredCVFull:
     """
     Importe un PDF, extrait le texte brut via PyMuPDF,
-    puis envoie le texte à Ollama qui remplit chaque section du CV.
+    puis envoie le texte à Ollama ou OpenRouter qui remplit chaque section du CV.
     Retourne un StoredCV pré-rempli que l'utilisateur peut ensuite valider/corriger.
     """
+    from loguru import logger
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     content = await file.read()
     if len(content) > 15 * 1024 * 1024:
@@ -164,13 +166,48 @@ async def import_pdf(
     if not raw_text.strip():
         raise HTTPException(status_code=422, detail="Impossible d'extraire le texte du PDF.")
 
-    # Parser via OpenRouter (priorité) ou Ollama
+    # Choisir le moteur IA selon le paramètre provider
     from app.services.openrouter_service import load_openrouter_config
     or_cfg = await load_openrouter_config(db)
-    if or_cfg:
-        sections = await _parse_cv_with_openrouter(raw_text, or_cfg.api_key, or_cfg.model or "")
-    else:
+
+    effective_provider = provider or 'auto'
+    sections: dict = {}
+
+    if effective_provider == 'ollama':
+        # Forcer Ollama
+        logger.info("[CVStore] import PDF → Ollama (force)")
         sections = await _parse_cv_with_ollama(raw_text, model or settings.ollama_model, settings.ollama_base_url)
+
+    elif effective_provider == 'openrouter':
+        # Forcer OpenRouter — erreur si non configuré
+        if not or_cfg:
+            raise HTTPException(status_code=400, detail="OpenRouter non configuré. Allez dans Paramètres → OpenRouter.")
+        logger.info(f"[CVStore] import PDF → OpenRouter (force, model={or_cfg.model})")
+        sections = await _parse_cv_with_openrouter(raw_text, or_cfg.api_key, or_cfg.model or "")
+
+    else:
+        # Auto : OR si dispo, sinon Ollama ; fallback Ollama si OR échoue
+        if or_cfg:
+            logger.info(f"[CVStore] import PDF → OpenRouter (auto, model={or_cfg.model})")
+            sections = await _parse_cv_with_openrouter(raw_text, or_cfg.api_key, or_cfg.model or "")
+        if not sections:
+            if or_cfg:
+                logger.warning("[CVStore] OpenRouter retourné vide → fallback Ollama")
+            else:
+                logger.info("[CVStore] import PDF → Ollama (auto)")
+            sections = await _parse_cv_with_ollama(raw_text, model or settings.ollama_model, settings.ollama_base_url)
+
+    # Si toutes les sections sont vides, retourner une erreur claire
+    if not sections:
+        logger.error(f"[CVStore] Aucune section parsée — sections vides après IA. provider={effective_provider}")
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Le modèle IA n'a pas pu analyser le CV (réponse vide ou invalide). "
+                "Vérifiez qu'Ollama est actif et que le modèle est chargé, "
+                "ou configurez un modèle OpenRouter plus puissant dans Paramètres."
+            ),
+        )
 
     # Créer le StoredCV
     cv = StoredCV(
@@ -203,7 +240,13 @@ _ALLOWED_SECTIONS = {
     "skills","languages","certifications","projects","interests",
 }
 
-def _cv_parse_prompt(raw_text: str) -> str:
+def _cv_parse_prompt(raw_text: str, compact: bool = False) -> str:
+    if compact:
+        # Version courte pour modèles lents (CPU)
+        return f"""Extract CV info as JSON. Keys: full_name, title, email, phone, location, summary, skills, experiences, education, languages. Use null if absent. Only JSON, no markdown.
+
+CV:
+{raw_text[:3000]}"""
     return f"""Tu es un expert en analyse de CV. Extrais les informations du CV ci-dessous
 et retourne un objet JSON avec exactement ces clés (chaînes de texte, null si absent).
 Ne traduis pas, conserve la langue d'origine.
@@ -232,18 +275,45 @@ CV à analyser :
 Réponds UNIQUEMENT avec l'objet JSON, sans texte autour, sans markdown."""
 
 def _parse_json_sections(raw: str) -> dict:
+    """Parse le JSON retourné par le LLM, avec récupération des JSONs tronqués."""
+    # Extraire le contenu d'un bloc ```json...```
     if "```" in raw:
         parts = raw.split("```")
         for p in parts:
             p = p.strip()
             if p.startswith("json"): p = p[4:].strip()
             if p.startswith("{"): raw = p; break
+
     start = raw.find("{")
     end   = raw.rfind("}")
     if start != -1 and end > start:
-        raw = raw[start:end+1]
-    data = json.loads(raw)
-    return {k: (v if isinstance(v, str) else None) for k, v in data.items() if k in _ALLOWED_SECTIONS}
+        clean = raw[start:end+1]
+    elif start != -1:
+        clean = raw[start:]  # JSON tronqué : pas de } final
+    else:
+        clean = raw
+
+    # Tentative 1 : JSON complet
+    try:
+        data = json.loads(clean)
+        return {k: (v if isinstance(v, str) else None) for k, v in data.items() if k in _ALLOWED_SECTIONS}
+    except json.JSONDecodeError:
+        pass
+
+    # Tentative 2 : JSON tronqué — extraire les paires clé-valeur complètes
+    result: dict[str, str] = {}
+    import re
+    # Chercher les paires "clé": "valeur" (chaînes simples, sans \n dans la valeur pour éviter les faux positifs)
+    pattern = re.compile(r'"([a-z_]+)"\s*:\s*"((?:[^"\\]|\\.)*?)"', re.DOTALL)
+    for m in pattern.finditer(clean):
+        key, val = m.group(1), m.group(2)
+        if key in _ALLOWED_SECTIONS:
+            # Décoder les séquences d'échappement JSON
+            try:
+                result[key] = json.loads(f'"{val}"')
+            except Exception:
+                result[key] = val
+    return result
 
 
 async def _parse_cv_with_openrouter(raw_text: str, api_key: str, model: str) -> dict:
@@ -261,7 +331,7 @@ async def _parse_cv_with_openrouter(raw_text: str, api_key: str, model: str) -> 
             "model": model or "openai/gpt-4o-mini",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
-            "max_tokens": 2000,
+            "max_tokens": 4096,
         }
         async with httpx.AsyncClient(timeout=120) as client:
             resp = await client.post(
@@ -270,7 +340,11 @@ async def _parse_cv_with_openrouter(raw_text: str, api_key: str, model: str) -> 
                 json=body,
             )
             resp.raise_for_status()
-            raw = resp.json()["choices"][0]["message"]["content"].strip()
+            choice = resp.json()["choices"][0]["message"]
+            raw = choice.get("content") or ""
+            if not raw.strip():
+                raise ValueError(f"OpenRouter a retourné un contenu vide (model={model or 'default'})")
+            raw = raw.strip()
         return _parse_json_sections(raw)
     except Exception as e:
         from loguru import logger
@@ -278,25 +352,53 @@ async def _parse_cv_with_openrouter(raw_text: str, api_key: str, model: str) -> 
         return {}
 
 
-async def _parse_cv_with_ollama(raw_text: str, model: str, base_url: str) -> dict:
-    """Envoie le texte brut du CV à Ollama et demande de remplir chaque section en JSON structuré."""
-    prompt = _cv_parse_prompt(raw_text)
+# Ordre de préférence pour le parsing JSON structuré
+_JSON_MODEL_PREFERENCE = ["qwen2.5", "qwen", "llama3", "llama", "mistral", "gemma"]
+
+async def _best_ollama_model(base_url: str, configured: str) -> str:
+    """Retourne le meilleur modèle Ollama disponible pour la génération JSON."""
+    from loguru import logger
+    import httpx
     try:
-        import httpx
-        import ollama as ol
-        client = ol.AsyncClient(
-            host=base_url,
-            timeout=httpx.Timeout(connect=10, read=300, write=10, pool=5),
-        )
-        response = await client.generate(
-            model=model,
-            prompt=prompt,
-            stream=False,
-            options={"temperature": 0.1, "num_predict": 1500},
-        )
-        raw = response["response"].strip()
+        base = base_url.rstrip("/")
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(f"{base}/api/tags")
+            models = [m["name"] for m in resp.json().get("models", [])]
+        for pref in _JSON_MODEL_PREFERENCE:
+            for m in models:
+                if pref in m.lower():
+                    if m != configured:
+                        logger.info(f"[CVStore] Modèle JSON optimal: {m} (préféré à {configured})")
+                    return m
+    except Exception:
+        pass
+    return configured
+
+
+async def _parse_cv_with_ollama(raw_text: str, model: str, base_url: str) -> dict:
+    """Envoie le texte brut du CV à Ollama via REST et demande de remplir chaque section en JSON."""
+    from loguru import logger
+    import httpx
+    prompt = _cv_parse_prompt(raw_text, compact=True)  # prompt court pour CPU
+    # Choisir le meilleur modèle disponible
+    effective_model = await _best_ollama_model(base_url, model)
+    logger.info(f"[CVStore] Ollama parse → model={effective_model}")
+    try:
+        base = base_url.rstrip("/")
+        payload = {
+            "model": effective_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.1, "num_predict": 1200},
+        }
+        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=10, read=600, write=10, pool=5)) as client:
+            resp = await client.post(f"{base}/api/generate", json=payload)
+            resp.raise_for_status()
+            raw = resp.json().get("response", "").strip()
+        if not raw:
+            raise ValueError("Ollama a retourné une réponse vide")
+        logger.debug(f"[CVStore] Ollama raw (first 300): {raw[:300]}")
         return _parse_json_sections(raw)
     except Exception as e:
-        from loguru import logger
         logger.error(f"[CVStore] Ollama parse error: {e}")
         return {}
