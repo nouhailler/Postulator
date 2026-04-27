@@ -33,6 +33,23 @@ echo -e "${BLUE}║         Démarrage Postulator         ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
 echo ""
 
+# ── Nettoyage des anciens processus ────────────────────────
+# Évite que Vite démarre sur 5174 si 5173 est déjà pris par
+# une ancienne instance (problème lors des mises à jour .deb)
+echo -e "${YELLOW}[0/4] Nettoyage des anciens processus...${NC}"
+pkill -f "uvicorn app.main:app" 2>/dev/null && sleep 1
+pkill -f "celery.*postulator"   2>/dev/null
+pkill -f "vite"                 2>/dev/null
+# Libérer les ports 8000 et 5173 si encore occupés
+for PORT in 8000 5173; do
+    PID=$(lsof -ti tcp:$PORT 2>/dev/null)
+    if [ -n "$PID" ]; then
+        kill "$PID" 2>/dev/null
+        sleep 0.5
+    fi
+done
+echo -e "      ${GREEN}✓ Ports 8000 et 5173 libérés${NC}"
+
 # ── Redis ──────────────────────────────────────────────────
 echo -e "${YELLOW}[1/4] Redis...${NC}"
 if ! redis-cli ping &>/dev/null; then
@@ -76,10 +93,14 @@ nohup npm run dev > "$LOG_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
 # Vérification réelle : attendre que le port 5173 réponde (jusqu'à 20s)
+FRONTEND_PORT=5173
 FRONTEND_OK=false
 for i in $(seq 1 20); do
     sleep 1
-    if curl -s http://localhost:5173 &>/dev/null; then
+    # Détecter le port réel depuis les logs (5173 ou 5174 si conflit)
+    DETECTED_PORT=$(grep -oP 'Local:\s+http://localhost:\K\d+' "$LOG_DIR/frontend.log" 2>/dev/null | head -1)
+    if [ -n "$DETECTED_PORT" ]; then
+        FRONTEND_PORT=$DETECTED_PORT
         FRONTEND_OK=true
         break
     fi
@@ -93,7 +114,7 @@ for i in $(seq 1 20); do
 done
 
 if $FRONTEND_OK; then
-    echo -e "      ${GREEN}✓ Frontend OK (pid $FRONTEND_PID) — http://localhost:5173${NC}"
+    echo -e "      ${GREEN}✓ Frontend OK (pid $FRONTEND_PID) — http://localhost:${FRONTEND_PORT}${NC}"
 else
     echo -e "      ${YELLOW}⚠ Frontend lent à démarrer (pid $FRONTEND_PID)${NC}"
     echo -e "      ${YELLOW}  Logs : tail -f $LOG_DIR/frontend.log${NC}"
@@ -103,19 +124,19 @@ fi
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║   Postulator prêt !                  ║${NC}"
-echo -e "${GREEN}║   → http://localhost:5173            ║${NC}"
+echo -e "${GREEN}║   → http://localhost:${FRONTEND_PORT}            ║${NC}"
 echo -e "${GREEN}║                                      ║${NC}"
 echo -e "${GREEN}║   Logs : ~/.postulator/logs/         ║${NC}"
 echo -e "${GREEN}║   Arrêt : Ctrl+C                     ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════╝${NC}"
 echo ""
 
-# Ouvrir le navigateur
+# Ouvrir le navigateur sur le bon port
 sleep 1
 if command -v xdg-open &>/dev/null; then
-    xdg-open http://localhost:5173 &
+    xdg-open "http://localhost:${FRONTEND_PORT}" &
 elif command -v gnome-open &>/dev/null; then
-    gnome-open http://localhost:5173 &
+    gnome-open "http://localhost:${FRONTEND_PORT}" &
 fi
 
 # Garder le script actif — arrêt propre sur Ctrl+C
