@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, RefreshCw, Download, ExternalLink,
   ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown,
-  Brain, Trash2, AlertTriangle, Globe, Sparkles, Loader, X, CheckCheck, Clock,
+  Brain, Trash2, AlertTriangle, Globe, Sparkles, Loader, X, CheckCheck, Clock, Hourglass,
 } from 'lucide-react'
 import { useAsync }    from '../hooks/useAsync.js'
 import { fetchJobs, fetchJob, updateJobStatus, deleteJob, purgeJobs, purgeJobsByCriteria } from '../api/jobs.js'
@@ -691,9 +691,22 @@ export default function JobsPage() {
       </div>
 
       {resetMsg  && <div className={styles.resetBanner}>{resetMsg}</div>}
-      {scoreBatchMsg && (
+
+      {/* Bannière scoring en cours — visible même modal fermée */}
+      {scoreBatching && (
+        <div className={styles.scoringBanner}>
+          <Hourglass size={14} strokeWidth={2} className={styles.scoringBannerIcon} />
+          <span className={styles.scoringBannerText}>
+            Scoring en cours avec{' '}
+            <strong>{aiProvider === 'openrouter' ? 'OpenRouter' : 'Ollama'}</strong>
+            {' '}— {scoringElapsed}s écoulées…
+          </span>
+          <span className={styles.scoringBannerTimer}>{scoringElapsed}s</span>
+        </div>
+      )}
+
+      {scoreBatchMsg && !scoreBatching && (
         <div className={`${styles.resetBanner} ${scoreBatchMsg.startsWith('Erreur') ? styles.errorBanner : ''}`}>
-          {scoreBatching && <Loader size={11} style={{ animation: 'spin 0.8s linear infinite', marginRight: 6 }} strokeWidth={2} />}
           {scoreBatchMsg}
         </div>
       )}
