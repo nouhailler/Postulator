@@ -98,10 +98,10 @@ export default function DashboardPage() {
         <ScoringChart scoring7d={scoring7d} scoring30d={scoring30d} />
       </div>
 
-      {/* ── High-Confidence Matches ── */}
+      {/* ── Matches supérieur à 60% ── */}
       <div className={styles.matchesHeader}>
         <h2 className={`${styles.matchesTitle} font-headline tracking-tight`}>
-          High-Confidence Matches
+          Matches supérieur à 60%
         </h2>
         <button
           className="btn-ghost"

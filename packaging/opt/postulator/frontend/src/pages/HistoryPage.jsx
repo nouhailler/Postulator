@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Trash2, ExternalLink, ChevronDown, ChevronUp, RefreshCw, Mail, Loader, CheckCircle, Search, X } from 'lucide-react'
+import { Trash2, ExternalLink, ChevronDown, ChevronUp, RefreshCw, Mail, Loader, CheckCircle, Search, X, FileText } from 'lucide-react'
 import { useAsync }   from '../hooks/useAsync.js'
 import { fetchHistory, deleteMatch } from '../api/history.js'
 import { sendMatchAlert } from '../api/alerts.js'
+import { fetchGenerated, deleteGenerated } from '../api/cvMatching.js'
 import styles from './HistoryPage.module.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -163,11 +164,85 @@ function HistoryRow({ entry, onDelete }) {
   )
 }
 
+// ── Ligne CV généré ──────────────────────────────────────────────────────────
+
+const LANG_LABELS = { fr: '🇫🇷 FR', en: '🇬🇧 EN', de: '🇩🇪 DE', it: '🇮🇹 IT', es: '🇪🇸 ES' }
+
+function GeneratedCVRow({ entry, onDelete }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <>
+      <tr
+        className={`${styles.row} ${expanded ? styles.rowExpanded : ''}`}
+        onClick={() => setExpanded(e => !e)}
+      >
+        {/* Date */}
+        <td className={styles.td}>
+          <span className={styles.dateMain}>{formatDate(entry.created_at).split(' ')[0]}</span>
+          <span className={styles.dateTime}>{formatDate(entry.created_at).split(' ').slice(1).join(' ')}</span>
+        </td>
+
+        {/* Offre */}
+        <td className={styles.td}>
+          <span className={styles.jobTitle}>{entry.job_title ?? '—'}</span>
+          <span className={styles.jobCompany}>{entry.job_company ?? '—'}</span>
+        </td>
+
+        {/* CV source */}
+        <td className={styles.td}>
+          <span className={styles.cvName}>{entry.source_cv_name ?? '—'}</span>
+        </td>
+
+        {/* Langue */}
+        <td className={`${styles.td} ${styles.tdCenter}`}>
+          <span className={styles.langBadge}>
+            {LANG_LABELS[entry.language] ?? entry.language ?? '—'}
+          </span>
+        </td>
+
+        {/* Actions */}
+        <td className={`${styles.td} ${styles.tdRight}`} onClick={e => e.stopPropagation()}>
+          <div className={styles.rowActions}>
+            {entry.job_url && (
+              <a href={entry.job_url} target="_blank" rel="noreferrer"
+                className={styles.actionIcon} title="Voir l'offre originale">
+                <ExternalLink size={13} strokeWidth={2} />
+              </a>
+            )}
+            <button className={`${styles.actionIcon} ${styles.actionDelete}`}
+              onClick={() => onDelete(entry.id)} title="Supprimer">
+              <Trash2 size={12} strokeWidth={2} />
+            </button>
+            <span className={styles.expandIcon}>
+              {expanded ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
+            </span>
+          </div>
+        </td>
+      </tr>
+
+      {/* Contenu markdown expandable */}
+      {expanded && entry.cv_markdown && (
+        <tr className={styles.detailRow}>
+          <td colSpan={5} className={styles.detailCell}>
+            <div className={styles.cvMarkdownWrap}>
+              <pre className={styles.cvMarkdown}>{entry.cv_markdown}</pre>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
+
 // ── Page principale ───────────────────────────────────────────────────────────
 
 export default function HistoryPage() {
 
-  // Filtres
+  // Onglets
+  const [activeTab, setActiveTab] = useState('analyses') // 'analyses' | 'generated'
+
+  // Filtres (onglet Analyses)
   const [minScore, setMinScore] = useState('')
   const [maxScore, setMaxScore] = useState('')
   const [dateFrom, setDateFrom] = useState('')
@@ -204,9 +279,21 @@ export default function HistoryPage() {
     )
   })
 
+  // CV générés
+  const { data: rawGenerated, loading: loadingGen, error: errorGen, refetch: refetchGen } = useAsync(
+    fetchGenerated, [], { fallback: [] }
+  )
+  const generatedList = rawGenerated ?? []
+
   const handleDelete = async (id) => {
     if (!window.confirm("Supprimer cette entrée de l'historique ?")) return
     try { await deleteMatch(id); refetch() }
+    catch (err) { console.error(err) }
+  }
+
+  const handleDeleteGenerated = async (id) => {
+    if (!window.confirm('Supprimer ce CV généré ?')) return
+    try { await deleteGenerated(id); refetchGen() }
     catch (err) { console.error(err) }
   }
 
@@ -224,172 +311,240 @@ export default function HistoryPage() {
 
       <div className={styles.pageHeader}>
         <div>
-          <h1 className={`${styles.pageTitle} font-headline tracking-tight`}>Historique des Matches</h1>
+          <h1 className={`${styles.pageTitle} font-headline tracking-tight`}>Historique</h1>
           <p className={styles.pageSub}>
-            Résultats d'analyses CV ↔ offres sauvegardés — cliquez sur une ligne pour le détail.
+            Analyses CV ↔ offres et CV générés sauvegardés — cliquez sur une ligne pour le détail.
           </p>
         </div>
-        <button className="btn-ghost" onClick={refetch} disabled={loading}>
-          <RefreshCw size={13} strokeWidth={2} className={loading ? styles.spin : ''} />
+        <button className="btn-ghost"
+          onClick={activeTab === 'analyses' ? refetch : refetchGen}
+          disabled={activeTab === 'analyses' ? loading : loadingGen}>
+          <RefreshCw size={13} strokeWidth={2} className={(activeTab === 'analyses' ? loading : loadingGen) ? styles.spin : ''} />
         </button>
       </div>
 
-      {/* ── Barre de filtres ── */}
-      <div className={styles.filtersBar}>
-
-        {/* Recherche texte */}
-        <div className={styles.searchWrap}>
-          <Search size={13} className={styles.searchIcon} strokeWidth={2} />
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="CV, offre, entreprise…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className={styles.searchClear} onClick={() => setSearch('')}>
-              <X size={11} strokeWidth={2} />
-            </button>
+      {/* ── Sélecteur d'onglets ── */}
+      <div className={styles.tabBar}>
+        <button
+          className={`${styles.tab} ${activeTab === 'analyses' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('analyses')}>
+          Analyses CV
+          {rawHistory && rawHistory.length > 0 && (
+            <span className={styles.tabCount}>{rawHistory.length}</span>
           )}
-        </div>
-
-        {/* Plage de dates */}
-        <div className={styles.dateWrap}>
-          <label className={styles.filterLabel}>Du</label>
-          <input
-            className={styles.dateInput}
-            type="date"
-            value={dateFrom}
-            onChange={e => setDateFrom(e.target.value)}
-            max={dateTo || undefined}
-          />
-        </div>
-
-        <div className={styles.dateWrap}>
-          <label className={styles.filterLabel}>Au</label>
-          <input
-            className={styles.dateInput}
-            type="date"
-            value={dateTo}
-            onChange={e => setDateTo(e.target.value)}
-            min={dateFrom || undefined}
-          />
-        </div>
-
-        {/* Plage de score */}
-        <div className={styles.scoreWrap}>
-          <label className={styles.filterLabel}>Score</label>
-          <input
-            className={styles.scoreInput}
-            type="number"
-            placeholder="min"
-            min={0} max={100}
-            value={minScore}
-            onChange={e => setMinScore(e.target.value)}
-          />
-          <span className={styles.scoreSep}>–</span>
-          <input
-            className={styles.scoreInput}
-            type="number"
-            placeholder="max"
-            min={0} max={100}
-            value={maxScore}
-            onChange={e => setMaxScore(e.target.value)}
-          />
-          <span className={styles.filterLabel}>%</span>
-        </div>
-
-        {/* Reset */}
-        {hasActiveFilters && (
-          <button className={styles.resetBtn} onClick={resetFilters} title="Réinitialiser les filtres">
-            <X size={12} strokeWidth={2} /> Réinitialiser
-          </button>
-        )}
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'generated' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('generated')}>
+          <FileText size={12} strokeWidth={2} />
+          CV Générés
+          {generatedList.length > 0 && (
+            <span className={styles.tabCount}>{generatedList.length}</span>
+          )}
+        </button>
       </div>
 
-      {/* Compteur filtré */}
-      {hasActiveFilters && (
-        <p className={styles.filterCount}>
-          {totalMatches} résultat{totalMatches !== 1 ? 's' : ''}
-          {search && rawTotal !== totalMatches ? ` sur ${rawTotal} chargés` : ''}
-        </p>
-      )}
+      {/* ── Onglet Analyses CV ── */}
+      {activeTab === 'analyses' && (
+        <>
+          {/* Barre de filtres */}
+          <div className={styles.filtersBar}>
 
-      {/* Stats */}
-      {totalMatches > 0 && (
-        <div className={styles.statsRow}>
-          <div className={styles.statCard}>
-            <p className={styles.statValue}>{totalMatches}</p>
-            <p className={styles.statLabel}>Analyses{hasActiveFilters ? ' filtrées' : ' sauvegardées'}</p>
+            {/* Recherche texte */}
+            <div className={styles.searchWrap}>
+              <Search size={13} className={styles.searchIcon} strokeWidth={2} />
+              <input
+                className={styles.searchInput}
+                type="text"
+                placeholder="CV, offre, entreprise…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className={styles.searchClear} onClick={() => setSearch('')}>
+                  <X size={11} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+
+            {/* Plage de dates */}
+            <div className={styles.dateWrap}>
+              <label className={styles.filterLabel}>Du</label>
+              <input
+                className={styles.dateInput}
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                max={dateTo || undefined}
+              />
+            </div>
+
+            <div className={styles.dateWrap}>
+              <label className={styles.filterLabel}>Au</label>
+              <input
+                className={styles.dateInput}
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                min={dateFrom || undefined}
+              />
+            </div>
+
+            {/* Plage de score */}
+            <div className={styles.scoreWrap}>
+              <label className={styles.filterLabel}>Score</label>
+              <input
+                className={styles.scoreInput}
+                type="number"
+                placeholder="min"
+                min={0} max={100}
+                value={minScore}
+                onChange={e => setMinScore(e.target.value)}
+              />
+              <span className={styles.scoreSep}>–</span>
+              <input
+                className={styles.scoreInput}
+                type="number"
+                placeholder="max"
+                min={0} max={100}
+                value={maxScore}
+                onChange={e => setMaxScore(e.target.value)}
+              />
+              <span className={styles.filterLabel}>%</span>
+            </div>
+
+            {/* Reset */}
+            {hasActiveFilters && (
+              <button className={styles.resetBtn} onClick={resetFilters} title="Réinitialiser les filtres">
+                <X size={12} strokeWidth={2} /> Réinitialiser
+              </button>
+            )}
           </div>
-          <div className={styles.statCard}>
-            <p className={styles.statValue} style={{
-              color: avgScore >= 80 ? 'var(--tertiary)' : avgScore >= 60 ? 'var(--primary)' : 'var(--outline)'
-            }}>
-              {avgScore}/100
+
+          {/* Compteur filtré */}
+          {hasActiveFilters && (
+            <p className={styles.filterCount}>
+              {totalMatches} résultat{totalMatches !== 1 ? 's' : ''}
+              {search && rawTotal !== totalMatches ? ` sur ${rawTotal} chargés` : ''}
             </p>
-            <p className={styles.statLabel}>Score moyen</p>
-          </div>
-          {bestMatch && (
-            <div className={`${styles.statCard} ${styles.statCardBest}`}>
-              <p className={styles.statValue} style={{ color: 'var(--tertiary)' }}>
-                {Math.round(bestMatch.score)}/100
-              </p>
-              <p className={styles.statLabel}>
-                Meilleur match — {bestMatch.job_title} · {bestMatch.job_company}
-              </p>
+          )}
+
+          {/* Stats */}
+          {totalMatches > 0 && (
+            <div className={styles.statsRow}>
+              <div className={styles.statCard}>
+                <p className={styles.statValue}>{totalMatches}</p>
+                <p className={styles.statLabel}>Analyses{hasActiveFilters ? ' filtrées' : ' sauvegardées'}</p>
+              </div>
+              <div className={styles.statCard}>
+                <p className={styles.statValue} style={{
+                  color: avgScore >= 80 ? 'var(--tertiary)' : avgScore >= 60 ? 'var(--primary)' : 'var(--outline)'
+                }}>
+                  {avgScore}/100
+                </p>
+                <p className={styles.statLabel}>Score moyen</p>
+              </div>
+              {bestMatch && (
+                <div className={`${styles.statCard} ${styles.statCardBest}`}>
+                  <p className={styles.statValue} style={{ color: 'var(--tertiary)' }}>
+                    {Math.round(bestMatch.score)}/100
+                  </p>
+                  <p className={styles.statLabel}>
+                    Meilleur match — {bestMatch.job_title} · {bestMatch.job_company}
+                  </p>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {error && (
-        <div className={styles.errorBanner}>
-          Impossible de charger l'historique. Vérifiez que le backend est démarré.
-        </div>
-      )}
-
-      {!loading && totalMatches === 0 && !error ? (
-        <div className={styles.empty}>
-          {hasActiveFilters ? (
-            <>
-              <p style={{ fontSize: 28, marginBottom: 8 }}>🔍</p>
-              <p>Aucun résultat pour ces filtres.</p>
-              <button className="btn-ghost" style={{ marginTop: 12 }} onClick={resetFilters}>
-                Réinitialiser les filtres
-              </button>
-            </>
-          ) : (
-            <>
-              <p style={{ fontSize: 28, marginBottom: 8 }}>📋</p>
-              <p>Aucune analyse sauvegardée pour l'instant.</p>
-              <p style={{ fontSize: 12, color: 'var(--outline)', marginTop: 4 }}>
-                Analysez un CV contre une offre dans <strong>CV Intelligence</strong>,
-                puis cliquez sur "Sauvegarder dans l'historique".
-              </p>
-            </>
+          {error && (
+            <div className={styles.errorBanner}>
+              Impossible de charger l'historique. Vérifiez que le backend est démarré.
+            </div>
           )}
-        </div>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.th}>Date</th>
-                <th className={styles.th}>CV</th>
-                <th className={styles.th}>Offre</th>
-                <th className={`${styles.th} ${styles.thCenter}`}>Score</th>
-                <th className={`${styles.th} ${styles.thRight}`}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map(entry => (
-                <HistoryRow key={entry.id} entry={entry} onDelete={handleDelete} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+
+          {!loading && totalMatches === 0 && !error ? (
+            <div className={styles.empty}>
+              {hasActiveFilters ? (
+                <>
+                  <p style={{ fontSize: 28, marginBottom: 8 }}>🔍</p>
+                  <p>Aucun résultat pour ces filtres.</p>
+                  <button className="btn-ghost" style={{ marginTop: 12 }} onClick={resetFilters}>
+                    Réinitialiser les filtres
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: 28, marginBottom: 8 }}>📋</p>
+                  <p>Aucune analyse sauvegardée pour l'instant.</p>
+                  <p style={{ fontSize: 12, color: 'var(--outline)', marginTop: 4 }}>
+                    Analysez un CV contre une offre dans <strong>CV Intelligence</strong>,
+                    puis cliquez sur "Sauvegarder dans l'historique".
+                  </p>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.th}>Date</th>
+                    <th className={styles.th}>CV</th>
+                    <th className={styles.th}>Offre</th>
+                    <th className={`${styles.th} ${styles.thCenter}`}>Score</th>
+                    <th className={`${styles.th} ${styles.thRight}`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map(entry => (
+                    <HistoryRow key={entry.id} entry={entry} onDelete={handleDelete} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Onglet CV Générés ── */}
+      {activeTab === 'generated' && (
+        <>
+          {errorGen && (
+            <div className={styles.errorBanner}>
+              Impossible de charger les CV générés. Vérifiez que le backend est démarré.
+            </div>
+          )}
+
+          {!loadingGen && generatedList.length === 0 && !errorGen ? (
+            <div className={styles.empty}>
+              <p style={{ fontSize: 28, marginBottom: 8 }}>📄</p>
+              <p>Aucun CV généré pour l'instant.</p>
+              <p style={{ fontSize: 12, color: 'var(--outline)', marginTop: 4 }}>
+                Générez un CV adapté à une offre depuis la page <strong>CV Matching</strong>.
+              </p>
+            </div>
+          ) : (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th className={styles.th}>Date</th>
+                    <th className={styles.th}>Offre</th>
+                    <th className={styles.th}>CV source</th>
+                    <th className={`${styles.th} ${styles.thCenter}`}>Langue</th>
+                    <th className={`${styles.th} ${styles.thRight}`}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {generatedList.map(entry => (
+                    <GeneratedCVRow key={entry.id} entry={entry} onDelete={handleDeleteGenerated} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

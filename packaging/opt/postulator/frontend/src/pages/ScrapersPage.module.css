@@ -92,6 +92,23 @@
 
 .btnDisabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
+.summarizeNowBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(60,221,199,0.08); border: 1px solid rgba(60,221,199,0.25);
+  color: var(--tertiary); font-size: 12px; font-weight: 600; font-family: var(--font-body);
+  padding: 5px 13px; border-radius: var(--radius-sm); cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.summarizeNowBtn:hover:not(:disabled) { background: rgba(60,221,199,0.14); border-color: rgba(60,221,199,0.5); }
+.summarizeNowBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.orBadgeInline {
+  display: inline-flex; align-items: center;
+  background: rgba(123,208,255,0.12); border: 1px solid rgba(123,208,255,0.3);
+  color: var(--primary); font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 1px 5px; border-radius: 3px; margin-left: 4px;
+}
+
 /* ── Bloc localisation ── */
 .locationBlock { display: flex; flex-direction: column; }
 .locationRow { display: flex; gap: 8px; align-items: stretch; }

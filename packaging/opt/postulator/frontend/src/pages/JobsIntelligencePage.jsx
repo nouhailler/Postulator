@@ -85,7 +85,7 @@ function MessageBubble({ msg }) {
 
 // ── Panneau historique des questions ─────────────────────────────────────────
 function PastQuestionsPanel({ questions, onReplay }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(true)
 
   if (!questions || questions.length === 0) return null
 

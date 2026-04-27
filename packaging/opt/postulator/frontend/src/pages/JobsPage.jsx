@@ -1,13 +1,14 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, RefreshCw, Download, ExternalLink,
   ChevronLeft, ChevronRight, ArrowUp, ArrowDown, ArrowUpDown,
-  Brain, Trash2, AlertTriangle, Globe, Sparkles, Loader, X, CheckCheck,
+  Brain, Trash2, AlertTriangle, Globe, Sparkles, Loader, X, CheckCheck, Clock,
 } from 'lucide-react'
 import { useAsync }    from '../hooks/useAsync.js'
 import { fetchJobs, fetchJob, updateJobStatus, deleteJob, purgeJobs, purgeJobsByCriteria } from '../api/jobs.js'
-import { fetchCVs }   from '../api/cvs.js'
+import { importCVFromStore } from '../api/cvs.js'
+import { fetchCVList }       from '../api/cvStore.js'
 import { scoreBatch, getScoreBatchStatus } from '../api/analysis.js'
 import { mockJobs }    from '../data/mockData.js'
 import JobDetailDrawer from '../components/jobs/JobDetailDrawer.jsx'
@@ -161,9 +162,12 @@ function exportCSV(jobs) {
 
 // ── Modal Score en masse ─────────────────────────────────────────────────────
 
-function ScoreBatchModal({ cvs, onConfirm, onCancel, loading }) {
+function ScoreBatchModal({ cvs, onConfirm, onCancel, loading, elapsed, provider }) {
   const [selCvId, setSelCvId] = useState(cvs?.[0]?.id ?? '')
   const [limit,   setLimit]   = useState(20)
+
+  const providerLabel = provider === 'openrouter' ? 'OpenRouter' : 'Ollama'
+
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modal}>
@@ -182,7 +186,14 @@ function ScoreBatchModal({ cvs, onConfirm, onCancel, loading }) {
               value={selCvId}
               onChange={e => setSelCvId(e.target.value)}
               style={{ width: '100%', background: 'var(--surface-container)', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-md)', padding: '7px 10px', color: 'var(--on-surface)', fontSize: 13 }}>
-              {(cvs ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {(cvs ?? []).length === 0
+                ? <option value="">— Aucun CV importé —</option>
+                : (cvs ?? []).map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.full_name ? `${c.full_name} — ${c.name}` : c.name}
+                    </option>
+                  ))
+              }
             </select>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
               Scorer les
@@ -207,6 +218,14 @@ function ScoreBatchModal({ cvs, onConfirm, onCancel, loading }) {
               : <><Brain size={13} strokeWidth={2} /> Lancer le scoring</>}
           </button>
         </div>
+        {loading && (
+          <div className={styles.scoringStatusBar}>
+            <Clock size={13} strokeWidth={2} className={styles.scoringStatusIcon} />
+            <span className={styles.scoringStatusText}>
+              {elapsed}s — {providerLabel} analyse les offres…
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -455,8 +474,20 @@ export default function JobsPage() {
   const [showScoreBatch,  setShowScoreBatch]  = useState(false)
   const [scoreBatching,   setScoreBatching]   = useState(false)
   const [scoreBatchMsg,   setScoreBatchMsg]   = useState(null)  // message rapide post-lancement
+  const [scoringElapsed,  setScoringElapsed]  = useState(0)
+  const [aiProvider,      setAiProvider]      = useState('ollama')
 
-  const { data: cvList } = useAsync(fetchCVs, [], { fallback: [] })
+  const { data: cvList } = useAsync(fetchCVList, [], { fallback: [] })
+
+  // Détecter le provider IA (OpenRouter ou Ollama) au montage
+  useEffect(() => {
+    fetch('/api/settings/openrouter')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.configured || data?.api_key) setAiProvider('openrouter')
+      })
+      .catch(() => {})
+  }, [])
 
   const buildParams = () => ({
     q:          q         || undefined,
@@ -574,10 +605,19 @@ export default function JobsPage() {
     finally { setResetting(false) }
   }
 
-  const handleScoreBatchConfirm = async (cvId, limit) => {
+  const handleScoreBatchConfirm = async (storedCvId, limit) => {
     setScoreBatching(true)
+    setScoringElapsed(0)
+    // Compteur de secondes écoulées
+    const startTime = Date.now()
+    const elapsedTimer = setInterval(() => {
+      setScoringElapsed(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
+
     try {
-      const res = await scoreBatch(cvId, limit, 'new')
+      // Convertir le StoredCV en CV legacy (upsert par nom — instantané si déjà fait)
+      const legacyCv = await importCVFromStore(storedCvId)
+      const res = await scoreBatch(legacyCv.id, limit, 'new')
       setShowScoreBatch(false)
       setScoreBatchMsg(res.message ?? `Scoring lancé pour ${res.total} offre(s)`)
       // Polling pour rafraîchir la liste quand c'est fini
@@ -586,15 +626,17 @@ export default function JobsPage() {
           const st = await getScoreBatchStatus()
           if (!st.running) {
             clearInterval(poll)
+            clearInterval(elapsedTimer)
             setScoreBatching(false)
             setScoreBatchMsg(`✓ Score terminé : ${st.done}/${st.total} offres — résultats dans les Alertes`)
             setTimeout(() => setScoreBatchMsg(null), 10000)
             refetch()  // rafraîchir le tableau
           }
-        } catch { clearInterval(poll); setScoreBatching(false) }
+        } catch { clearInterval(poll); clearInterval(elapsedTimer); setScoreBatching(false) }
       }, 4000)
     } catch (err) {
       console.error(err)
+      clearInterval(elapsedTimer)
       setScoreBatching(false)
       setScoreBatchMsg(`Erreur : ${err.detail ?? err.message}`)
       setTimeout(() => setScoreBatchMsg(null), 5000)
@@ -618,6 +660,8 @@ export default function JobsPage() {
           onConfirm={handleScoreBatchConfirm}
           onCancel={() => setShowScoreBatch(false)}
           loading={scoreBatching}
+          elapsed={scoringElapsed}
+          provider={aiProvider}
         />
       )}
 

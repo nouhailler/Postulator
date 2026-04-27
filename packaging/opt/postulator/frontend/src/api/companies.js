@@ -7,6 +7,7 @@ export const updateCompany        = (id, data) => api.patch(`/companies/${id}`, 
 export const deleteCompany        = (id)       => api.delete(`/companies/${id}`)
 export const discoverCompanyUrl   = (id)       => api.post(`/companies/${id}/discover`, {})
 export const scrapeCompany        = (id)       => api.post(`/companies/${id}/scrape`, {})
+export const cancelCompanyRun     = (id)       => api.post(`/companies/${id}/cancel`, {})
 export const scrapeAllCompanies   = ()         => api.post('/companies/scrape-all', {})
 export const fetchRunStatus       = ()         => api.get('/companies/run-status')
 export const fetchCompaniesConfig = ()         => api.get('/companies/config')

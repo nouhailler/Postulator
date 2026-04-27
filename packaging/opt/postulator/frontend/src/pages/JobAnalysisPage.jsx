@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import {
   Search, Loader, Clock, Send, ChevronDown, Sparkles,
-  AlertCircle, Hourglass, Zap, Cpu, CheckCircle2, X, Maximize2, Trash2,
+  AlertCircle, Hourglass, Zap, Cpu, CheckCircle2, X, Maximize2, Trash2, BookMarked,
 } from 'lucide-react'
 import { useAsync } from '../hooks/useAsync.js'
 import { fetchJobs } from '../api/jobs.js'
@@ -88,12 +88,17 @@ function FullModal({ entry, isFirst, onClose }) {
             <span className={styles.modalTitle}>
               {isFirst ? 'Analyse initiale' : 'Question de suivi'}
             </span>
-            <span className={`${styles.providerBadge} ${entry.provider === 'openrouter' ? styles.providerOR : styles.providerOllama}`}>
-              {entry.provider === 'openrouter'
-                ? <><Zap size={10} strokeWidth={2} /> OpenRouter</>
-                : <><Cpu size={10} strokeWidth={2} /> Ollama</>}
-            </span>
-            {entry.duration_ms > 0 && (
+            {entry.cached
+              ? <span className={styles.cachedBadge} title="Réponse issue de la mémoire">
+                  <BookMarked size={10} strokeWidth={2} /> Mémoire
+                </span>
+              : <span className={`${styles.providerBadge} ${entry.provider === 'openrouter' ? styles.providerOR : styles.providerOllama}`}>
+                  {entry.provider === 'openrouter'
+                    ? <><Zap size={10} strokeWidth={2} /> OpenRouter</>
+                    : <><Cpu size={10} strokeWidth={2} /> Ollama</>}
+                </span>
+            }
+            {entry.duration_ms > 0 && !entry.cached && (
               <span className={styles.durationBadge}>
                 <Clock size={10} strokeWidth={2} />
                 {(entry.duration_ms / 1000).toFixed(1)}s
@@ -160,12 +165,17 @@ function ResultCard({ entry, isFirst, onOpen }) {
           </span>
         </div>
         <div className={styles.cardMeta}>
-          <span className={`${styles.providerBadge} ${entry.provider === 'openrouter' ? styles.providerOR : styles.providerOllama}`}>
-            {entry.provider === 'openrouter'
-              ? <><Zap size={10} strokeWidth={2} /> OpenRouter</>
-              : <><Cpu size={10} strokeWidth={2} /> Ollama</>}
-          </span>
-          {entry.duration_ms > 0 && (
+          {entry.cached
+            ? <span className={styles.cachedBadge} title="Réponse issue de la mémoire — IA non réinterrogée">
+                <BookMarked size={10} strokeWidth={2} /> Mémoire
+              </span>
+            : <span className={`${styles.providerBadge} ${entry.provider === 'openrouter' ? styles.providerOR : styles.providerOllama}`}>
+                {entry.provider === 'openrouter'
+                  ? <><Zap size={10} strokeWidth={2} /> OpenRouter</>
+                  : <><Cpu size={10} strokeWidth={2} /> Ollama</>}
+              </span>
+          }
+          {entry.duration_ms > 0 && !entry.cached && (
             <span className={styles.durationBadge}>
               <Clock size={10} strokeWidth={2} />
               {(entry.duration_ms / 1000).toFixed(1)}s
@@ -245,7 +255,7 @@ export default function JobAnalysisPage() {
     setLoadingHistory(true)
     try {
       const data = await api.get(`/job-analysis/history/${jobId}`)
-      // Convertir les entrées BDD au format local {criteria, question, answer, provider, model, duration_ms}
+      // Convertir les entrées BDD au format local
       setHistory((data ?? []).map(h => ({
         criteria:    h.criteria,
         question:    h.question,
@@ -254,6 +264,7 @@ export default function JobAnalysisPage() {
         model:       h.model,
         duration_ms: h.duration_ms,
         desc_source: h.desc_source,
+        cached:      false,  // l'historique chargé est affiché tel quel (pas besoin du badge)
       })))
     } catch {
       setHistory([])
@@ -358,6 +369,7 @@ export default function JobAnalysisPage() {
         model:       res.model,
         duration_ms: res.duration_ms,
         desc_source: res.desc_source,
+        cached:      res.cached ?? false,
       }])
 
       if (!isInitial) setFollowUp('')
